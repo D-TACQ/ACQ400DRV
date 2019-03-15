@@ -9,7 +9,7 @@
 #define ACQ420FMC_H_
 
 #include "acq400_includes.h"
-
+#include "cpsc2.h"
 
 /* Offsets for control registers in the AXI MM2S FIFO */
 
@@ -178,6 +178,8 @@
 #define MOD_ID_ACQ2106SC	0x82
 #define MOD_ID_KMCU		0x83
 #define MOD_ID_KMCU30		0x84
+
+
 
 #define MOD_ID_ACQ423ELF	0x09
 
@@ -444,8 +446,15 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_AXI64_DUALCHAN(adev) \
 	(IS_AXI64(adev) && adev->dma_chan[0] && adev->dma_chan[1])
 
-#define IS_SC(adev) \
+#define _IS_SC(adev) \
 	(IS_ACQ2X06SC(adev)||IS_ACQ1001SC(adev)||IS_KMCx_SC(dev))
+
+#ifdef CPSC2_H_
+#define IS_SC(adev)	(_IS_SC(adev) || IS_CPSC2_SC(adev))
+#else
+#define IS_SC(adev)	_IS_SC(adev)
+#endif
+
 
 #define IS_ACQ1014(adev) \
 	(IS_ACQ1001SC(adev) && (GET_MOD_ID_VERSION(adev)&0x4) != 0)

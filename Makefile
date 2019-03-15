@@ -95,6 +95,7 @@ packageko:
 	
 	
 package: all packageko
+	mkdir -p release
 	echo do NOT rm -Rf opkg/*
 	mkdir -p opkg/usr/local/bin \
 		opkg/usr/share opkg/usr/local/CARE opkg/usr/local/map \

@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "3.370"
+#define REVID "CPSC2 4.001"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -2769,6 +2769,8 @@ int acq400_modprobe_sc(struct acq400_dev* adev)
 int acq400_modprobe(struct acq400_dev* adev)
 {
 	adev->isFifoError = acq420_isFifoError;	/* REMOVE me: better default wanted */
+
+	dev_info(DEVP(adev), "%s id %x %s", __FUNCTION__, GET_MOD_ID(adev), IS_SC(adev)? "SC": "MODULE");
 
 	if (IS_SC(adev)){
 		return acq400_modprobe_sc(adev);

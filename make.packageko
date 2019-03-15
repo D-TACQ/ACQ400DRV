@@ -8,6 +8,7 @@ MRT="release/09-packageko-$REL-$DC.tgz"
 echo Building $PKO
 rm -Rf modules_output
 mkdir -p modules_output
+mkdir -p release
 
 (cd ../DRIVERS/ISL22313; ./make.zynq)
 (cd ../DRIVERS/SI5326; ./make.zynq)
