@@ -1,7 +1,10 @@
 #!/bin/bash
 # $1 is the datecode
+DC=${1:-$(date +%y%m%d%H%M%S)}
 REL=$(cat ../linux-xlnx/include/config/kernel.release)
-PKO="packageko-$REL-$1.img"
+PKO="packageko-$REL-$DC.img"
+MRT="release/09-packageko-$REL-$DC.tgz"
+
 echo Building $PKO
 rm -Rf modules_output
 mkdir -p modules_output
@@ -14,6 +17,14 @@ cp ../DRIVERS/SI5326/si5326.ko modules_output
 cp $(find ../linux-xlnx -name \*.ko) modules_output
 cp *.ko modules_output
 mksquashfs modules_output/* release/$PKO 2>&1 >squashfs.log
+
+echo creating modules_root tarball for diskless $MRT
+
+rm -Rf modules_root
+mkdir -p modules_root/usr/local/lib/modules
+cp modules_output/* modules_root/usr/local/lib/modules
+tar cvzf $MRT -C modules_root .
+
 rm packageko*img
 cp release/$PKO .
 if [ $? -ne 0 ]; then

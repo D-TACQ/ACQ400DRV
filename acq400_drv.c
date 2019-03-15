@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "3.366"
+#define REVID "3.370"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -2504,6 +2504,9 @@ static struct of_device_id acq400_of_match[] /* __devinitdata */ = {
         { .compatible = "D-TACQ,acq1001sc"  },
         { .compatible = "D-TACQ,acq1002sc"  },
         { .compatible = "D-TACQ,acq400pmod" },
+	{ .compatible = "D-TACQ,cpsc2sc"    },
+	{ .compatible = "D-TACQ,cpsc2dac"   },
+	{ .compatible = "D-TACQ,cpsc2comms" },
         { /* end of table */}
 };
 MODULE_DEVICE_TABLE(of, acq400_of_match);

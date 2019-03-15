@@ -1013,7 +1013,7 @@ static ssize_t _store_optimise_bufferlen(
 	int newbl = spb*mindma;
 
 	dev_dbg(DEVP(adev), "store_optimise_bufferlen ss:%d mindma:0x%x spb:%d len:0x%x",
-			sample_size, mindma, spb, newbl);
+		sample_size, mindma, spb, newbl);
 
 	acq400_set_bufferlen(adev, newbl);
 
@@ -1031,6 +1031,9 @@ static ssize_t store_optimise_bufferlen(
 	u32 sample_size;
 	u32 burst_len = 1;
 	if (sscanf(buf, "%u %u", &sample_size, &burst_len) >= 1){
+		if (sample_size == 0){
+			sample_size = 64;	/* pick a sensible default */
+		}
 		if (burst_len > 1){
 			if (burst_len * sample_size < bufferlen){
 				sample_size = burst_len * sample_size;
