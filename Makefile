@@ -133,6 +133,7 @@ apps: $(APPS)
 
 modules:
 	make -C $(KERN_SRC) ARCH=arm M=`pwd` modules
+	arm-linux-gnueabihf-strip --strip-debug *.ko
 	
 clean:
 	@rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions $(LIBS) $(APPS) \
