@@ -201,3 +201,25 @@ static DEVICE_ATTR(NAME, S_IRUGO|S_IWUSR, show_bits##NAME, store_bits##NAME)
 #define MAKE_BITS(NAME, REG, SHL, MASK)	_MAKE_BITS(NAME, REG, SHL, MASK, 0)
 #define DEPRECATED_MAKE_BITS(NAME, REG, SHL, MASK)	_MAKE_BITS(NAME, REG, SHL, MASK, 1)
 
+#define SCOUNT_KNOB(name, reg) 							\
+static ssize_t show_clk_count_##name(						\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	char * buf)								\
+{										\
+	u32 counter = acq400_devices[dev->id]->reg_cache.data[reg/sizeof(int)]; \
+	return sprintf(buf, "%u\n", counter);					\
+}										\
+static DEVICE_ATTR(scount_##name, S_IRUGO, show_clk_count_##name, 0)
+
+#define SCOUNT_KNOB_FIELD(name, reg, field)					\
+static ssize_t show_clk_count_##name(						\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	char * buf)								\
+{										\
+	unsigned shl = getSHL(field);						\
+	u32 counter = acq400_devices[dev->id]->reg_cache.data[reg/sizeof(int)]; \
+	return sprintf(buf, "%u\n", (counter&field)>>shl);			\
+}										\
+static DEVICE_ATTR(scount_##name, S_IRUGO, show_clk_count_##name, 0)

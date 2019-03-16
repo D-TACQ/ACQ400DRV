@@ -1975,29 +1975,6 @@ static const struct attribute *acq435_attrs[] = {
 };
 
 
-
-
-
-
-
-
-
-
-
-
-//	u32 counter = acq400rd32_upcount(acq400_devices[dev->id], reg);
-
-#define SCOUNT_KNOB(name, reg) 						\
-static ssize_t show_clk_count_##name(					\
-	struct device * dev,						\
-	struct device_attribute *attr,					\
-	char * buf)							\
-{									\
-	u32 counter = acq400_devices[dev->id]->reg_cache.data[reg/sizeof(int)]; \
-	return sprintf(buf, "%u\n", counter);				\
-}									\
-static DEVICE_ATTR(scount_##name, S_IRUGO, show_clk_count_##name, 0)
-
 SCOUNT_KNOB(CLK_EXT, 	ACQ2006_CLK_COUNT(0));
 SCOUNT_KNOB(CLK_MB, 	ACQ2006_CLK_COUNT(1));
 SCOUNT_KNOB(CLK_S1,     ACQ2006_CLK_COUNT(SITE2DX(1)));
