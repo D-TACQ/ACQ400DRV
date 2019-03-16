@@ -28,7 +28,17 @@
 #define CPSC2_DAC_MATH_STA		(ADC_BASE+0x7C)
 #define CPSC2_DAC_SLOW_SET_CH(n)	(ADC_BASE+0x80+4*((n)-1))
 
+#define CPSC2_COM_CONTROL		(ADC_BASE+0x04)
+#define CPSC2_COM_HEARTBEAT		(ADC_BASE+0x08)
+#define CPSC2_COM_SFP_AURORA_CR(n)	(ADC_BASE+0x10+((n)-1)*0x10)
+#define CPSC2_COM_SFP_AURORA_STA(n)	(ADC_BASE+0x14+((n)-1)*0x10)
+#define CPSC2_COM_SFP_AURORA_STA1(n)	(ADC_BASE+0x18+((n)-1)*0x10)
+#define CPSC2_COM_SFP_AURORA_STA2(n)	(ADC_BASE+0x1C+((n)-1)*0x10)
+
+#define CPSC2_COM_LAST_PKT(n, f)	(ADC_BASE + (n)*0x100+ 4*(f))
+
 struct acq400_dev;
 
 extern void cpsc2_dac_createDebugfs(struct acq400_dev* adev, char* pcursor);
+extern void cpsc2_com_createDebugfs(struct acq400_dev* adev, char* pcursor);
 #endif /* CPSC2_H_ */
