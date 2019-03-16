@@ -37,7 +37,7 @@ CPPFLAGS += -O3 -Wall
 
 acq420fmc-objs := acq400_drv.o  acq400_ui.o acq400_fs.o \
 	acq400_core.o acq400_init_defaults.o \
-	acq400_debugfs.o acq400_sysfs.o acq400_lists.o \
+	acq400_debugfs.o acq400_sysfs.o acq400_lists.o acq400_debugfs_internal.o \
 	acq400_proc.o hbm.o zynq-timer.o \
 	bolo8_core.o bolo_ui.o bolo8_sysfs.o \
 	dio432_drv.o  ao424_drv.o acq400_sewfifo.o \
@@ -45,7 +45,7 @@ acq420fmc-objs := acq400_drv.o  acq400_ui.o acq400_fs.o \
 	acq400_xilinx_axidma.o acq400_deltrg.o \
 	acq400_set.o acq400_sysfs_utils.o  \
 	acq400_axi_chain.o acq400_axi_oneshot.o \
-	radcelf_sysfs.o acq400_reg_cache.o 
+	radcelf_sysfs.o acq400_reg_cache.o cpsc2_drv.o
 	
 dmadescfs-objs := dmadescfs_drv.o
 
