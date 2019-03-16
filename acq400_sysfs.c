@@ -30,7 +30,6 @@
 #include <linux/user.h>
 
 #include "acq400.h"
-#include "bolo.h"
 #include "hbm.h"
 
 #include "acq400_sysfs.h"
@@ -3149,7 +3148,7 @@ void acq400_createSysfs(struct device *dev)
 				IS_ACQ425(adev) ? acq425_attrs: ACQ420_ATTRS;
 		}else if (IS_ACQ43X(adev)){
 			specials[nspec++] = acq435_attrs;
-		}else if (IS_AO420(adev)||IS_AO428(adev)){
+		}else if (IS_AO42S(adev)){
 			specials[nspec++] = playloop_attrs;
 			specials[nspec++] = dacspi_attrs;
 			if (IS_AO420_HALF436(adev)){
@@ -3158,7 +3157,16 @@ void acq400_createSysfs(struct device *dev)
 						acq436_upper_half_attrs;
 				specials[nspec++] = ao420_half_436_attrs;
 			}else{
-				specials[nspec++] = IS_AO420(adev)? ao420_attrs: ao428_attrs;
+				if (IS_AO420(adev)){
+					specials[nspec++] = ao420_attrs;
+				}else{
+					specials[nspec++] = ao42S_attrs;
+					if (IS_AO428(adev)){
+						specials[nspec++] = ao428_attrs;
+					}else if (IS_CPSC2_DAC(adev)){
+						specials[nspec++] = cpsc2_dac_attrs;
+					}
+				}
 			}
 		}else if (IS_AO424(adev)){
 			specials[nspec++] = playloop_attrs;
@@ -3178,6 +3186,8 @@ void acq400_createSysfs(struct device *dev)
 			specials[nspec++] = HAS_FPGA_FIR(adev)?	acq480_ffir_attrs: acq480_attrs;
 		}else if (IS_PIG_CELF(adev)){
 			specials[nspec++] = pig_celf_attrs;
+		}else if (IS_CSPC2_COMMS(adev)){
+			specials[nspec++] = cpsc2_com_attrs;
 		}else{
 			return;
 		}

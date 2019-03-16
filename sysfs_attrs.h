@@ -21,7 +21,11 @@ extern const struct attribute *bolo8_attrs[];
 extern const struct attribute *playloop_attrs[];
 extern const struct attribute* dacspi_attrs[];
 extern const struct attribute *ao428_attrs[];
+extern const struct attribute *ao42S_attrs[];
 extern const struct attribute *ao420_attrs[];
+
+extern const struct attribute *cpsc2_dac_attrs[];
+extern const struct attribute *cpsc2_com_attrs[];
 
 #define ao420_half_436_attrs &ao420_attrs[8]
 

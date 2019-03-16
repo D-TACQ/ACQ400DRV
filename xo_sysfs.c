@@ -997,10 +997,7 @@ static DEVICE_ATTR(dac_mux_master,
 
 
 const struct attribute *ao428_attrs[] = {
-	&dev_attr_dacreset_device.attr,
-	&dev_attr_dac_headroom.attr,
-	&dev_attr_dac_fifo_samples.attr,
-	&dev_attr_dac_encoding.attr,
+
 	&dev_attr_AO_01.attr,
 	&dev_attr_AO_02.attr,
 	&dev_attr_AO_03.attr,
@@ -1009,6 +1006,14 @@ const struct attribute *ao428_attrs[] = {
 	&dev_attr_AO_06.attr,
 	&dev_attr_AO_07.attr,
 	&dev_attr_AO_08.attr,
+	NULL
+};
+
+const struct attribute *ao42S_attrs [] = {
+	&dev_attr_dacreset_device.attr,
+	&dev_attr_dac_headroom.attr,
+	&dev_attr_dac_fifo_samples.attr,
+	&dev_attr_dac_encoding.attr,
 	&dev_attr_offset_01.attr,
 	&dev_attr_offset_02.attr,
 	&dev_attr_offset_03.attr,
@@ -1019,6 +1024,7 @@ const struct attribute *ao428_attrs[] = {
 	&dev_attr_offset_08.attr,
 	NULL
 };
+
 const struct attribute *ao420_attrs[] = {
 	&dev_attr_G3.attr, &dev_attr_D3.attr, &dev_attr_AO_03.attr, &dev_attr_dac_range_03.attr,
 	&dev_attr_G4.attr, &dev_attr_D4.attr, &dev_attr_AO_04.attr, &dev_attr_dac_range_04.attr,
