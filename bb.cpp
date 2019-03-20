@@ -386,6 +386,24 @@ int dump() {
 	return 0;
 }
 
+/*
+acq2106_112> grep ^050, /proc/driver/acq400/0/buffers
+050,e1800000,0x21800000,0x400000,0
+*/
+unsigned getSpecificBufferlen(int ibuf)
+{
+	char cmd[128];
+	sprintf(cmd, "grep ^%03d, /proc/driver/acq400/0/buffers", ibuf);
+	unsigned bl = 0;
+	FILE * pp = popen(cmd, "r");
+	if (fscanf(pp, "%*d,%*x,%*x,%x,%*d", &bl) == 1){
+		fprintf(stderr, "success bl:0x%08x\n", bl);
+	}else{
+		fprintf(stderr, "FAIL: %s\n", cmd);
+	}
+	pclose(pp);
+	return bl;
+}
 #define MODPRAMS "/sys/module/acq420fmc/parameters/"
 #define DFB	 MODPRAMS "distributor_first_buffer"
 #define BUFLEN	 MODPRAMS "bufferlen"
@@ -403,8 +421,11 @@ RUN_MODE ui(int argc, const char** argv)
 		G::load_threshold = atoi(evar);
 	}
 	getKnob(-1, NBUF,  &Buffer::nbuffers);
-	getKnob(-1, BUFLEN, &Buffer::bufferlen);
 	getKnob(-1, DFB, 	&G::buffer0);
+	getKnob(-1, BUFLEN, &Buffer::bufferlen);
+	if (G::buffer0 != 0){
+		Buffer::bufferlen = getSpecificBufferlen(G::buffer0);
+	}
 
 	Buffer::nbuffers -= G::buffer0;
 

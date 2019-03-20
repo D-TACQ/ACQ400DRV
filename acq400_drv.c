@@ -1581,10 +1581,7 @@ void xo400_getDMA(struct acq400_dev* adev)
 	}
 }
 
-int ao_samples_per_hb(struct acq400_dev *adev)
-{
-	return bufferlen / xo_distributor_sample_size;
-}
+
 
 #define XO_MAX_POLL 100
 
@@ -1659,6 +1656,7 @@ void incr_push(struct acq400_dev *adev, struct XO_dev* xo_dev)
 	}
 }
 
+
 int xo_data_loop(void *data)
 /** xo_data_loop() : outputs using distributor and PRI on SC, but loop is
  * actually associated with the master site
@@ -1674,14 +1672,16 @@ int xo_data_loop(void *data)
 	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
 	struct acq400_dev *adev0 = acq400_devices[0];
 	struct HBM** hbm0 = adev0->hb;
+
 	int ic = 0;
 #define IB 	(xo_dev->AO_playloop.pull_buf)
+	int ao_samples_per_hb = hbm0[distributor_first_buffer]->len / xo_distributor_sample_size;
 #define IBINCR	incr_push(adev, xo_dev)
 #define IBRESET do { IB = distributor_first_buffer; } while(0)
 
 	long dma_timeout = START_TIMEOUT;
 	int maxlen = max(xo_dev->AO_playloop.maxlen, xo_dev->AO_playloop.length);
-	int shot_buffer_count0 = maxlen/ao_samples_per_hb(adev0);
+	int shot_buffer_count0 = maxlen/ao_samples_per_hb;
 	int shot_buffer_count = shot_buffer_count0;
 
 #define AO_CONTINUOUS	(xo_dev->AO_playloop.oneshot == AO_continuous)
@@ -1692,9 +1692,9 @@ int xo_data_loop(void *data)
 	int last_push_done = 0;
 
 	dev_dbg(DEVP(adev), "xo_data_loop() ib set %d playloop:%d hbs:%d shot_buffer_count:%d",
-				IB, xo_dev->AO_playloop.length, ao_samples_per_hb(adev), shot_buffer_count);
+				IB, xo_dev->AO_playloop.length, ao_samples_per_hb, shot_buffer_count);
 
-	if (shot_buffer_count*ao_samples_per_hb(adev) < xo_dev->AO_playloop.length){
+	if (shot_buffer_count*ao_samples_per_hb < xo_dev->AO_playloop.length){
 		shot_buffer_count += 1;
 		dev_dbg(DEVP(adev), "ao play data buffer overspill");
 	}
@@ -1783,7 +1783,7 @@ int xo_data_loop(void *data)
 		}
 		dev_dbg(DEVP(adev), "back from dma_sync_wait() ..");
 
-		xo_dev->AO_playloop.cursor += ao_samples_per_hb(adev);
+		xo_dev->AO_playloop.cursor += ao_samples_per_hb;
 
 		if (last_push_done && continuous_at_start){
 			dev_dbg(DEVP(adev), "continuous going down ..");
