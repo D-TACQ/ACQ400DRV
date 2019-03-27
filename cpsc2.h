@@ -17,6 +17,7 @@
 #define IS_CSPC2_COMMS(adev)		(GET_MOD_ID(adev) == MOD_ID_CPSC2_COMMS)
 #define IS_CPSC2_DAC(adev)		(GET_MOD_ID(adev) == MOD_ID_CPSC2_DAC)
 
+/* additional DAC REGS */
 
 #define CPSC2_DAC_SFP1_PKT_CNT		(ADC_BASE+0x60)
 #define CPSC2_DAC_SFP1_SKIP_PKT_CNT	(ADC_BASE+0x64)
@@ -28,8 +29,17 @@
 #define CPSC2_DAC_MATH_STA		(ADC_BASE+0x7C)
 #define CPSC2_DAC_SLOW_SET_CH(n)	(ADC_BASE+0x80+4*((n)-1))
 
+/* DAC bitfields */
+
+#define CPSC2_DAC_CTRL_SFP_MODE		(0x3<<18)
+#define CPSC2_DACB_WFnSFP		(0x1<<17)
+#define CPSC2_DACA_WFnSFP		(0x1<<16)
+
+
 #define CPSC2_DAC_PKT_TX_ERR		(1<<16)
 #define CPSC2_DAC_PKT_TX_EN		(1<<0)
+
+/* COM REGS */
 
 #define CPSC2_COM_CONTROL		(ADC_BASE+0x04)
 #define CPSC2_COM_HEARTBEAT		(ADC_BASE+0x08)
@@ -39,6 +49,8 @@
 #define CPSC2_COM_SFP_AURORA_STA2(n)	(ADC_BASE+0x1C+((n)-1)*0x10)
 
 #define CPSC2_COM_LAST_PKT(n, f)	(ADC_BASE + (n)*0x100+ 4*(f))
+
+/* COM Bitfields */
 
 #define CPSC2_COM_CONTROL_SFP2_TX_EN	(1<<9)
 #define CPSC2_COM_CONTROL_SFP2_RX_EN	(1<<8)

@@ -23,6 +23,9 @@ SCOUNT_KNOB(SFP1_SKIP_PKT_CNT, 	CPSC2_DAC_SFP1_SKIP_PKT_CNT);
 SCOUNT_KNOB(SFP2_PKT_CNT, 	CPSC2_DAC_SFP2_PKT_CNT);
 SCOUNT_KNOB(SFP2_SKIP_PKT_CNT, 	CPSC2_DAC_SFP2_SKIP_PKT_CNT);
 
+MAKE_BITS(sfp_mode, DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DAC_CTRL_SFP_MODE);
+MAKE_BITS(dac_b_wf_n_sfp, DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DACB_WFnSFP);
+MAKE_BITS(dac_a_wf_n_sfp, DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DACA_WFnSFP);
 MAKE_BITS(pkt_tx_err, CPSC2_DAC_PKT_TX, MAKE_BITS_FROM_MASK, CPSC2_DAC_PKT_TX_ERR);
 MAKE_BITS(pkt_tx_en, CPSC2_DAC_PKT_TX, MAKE_BITS_FROM_MASK, CPSC2_DAC_PKT_TX_EN);
 MAKE_BITS(pkt_seq, CPSC2_DAC_PKT_SEQ, MAKE_BITS_FROM_MASK, ~1);
@@ -34,6 +37,11 @@ const struct attribute *cpsc2_dac_attrs[] = {
 	&dev_attr_scount_SFP1_SKIP_PKT_CNT.attr,
 	&dev_attr_scount_SFP2_PKT_CNT.attr,
 	&dev_attr_scount_SFP2_SKIP_PKT_CNT.attr,
+
+	&dev_attr_sfp_mode.attr,
+	&dev_attr_dac_b_wf_n_sfp.attr,
+	&dev_attr_dac_a_wf_n_sfp.attr,
+
 	&dev_attr_pkt_tx_err.attr,
 	&dev_attr_pkt_tx_en.attr,
 	&dev_attr_pkt_seq.attr,
