@@ -14,7 +14,7 @@ set.sys ${KNOBS}/dacreset 0
 set.sys ${KNOBS}/dacspi 0x300000
 set.sys ${KNOBS}/dacspi 0x400002
 case $MODEL in
-ao428elf)
+ao428elf|cpsc2dac)
 	set.sys ${KNOBS}/dacspi 0x200002;;
 *)
 	set.sys ${KNOBS}/dacspi 0x200000;;

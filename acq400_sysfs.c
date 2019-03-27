@@ -1660,6 +1660,9 @@ static const char* _lookup_id(struct acq400_dev *adev)
 		{ MOD_ID_DIO432FMC, 	"dio432"	},
 		{ MOD_ID_DIO432PMOD,	"dio432"	},
 		{ MOD_ID_DIO482FMC,  	"dio432"	},	/* logically same */
+		{ MOD_ID_CPSC2,         "cpsc2sc"	},
+		{ MOD_ID_CPSC2_COMMS,   "cpsc2com"	},
+		{ MOD_ID_CPSC2_DAC,     "cpsc2dac"	},
 	};
 #define NID	(sizeof(idlut)/sizeof(struct IDLUT_ENTRY))
 	int ii;
