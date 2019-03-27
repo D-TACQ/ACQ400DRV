@@ -3091,6 +3091,8 @@ void acq400_createSysfs(struct device *dev)
 			}
 		}else if (IS_KMCx_SC(adev)){
 			specials[nspec++] = kmcx_sc_attrs;
+		}else if (IS_CPSC2_SC(adev)){
+			specials[nspec++] = acq1001sc_attrs;
 		}
 	}else{
 		if (sysfs_create_files(&dev->kobj, sysfs_device_attrs)){
