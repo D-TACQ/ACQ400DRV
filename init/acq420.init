@@ -337,7 +337,7 @@ build_knobs_device() {
 		ACQ480_SITES="${ACQ480_SITES} $site";;
 	9)
 		ACQ423_SITES="${ACQ423_SITES} $site";;	
-	40|42|6A)		
+	40|42|43|6A)		
 		echo "ao420_init ${site}" >>/tmp/acq420.init-postpowerup-action
 		if [ -e /etc/acq400/$site/dac_mux_master ]; then
 				ln -s /usr/local/bin/muxpattern /etc/acq400/$site/
