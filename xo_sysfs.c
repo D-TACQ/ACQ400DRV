@@ -337,6 +337,8 @@ static ssize_t show_xo_buffers(
 }
 static DEVICE_ATTR(xo_buffers, S_IRUGO, show_xo_buffers, 0);
 
+MAKE_BITS(awg_abort, DAC_CTRL, MAKE_BITS_FROM_MASK, DAC_CTRL_AWG_ABORT);
+
 
 const struct attribute *playloop_attrs[] = {
 	&dev_attr_playloop_length.attr,
@@ -349,6 +351,7 @@ const struct attribute *playloop_attrs[] = {
 	&dev_attr_playloop_pull_buf.attr,
 	&dev_attr_xo_buffers.attr,
 	&dev_attr_task_active.attr,
+	&dev_attr_awg_abort.attr,
 	NULL
 };
 
