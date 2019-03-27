@@ -941,6 +941,7 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 			rad_celf_init_defaults(adev);
 			break;
 		case MOD_ID_DAC_CELF:
+		case MOD_ID_CPSC2_DAC:
 			ao428_init_defaults(adev);
 			break;
 		default:
