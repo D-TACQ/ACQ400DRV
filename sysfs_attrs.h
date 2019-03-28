@@ -24,6 +24,7 @@ extern const struct attribute *ao428_attrs[];
 extern const struct attribute *ao42S_attrs[];
 extern const struct attribute *ao420_attrs[];
 
+extern const struct attribute *cpsc2_sc_attrs[];
 extern const struct attribute *cpsc2_dac_attrs[];
 extern const struct attribute *cpsc2_com_attrs[];
 

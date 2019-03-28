@@ -17,6 +17,20 @@
 
 #include "sysfs_attrs.h"
 
+MAKE_BITS(rfd_mcm2_stopped, 	CPSC2_SC_RFD, MAKE_BITS_FROM_MASK, CPSC2_SC_RFD_MCM2_STOPPED);
+MAKE_BITS(rfd_mcm2_pll_locked, 	CPSC2_SC_RFD, MAKE_BITS_FROM_MASK, CPSC2_SC_RFD_MCM2_PLL_LOCKED);
+MAKE_BITS(rfd_mcm1_stopped, 	CPSC2_SC_RFD, MAKE_BITS_FROM_MASK, CPSC2_SC_RFD_MCM1_STOPPED);
+MAKE_BITS(rfd_mcm1_pll_locked, 	CPSC2_SC_RFD, MAKE_BITS_FROM_MASK, CPSC2_SC_RFD_MCM1_PLL_LOCKED);
+MAKE_BITS(rfd_div, 		CPSC2_SC_RFD, MAKE_BITS_FROM_MASK, CPSC2_SC_RFD_DIV);
+
+const struct attribute *cpsc2_sc_attrs[] = {
+		&dev_attr_rfd_mcm2_stopped.attr,
+		&dev_attr_rfd_mcm2_pll_locked.attr,
+		&dev_attr_rfd_mcm1_stopped.attr,
+		&dev_attr_rfd_mcm1_pll_locked.attr,
+		&dev_attr_rfd_div.attr,
+		NULL
+};
 
 SCOUNT_KNOB(SFP1_PKT_CNT, 	CPSC2_DAC_SFP1_PKT_CNT);
 SCOUNT_KNOB(SFP1_SKIP_PKT_CNT, 	CPSC2_DAC_SFP1_SKIP_PKT_CNT);
