@@ -422,7 +422,9 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 	int sites =
 		IS_ACQ2X06SC(adev)? 6:
 		IS_ACQ1001SC(adev)? 4:	/* other counters used in special cases */
-		IS_KMCx_SC(adev)  ? 2: 0;
+		IS_KMCx_SC(adev)  ? 2:
+		IS_CPSC2_SC(adev) ? 3:
+				    0;
 
 	dev_rc_init(DEVP(adev), &adev->reg_cache,
 			adev->dev_virtaddr, adev->of_prams.site, SC_REG_MAX);
