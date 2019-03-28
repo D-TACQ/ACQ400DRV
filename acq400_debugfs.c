@@ -462,7 +462,7 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 	}
 
 	DBG_REG_CREATE(GPG_CONTROL);
-	if (!IS_CPSC2_SC(adev) || !IS_KMCx_SC(adev)){
+	if (!IS_CPSC2_SC(adev) && !IS_KMCx_SC(adev)){
 		DBG_REG_CREATE(HDMI_SYNC_DAT);
 		DBG_REG_CREATE(HDMI_SYNC_OUT_SRC);
 	}

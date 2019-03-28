@@ -114,8 +114,8 @@ static ssize_t show_bits##NAME(						\
 	struct device_attribute *a,					\
 	char *b)							\
 {									\
-	unsigned shl = getSHL(MASK);					\
-	if (shl){							\
+	if (SHL==MAKE_BITS_FROM_MASK){					\
+		unsigned shl = getSHL(MASK);				\
 		return acq400_show_bits(d, a, b, REG, shl, (MASK)>>shl);\
 	}else{								\
 		return acq400_show_bits(d, a, b, REG, SHL, MASK);	\
@@ -130,8 +130,8 @@ static ssize_t show_bits##NAME(						\
 	struct device_attribute *a,					\
 	char *b)							\
 {									\
-	unsigned shl = getSHL(MASK);					\
-	if (shl){							\
+	if (SHL==MAKE_BITS_FROM_MASK){					\
+		unsigned shl = getSHL(MASK);				\
 		return acq400_show_bitN(d, a, b, REG, shl, (MASK)>>shl);\
 	}else{								\
 		return acq400_show_bitN(d, a, b, REG, SHL, MASK);	\
@@ -147,8 +147,8 @@ static ssize_t store_bitN##NAME(					\
 	const char * b,							\
 	size_t c)							\
 {									\
-	unsigned shl = getSHL(MASK);					\
-	if (shl){							\
+	if (SHL==MAKE_BITS_FROM_MASK){					\
+		unsigned shl = getSHL(MASK);				\
 		return acq400_store_bitN(d, a, b, c, REG, shl, (MASK)>>shl, WD);\
 	}else{								\
 		return acq400_store_bitN(d, a, b, c, REG, SHL, MASK, WD);\
@@ -159,8 +159,8 @@ static ssize_t show_bitN##NAME(						\
 	struct device_attribute *a,					\
 	char *b)							\
 {									\
-	unsigned shl = getSHL(MASK);					\
-	if (shl){							\
+	if (SHL==MAKE_BITS_FROM_MASK){					\
+		unsigned shl = getSHL(MASK);				\
 		return acq400_show_bitN(d, a, b, REG, shl, (MASK)>>shl);\
 	}else{								\
 		return acq400_show_bitN(d, a, b, REG, SHL, MASK);	\
@@ -175,8 +175,8 @@ static ssize_t show_bits##NAME(						\
 	struct device_attribute *a,					\
 	char *b)							\
 {									\
-	unsigned shl = getSHL(MASK);					\
-	if (shl){							\
+	if (SHL==MAKE_BITS_FROM_MASK){					\
+		unsigned shl = getSHL(MASK);				\
 		return acq400_show_bits(d, a, b, REG, shl, (MASK)>>shl);\
 	}else{								\
 		return acq400_show_bits(d, a, b, REG, SHL, MASK);	\
@@ -188,8 +188,8 @@ static ssize_t store_bits##NAME(					\
 	const char * b,							\
 	size_t c)							\
 {									\
-	unsigned shl = getSHL(MASK);					\
-	if (shl){							\
+	if (SHL==MAKE_BITS_FROM_MASK){					\
+		unsigned shl = getSHL(MASK);					\
 		return acq400_store_bits(d, a, b, c, REG, shl, (MASK)>>shl, WD);\
 	}else{								\
 		return acq400_store_bits(d, a, b, c, REG, SHL, MASK, WD);\

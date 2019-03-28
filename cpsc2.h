@@ -23,7 +23,7 @@
 #define CPSC2_SC_RFD_MCM2_PLL_LOCKED	(1<<10)
 #define CPSC2_SC_RFD_MCM1_STOPPED	(1<<11)
 #define CPSC2_SC_RFD_MCM1_PLL_LOCKED	(1<<10)
-#define CPSC2_SC_RFD_DIV		0xff
+#define CPSC2_SC_RFD_DIV		0x000000ff
 
 /* additional DAC REGS */
 
