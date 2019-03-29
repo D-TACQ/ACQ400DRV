@@ -30,6 +30,7 @@ do
 				fi
 			fi
 		fi
+		[ $site -eq 2 ] && active_chan=16
 		let nchan="${nchan}+${active_chan}*${wpc}"
 		sitelist="${sitelist}${sep}${site}"
 		sep=","
