@@ -43,6 +43,8 @@ int pcomp;
 module_param(pcomp, int, 0644);
 MODULE_PARM_DESC(pcomp, "compensate phase (bytes)");
 
+#include "cpsc2.h"
+#define HAS_I(adev) (IS_CPSC2_DAC(adev))
 #define ACQ400_FS_MAGIC	0xd1ac0400
 
 #define XX	0
@@ -711,7 +713,7 @@ static void a400fs_create_files (struct super_block *sb, struct dentry *root)
 	for (dev = 0; dev <= MAXDEVICES; ++dev){
 		struct acq400_dev *adev = acq400_devices[dev];
 		dev_dbg(DEVP(adev0), "dev:%d adev:%p", dev, adev);
-		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev))){
+		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev) || HAS_I(adev))){
 			a400fs_add_site(adev->of_prams.site, adev, &FSN);
 		}
 	}
