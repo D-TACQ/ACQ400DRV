@@ -83,11 +83,11 @@ MAKE_BITS(aurora2_clrf, CPSC2_COM_SFP_AURORA_CR(2), MAKE_BITS_FROM_MASK, CPSC2_C
 MAKE_BITS(aurora2_pwrdn,CPSC2_COM_SFP_AURORA_CR(2), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_CR_PWRDN);
 MAKE_BITS(aurora2_lpbk, CPSC2_COM_SFP_AURORA_CR(2), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_CR_LPBK);
 
-MAKE_BITS(aurora1_rx_pkts, CPSC2_COM_SFP_AURORA_STA(1), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_STA_CNT);
+SCOUNT_KNOB_FIELD(aurora1_rx_pkts, CPSC2_COM_SFP_AURORA_STA(1), CPSC2_COM_AURORA_STA_CNT);
 MAKE_BITS(aurora1_flags,   CPSC2_COM_SFP_AURORA_STA(1), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_STA_FLG);
 MAKE_BITS(aurora1_lane_up, CPSC2_COM_SFP_AURORA_STA(1), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_STA_LANEUP);
 
-MAKE_BITS(aurora2_rx_pkts, CPSC2_COM_SFP_AURORA_STA(2), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_STA_CNT);
+SCOUNT_KNOB_FIELD(aurora2_rx_pkts, CPSC2_COM_SFP_AURORA_STA(2), CPSC2_COM_AURORA_STA_CNT);
 MAKE_BITS(aurora2_flags,   CPSC2_COM_SFP_AURORA_STA(2), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_STA_FLG);
 MAKE_BITS(aurora2_lane_up, CPSC2_COM_SFP_AURORA_STA(2), MAKE_BITS_FROM_MASK, CPSC2_COM_AURORA_STA_LANEUP);
 
@@ -124,11 +124,11 @@ const struct attribute *cpsc2_com_attrs[] = {
 	&dev_attr_aurora2_pwrdn.attr,
 	&dev_attr_aurora2_lpbk.attr,
 
-	&dev_attr_aurora1_rx_pkts.attr,
+	&dev_attr_scount_aurora1_rx_pkts.attr,
 	&dev_attr_aurora1_flags.attr,
 	&dev_attr_aurora1_lane_up.attr,
 
-	&dev_attr_aurora2_rx_pkts.attr,
+	&dev_attr_scount_aurora2_rx_pkts.attr,
 	&dev_attr_aurora2_flags.attr,
 	&dev_attr_aurora2_lane_up.attr,
 
