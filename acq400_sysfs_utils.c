@@ -178,4 +178,43 @@ ssize_t acq400_store_bits(
 	}
 }
 
+ssize_t acq400_show_dnum(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	unsigned REG,
+	unsigned SHL,
+	unsigned MASK)
+{
+	u32 regval = acq400rd32(acq400_devices[dev->id], REG);
+	u32 field = (regval>>SHL)&MASK;
+	u32 sbit = (MASK+1) >> 1;
+	if ((sbit&field) != 0){
+		while(sbit <<= 1){
+			field |= sbit;
+		}
+	}
+
+	return sprintf(buf, "%d\n", (int)field);
+}
+ssize_t acq400_store_dnum(
+		struct device * dev,
+		struct device_attribute *attr,
+		const char * buf,
+		size_t count,
+		unsigned REG,
+		unsigned SHL,
+		unsigned MASK)
+{
+	int field;
+	if (sscanf(buf, "%d", &field) == 1){
+		u32 regval = acq400rd32(acq400_devices[dev->id], REG);
+		regval &= ~(MASK << SHL);
+		regval |= (field&MASK) << SHL;
+		acq400wr32(acq400_devices[dev->id], REG, regval);
+		return count;
+	}else{
+		return -1;
+	}
+}
 
