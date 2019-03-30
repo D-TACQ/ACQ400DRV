@@ -947,14 +947,14 @@ const struct attribute* dacspi_attrs[] = {
 	NULL
 };
 
-MAKE_BITS(offset_01, AO428_OFFSET_1, 0, 0x000fffff);
-MAKE_BITS(offset_02, AO428_OFFSET_2, 0, 0x000fffff);
-MAKE_BITS(offset_03, AO428_OFFSET_3, 0, 0x000fffff);
-MAKE_BITS(offset_04, AO428_OFFSET_4, 0, 0x000fffff);
-MAKE_BITS(offset_05, AO428_OFFSET_5, 0, 0x000fffff);
-MAKE_BITS(offset_06, AO428_OFFSET_6, 0, 0x000fffff);
-MAKE_BITS(offset_07, AO428_OFFSET_7, 0, 0x000fffff);
-MAKE_BITS(offset_08, AO428_OFFSET_8, 0, 0x000fffff);
+MAKE_DNUM(offset_01, AO428_OFFSET_1, 0x000fffff);
+MAKE_DNUM(offset_02, AO428_OFFSET_2, 0x000fffff);
+MAKE_DNUM(offset_03, AO428_OFFSET_3, 0x000fffff);
+MAKE_DNUM(offset_04, AO428_OFFSET_4, 0x000fffff);
+MAKE_DNUM(offset_05, AO428_OFFSET_5, 0x000fffff);
+MAKE_DNUM(offset_06, AO428_OFFSET_6, 0x000fffff);
+MAKE_DNUM(offset_07, AO428_OFFSET_7, 0x000fffff);
+MAKE_DNUM(offset_08, AO428_OFFSET_8, 0x000fffff);
 
 MAKE_BITS(dac_mux, DAC_MUX, 0,0x00000fff);
 
