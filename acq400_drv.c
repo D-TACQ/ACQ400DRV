@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.010"
+#define REVID "CPSC2 4.011"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
