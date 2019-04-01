@@ -179,6 +179,7 @@ int MapBuffer::copyBuffer(void* dest) {
 
 
 int Buffer::verbose;
+int Buffer::checkiten = 1;
 unsigned Buffer::bufferlen;
 unsigned Buffer::nbuffers;
 unsigned Buffer::sample_size = 1;
@@ -198,6 +199,8 @@ public:
 	BufferInitializer() {
 		const char* vs = getenv("BufferVerbose");
 		vs && (Buffer::verbose = atoi(vs));
+		const char* checkit = getenv("BufferCheckit");
+		checkit && (Buffer::checkiten = atoi(checkit));
 	}
 };
 

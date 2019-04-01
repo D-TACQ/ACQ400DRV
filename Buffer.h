@@ -40,6 +40,7 @@ protected:
 public:
 	static unsigned last_buf;
 	static int verbose;
+	static int checkiten;
 	static unsigned bufferlen;
 	static unsigned nbuffers;
 	static unsigned sample_size;
