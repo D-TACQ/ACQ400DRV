@@ -156,8 +156,13 @@ void set_playloop_length(int nsamples)
 {
 	char cmd[128];
 	if (G::play_bufferlen){
+		unsigned ll = G::load_bufferlen;
+		unsigned pl = G::play_bufferlen;
+		while ((pl&0x1) == 0){
+			ll >>= 1; pl >>= 1;
+		}
+		nsamples = nsamples * pl / ll;
 		setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::play_bufferlen);
-		nsamples = nsamples * G::load_bufferlen / G::play_bufferlen;
 	}
 	sprintf(cmd, "set.site %d playloop_length %d %d",
 			G::play_site, G_nsamples = nsamples, G::mode);
