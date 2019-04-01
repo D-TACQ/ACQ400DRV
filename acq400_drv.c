@@ -1714,8 +1714,8 @@ int xo_data_loop(void *data)
 	lvar = dma_async_memcpy_callback(adev->dma_chan[chan], 		\
 			FIFO_PA(adev0), hbm->pa, hbm->len, 	\
 			_flags, acq400_dma_callback, adev);		\
-	dev_dbg(DEVP(adev), "DMA_ASYNC_PUSH #%d [%d] ix:%d pa:0x%08x %s",\
-		__LINE__, chan, hbm->ix, hbm->pa, flags2str(_flags)); 	\
+	dev_dbg(DEVP(adev), "DMA_ASYNC_PUSH #%d [%d] ix:%d pa:0x%08x len:0x%08x %s",\
+		__LINE__, chan, hbm->ix, hbm->pa, hbm->len, flags2str(_flags)); \
 	} while(0)
 
 #define DMA_ASYNC_ISSUE_PENDING(chan) _dma_async_issue_pending(adev, chan, __LINE__)

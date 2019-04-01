@@ -88,6 +88,8 @@ namespace G {
 	int max_samples;
 	int TO = 1;					// Timeout, seconds
 	int load_threshold = 2;
+	unsigned load_bufferlen;			// Set bufferlen for load
+	unsigned play_bufferlen;			// Change bufferlen on play
 };
 
 #include "Buffer.h"
@@ -153,6 +155,10 @@ int G_nsamples;
 void set_playloop_length(int nsamples)
 {
 	char cmd[128];
+	if (G::play_bufferlen){
+		setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::play_bufferlen);
+		nsamples = nsamples * G::load_bufferlen / G::play_bufferlen;
+	}
 	sprintf(cmd, "set.site %d playloop_length %d %d",
 			G::play_site, G_nsamples = nsamples, G::mode);
 	system(cmd);
@@ -369,6 +375,10 @@ int load() {
 	openlog("bb", LOG_PID, LOG_USER);
 	set_playloop_length(0);
 
+	if (G::load_bufferlen){
+		setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::load_bufferlen);
+	}
+
 	if (G::concurrent){
 		_load_concurrent();
 	}else{
@@ -426,6 +436,8 @@ RUN_MODE ui(int argc, const char** argv)
 	if (G::buffer0 != 0){
 		Buffer::bufferlen = getSpecificBufferlen(G::buffer0);
 	}
+	getKnob(-1, "/etc/acq400/0/dist_bufferlen_play", &G::play_bufferlen);
+	getKnob(-1, "/etc/acq400/0/dist_bufferlen_load", &G::load_bufferlen);
 
 	Buffer::nbuffers -= G::buffer0;
 
