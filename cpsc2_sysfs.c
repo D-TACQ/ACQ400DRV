@@ -37,14 +37,22 @@ SCOUNT_KNOB(SFP1_SKIP_PKT_CNT, 	CPSC2_DAC_SFP1_SKIP_PKT_CNT);
 SCOUNT_KNOB(SFP2_PKT_CNT, 	CPSC2_DAC_SFP2_PKT_CNT);
 SCOUNT_KNOB(SFP2_SKIP_PKT_CNT, 	CPSC2_DAC_SFP2_SKIP_PKT_CNT);
 
-MAKE_BITS(sfp_mode, DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DAC_CTRL_SFP_MODE);
+MAKE_BITS(sfp_mode,       DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DAC_CTRL_SFP_MODE);
 MAKE_BITS(dac_b_wf_n_sfp, DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DACB_WFnSFP);
 MAKE_BITS(dac_a_wf_n_sfp, DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DACA_WFnSFP);
-MAKE_BITS(pkt_tx_err, CPSC2_DAC_PKT_TX, MAKE_BITS_FROM_MASK, CPSC2_DAC_PKT_TX_ERR);
-MAKE_BITS(pkt_tx_en, CPSC2_DAC_PKT_TX, MAKE_BITS_FROM_MASK, CPSC2_DAC_PKT_TX_EN);
-MAKE_BITS(pkt_seq, CPSC2_DAC_PKT_SEQ, MAKE_BITS_FROM_MASK, ~0);
-MAKE_BITS(proc_sta, CPSC2_DAC_PROC_STA, MAKE_BITS_FROM_MASK, ~0);
-MAKE_BITS(math_sta, CPSC2_DAC_MATH_STA, MAKE_BITS_FROM_MASK, ~0);
+MAKE_BITS(pkt_tx_err,     CPSC2_DAC_PKT_TX, MAKE_BITS_FROM_MASK, CPSC2_DAC_PKT_TX_ERR);
+MAKE_BITS(pkt_tx_en,      CPSC2_DAC_PKT_TX, MAKE_BITS_FROM_MASK, CPSC2_DAC_PKT_TX_EN);
+MAKE_BITS(pkt_seq,        CPSC2_DAC_PKT_SEQ, MAKE_BITS_FROM_MASK, ~0);
+
+MAKE_BITS(proc_a_ie,  CPSC2_DAC_PROC_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_A_IE);
+MAKE_BITS(proc_a_sta, CPSC2_DAC_PROC_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_A_STA);
+MAKE_BITS(proc_b_ie,  CPSC2_DAC_PROC_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_B_IE);
+MAKE_BITS(proc_b_sta, CPSC2_DAC_PROC_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_B_STA);
+
+MAKE_BITS(math_a_ie,  CPSC2_DAC_MATH_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_A_IE);
+MAKE_BITS(math_a_sta, CPSC2_DAC_MATH_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_A_STA);
+MAKE_BITS(math_b_ie,  CPSC2_DAC_MATH_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_B_IE);
+MAKE_BITS(math_b_sta, CPSC2_DAC_MATH_ICRSTA, MAKE_BITS_FROM_MASK, CPSC2_DAC_MATH_B_STA);
 
 const struct attribute *cpsc2_dac_attrs[] = {
 	&dev_attr_scount_SFP1_PKT_CNT.attr,
@@ -59,8 +67,16 @@ const struct attribute *cpsc2_dac_attrs[] = {
 	&dev_attr_pkt_tx_err.attr,
 	&dev_attr_pkt_tx_en.attr,
 	&dev_attr_pkt_seq.attr,
-	&dev_attr_proc_sta.attr,
-	&dev_attr_math_sta.attr,
+
+	&dev_attr_proc_a_sta.attr,
+	&dev_attr_proc_b_sta.attr,
+	&dev_attr_proc_a_ie.attr,
+	&dev_attr_proc_b_ie.attr,
+
+	&dev_attr_math_a_sta.attr,
+	&dev_attr_math_b_sta.attr,
+	&dev_attr_math_a_ie.attr,
+	&dev_attr_math_b_ie.attr,
 	NULL
 };
 
