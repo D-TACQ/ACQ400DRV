@@ -17,7 +17,7 @@
 #define IS_CSPC2_COMMS(adev)		(GET_MOD_ID(adev) == MOD_ID_CPSC2_COMMS)
 #define IS_CPSC2_DAC(adev)		(GET_MOD_ID(adev) == MOD_ID_CPSC2_DAC)
 
-#define CPSC2_SC_RFD			(ADC_BASE+0x54)
+#define CPSC2_SC_RFD			(ADC_BASE+0x70)
 
 #define CPSC2_SC_RFD_MCM2_STOPPED	(1<<11)
 #define CPSC2_SC_RFD_MCM2_PLL_LOCKED	(1<<10)
