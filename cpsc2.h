@@ -33,8 +33,8 @@
 #define CPSC2_DAC_SFP2_SKIP_PKT_CNT	(ADC_BASE+0x6C)
 #define CPSC2_DAC_PKT_TX		(ADC_BASE+0x70)
 #define CPSC2_DAC_PKT_SEQ		(ADC_BASE+0x74)
-#define CPSC2_DAC_PROC_ICRSTA		(ADC_BASE+0x78)
-#define CPSC2_DAC_MATH_ICRSTA		(ADC_BASE+0x7C)
+#define CPSC2_DAC_PROC_ICST		(ADC_BASE+0x78)
+#define CPSC2_DAC_MATH_ICST		(ADC_BASE+0x7C)
 #define CPSC2_DAC_SLOW_SET_CH(n)	(ADC_BASE+0x80+4*((n)-1))
 
 /* DAC bitfields */
@@ -48,9 +48,9 @@
 #define CPSC2_DAC_PKT_TX_EN		(1<<0)
 
 #define CPSC2_DAC_MATH_A_IE		(0xff<<0)
-#define CPSC2_DAC_MATH_A_STA		(0xff<<8)
+#define CPSC2_DAC_MATH_A_ST		(0xff<<8)
 #define CPSC2_DAC_MATH_B_IE		(0xff<<16)
-#define CPSC2_DAC_MATH_B_STA		(0xff<<16)
+#define CPSC2_DAC_MATH_B_ST		(0xff<<16)
 
 /* COM REGS */
 
