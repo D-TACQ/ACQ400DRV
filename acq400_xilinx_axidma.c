@@ -158,7 +158,7 @@ int pa2buffer_index(struct acq400_dev *adev, unsigned pa)
 		}
 	}
 
-	return ~1;
+	return ~0;
 }
 
 static int acq400axi_proc_seq_show_descr(struct seq_file *s, void *v)
