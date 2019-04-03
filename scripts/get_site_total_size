@@ -14,6 +14,9 @@ sep=""
 
 for site in $sites
 do
+	if [ $site -eq 2 ]; then
+		site=3
+	fi 
 	s_root=/etc/acq400/$site
 	wpc=1
 
@@ -29,8 +32,7 @@ do
 					wpc=2
 				fi
 			fi
-		fi
-		[ $site -eq 2 ] && active_chan=16
+		fi		
 		let nchan="${nchan}+${active_chan}*${wpc}"
 		sitelist="${sitelist}${sep}${site}"
 		sep=","

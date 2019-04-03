@@ -44,7 +44,7 @@ module_param(pcomp, int, 0644);
 MODULE_PARM_DESC(pcomp, "compensate phase (bytes)");
 
 #include "cpsc2.h"
-#define HAS_I(adev) (IS_CPSC2_DAC(adev))
+#define HAS_I(adev) (IS_CSPC2_COMMS(adev))
 #define ACQ400_FS_MAGIC	0xd1ac0400
 
 #define XX	0

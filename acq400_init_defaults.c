@@ -528,6 +528,12 @@ static void acq43X_init_defaults(struct acq400_dev *adev)
 	}
 }
 
+void cpsc2_comms_init_defaults(struct acq400_dev* adev) {
+	dev_info(DEVP(adev), "%s device init fake 32CH as RX monitor", "cpsc2_com");
+	adev->nchan_enabled = 16;
+	adev->data32 = 1;
+	adev->word_size = 4;
+}
 int _ao420_getFifoSamples(struct acq400_dev* adev) {
 	return acq400rd32(adev, DAC_FIFO_SAMPLES)&DAC_FIFO_SAMPLES_MASK;
 }
@@ -944,6 +950,8 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 		case MOD_ID_CPSC2_DAC:
 			ao428_init_defaults(adev);
 			break;
+		case MOD_ID_CPSC2_COMMS:
+			cpsc2_comms_init_defaults(adev);
 		default:
 			dev_warn(DEVP(adev), "no custom init for module type %x",
 						(adev)->mod_id>>MOD_ID_TYPE_SHL);
