@@ -952,6 +952,7 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 			break;
 		case MOD_ID_CPSC2_COMMS:
 			cpsc2_comms_init_defaults(adev);
+			break;
 		default:
 			dev_warn(DEVP(adev), "no custom init for module type %x",
 						(adev)->mod_id>>MOD_ID_TYPE_SHL);
