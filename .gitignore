@@ -1,6 +1,7 @@
 .cproject
 .project
 *.o
+*.d
 *.ko
 *.cmd
 *.mod.c

@@ -713,8 +713,15 @@ static void a400fs_create_files (struct super_block *sb, struct dentry *root)
 	for (dev = 0; dev <= MAXDEVICES; ++dev){
 		struct acq400_dev *adev = acq400_devices[dev];
 		dev_dbg(DEVP(adev0), "dev:%d adev:%p", dev, adev);
-		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev) || HAS_I(adev))){
+		if (!adev){
+			continue;
+		}else if (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev) || HAS_I(adev)){
 			a400fs_add_site(adev->of_prams.site, adev, &FSN);
+		}else{
+			int nc = adev->nchan_enabled;
+			adev->nchan_enabled = 0;
+			a400fs_add_site(adev->of_prams.site, adev, &FSN);
+			adev->nchan_enabled = nc;
 		}
 	}
 }
