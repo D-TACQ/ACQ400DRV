@@ -54,6 +54,8 @@ void acq400wr32(struct acq400_dev *adev, int offset, u32 value)
 	iowrite32(value, adev->dev_virtaddr + offset);
 }
 
+
+
 u32 acq400rd32(struct acq400_dev *adev, int offset)
 {
 	u32 rc = ioread32(adev->dev_virtaddr + offset);
@@ -67,6 +69,16 @@ u32 acq400rd32(struct acq400_dev *adev, int offset)
 	return rc;
 }
 
+void acq400setbits(struct acq400_dev *adev, int offset, u32 bits)
+{
+	u32 rv = acq400rd32(adev, offset);
+	acq400wr32(adev, offset, rv | bits);
+}
+void acq400clrbits(struct acq400_dev *adev, int offset, u32 bits)
+{
+	u32 rv = acq400rd32(adev, offset);
+	acq400wr32(adev, offset, rv & ~bits);
+}
 
 void write32(volatile u32* to, volatile u32* from, int nwords)
 {

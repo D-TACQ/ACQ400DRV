@@ -220,6 +220,17 @@ static void _ao420_onStop(struct acq400_dev *adev)
 	_ao420_stop(adev);
 }
 
+static void _cpsc2_dac_onStop(struct acq400_dev *adev)
+{
+	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+	dev_info(DEVP(adev), "TODO: drain off any PRI AWG BEFORE shutdown");
+	xo_dev->AO_playloop.oneshot = 1;
+	msleep(100);
+	acq400setbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+	msleep(100);
+	acq400clrbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+	_ao420_stop(adev);
+}
 
 extern int xo_use_distributor;
 
@@ -557,7 +568,7 @@ static void ao428_init_defaults(struct acq400_dev *adev)
 
 	adev->sysclkhz = SYSCLK_M66;
 	adev->onStart = _ao420_onStart;
-	adev->onStop = _ao420_onStop;
+	adev->onStop = IS_CPSC2_DAC(adev)? _cpsc2_dac_onStop: _ao420_onStop;
 	xo_dev->xo.physchan = ao428_physChan;
 	xo_dev->xo.getFifoSamples = _ao420_getFifoSamples;
 	xo_dev->xo.fsr = DAC_FIFO_STA;
