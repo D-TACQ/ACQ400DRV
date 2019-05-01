@@ -222,13 +222,16 @@ static void _ao420_onStop(struct acq400_dev *adev)
 
 static void _cpsc2_dac_onStop(struct acq400_dev *adev)
 {
-	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
-	dev_info(DEVP(adev), "TODO: drain off any PRI AWG BEFORE shutdown");
-	xo_dev->AO_playloop.oneshot = 1;
-	msleep(100);
-	acq400setbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
-	msleep(100);
-	acq400clrbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+	if (adev->task_active){
+		struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+		dev_dbg(DEVP(adev), "drain off any PRI AWG BEFORE shutdown");
+		xo_dev->AO_playloop.oneshot = 1;
+		msleep(100);
+		acq400setbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+		msleep(100);
+		acq400clrbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+	}
+
 	_ao420_stop(adev);
 }
 
