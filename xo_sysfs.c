@@ -734,7 +734,7 @@ static ssize_t store_dacspi(
 	}
 }
 
-static DEVICE_ATTR(dacspi, S_IWUSR, show_dacspi, store_dacspi);
+static DEVICE_ATTR(dacspi, S_IWUSR|S_IRUGO, show_dacspi, store_dacspi);
 
 static ssize_t show_delay66(
 	struct device * dev,
