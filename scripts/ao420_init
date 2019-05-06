@@ -5,23 +5,24 @@ KNOBS=/dev/acq400.${SITE}.knobs
 MODEL=$(cat $KNOBS/module_name)
 
 
+vset_sys() {
+	echo set.sys $1 $2
+	set.sys $1 $2
+	echo get.sys $1 $(get.sys $1)
+}
+
 echo "dac_range_ALL=dac_range_??" >/etc/acq400/${SITE}/groups	
 echo +++ initializing DACs for $MODEL
-echo "file acq400_drv.c +p"   >/sys/kernel/debug/dynamic_debug/control
-echo "file acq400_sysfs.c +p" >/sys/kernel/debug/dynamic_debug/control
-set.sys ${KNOBS}/dacreset 1
-set.sys ${KNOBS}/dacreset 0
-set.sys ${KNOBS}/dacspi 0x300000
-set.sys ${KNOBS}/dacspi 0x400002
+vset_sys ${KNOBS}/dacreset 1
+vset_sys ${KNOBS}/dacreset 0
+vset_sys ${KNOBS}/dacspi 0x400002
 case $MODEL in
 ao428elf|cpsc2dac)
-	set.sys ${KNOBS}/dacspi 0x200002;;
+	echo ++++ special
+	vset_sys ${KNOBS}/dacspi 0x200002;;
 *)
-	set.sys ${KNOBS}/dacspi 0x200000;;
+	vset_sys ${KNOBS}/dacspi 0x200000;;
 esac
-
-echo "file acq400_drv.c -p"   >/sys/kernel/debug/dynamic_debug/control
-echo "file acq400_sysfs.c -p" >/sys/kernel/debug/dynamic_debug/control
 
 ln -s /usr/local/bin/wavegen /etc/acq400/$SITE
 
