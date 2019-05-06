@@ -425,6 +425,13 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 		IS_KMCx_SC(adev)  ? 2:
 		IS_CPSC2_SC(adev) ? 3:
 				    0;
+	int clk_sites = sites;
+	int trg_sites = sites;
+
+	if (IS_CPSC2_SC(adev)) {
+		clk_sites = 5;
+		trg_sites = 5;
+	}
 
 	dev_rc_init(DEVP(adev), &adev->reg_cache,
 			adev->dev_virtaddr, adev->of_prams.site, SC_REG_MAX);
@@ -485,7 +492,7 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 	DBG_REG_CREATE_NAME("CLK_EXT", ACQ2006_CLK_COUNT(EXT_DX));
 	DBG_REG_CREATE_NAME("CLK_MB",  ACQ2006_CLK_COUNT(MB_DX));
 
-	for (site = 1; site <= sites + IS_ACQ1001SC(adev); ++site){
+	for (site = 1; site <= clk_sites + IS_ACQ1001SC(adev); ++site){
 		char name[20];
 		sprintf(name, "CLK_%d", site);
 		DBG_REG_CREATE_NAME(name, ACQ2006_CLK_COUNT(SITE2DX(site)));
@@ -493,7 +500,7 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 
 	DBG_REG_CREATE_NAME("TRG_EXT", ACQ2006_TRG_COUNT(EXT_DX));
 	DBG_REG_CREATE_NAME("TRG_MB",  ACQ2006_TRG_COUNT(MB_DX));
-	for (site = 1; site <= sites; ++site){
+	for (site = 1; site <= trg_sites; ++site){
 		char name[20];
 		sprintf(name, "TRG_%d", site);
 		DBG_REG_CREATE_NAME(name, ACQ2006_TRG_COUNT(SITE2DX(site)));

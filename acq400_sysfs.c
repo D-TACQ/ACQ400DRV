@@ -1660,7 +1660,7 @@ static const char* _lookup_id(struct acq400_dev *adev)
 		{ MOD_ID_DIO432FMC, 	"dio432"	},
 		{ MOD_ID_DIO432PMOD,	"dio432"	},
 		{ MOD_ID_DIO482FMC,  	"dio432"	},	/* logically same */
-		{ MOD_ID_CPSC2,         "cpsc2sc"	},
+		{ MOD_ID_CPSC2,         "sc"	},
 		{ MOD_ID_CPSC2_COMMS,   "cpsc2com"	},
 		{ MOD_ID_CPSC2_DAC,     "cpsc2dac"	},
 	};
@@ -3095,7 +3095,7 @@ void acq400_createSysfs(struct device *dev)
 		}else if (IS_KMCx_SC(adev)){
 			specials[nspec++] = kmcx_sc_attrs;
 		}else if (IS_CPSC2_SC(adev)){
-			specials[nspec++] = acq1001sc_attrs;
+			specials[nspec++] = acq2006sc_attrs;
 			specials[nspec++] = cpsc2_sc_attrs;
 		}
 	}else{
