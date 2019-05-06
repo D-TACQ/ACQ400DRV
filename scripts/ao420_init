@@ -15,12 +15,15 @@ echo "dac_range_ALL=dac_range_??" >/etc/acq400/${SITE}/groups
 echo +++ initializing DACs for $MODEL
 vset_sys ${KNOBS}/dacreset 1
 vset_sys ${KNOBS}/dacreset 0
-vset_sys ${KNOBS}/dacspi 0x400002
+
 case $MODEL in
 ao428elf|cpsc2dac)
 	echo ++++ special
-	vset_sys ${KNOBS}/dacspi 0x200002;;
+	vset_sys ${KNOBS}/dacspi 0x300000	# Clear Code
+	vset_sys ${KNOBS}/dacspi 0x400002	# Soft Reset
+	vset_sys ${KNOBS}/dacspi 0x200002;; # +/- Ref Mult.
 *)
+	vset_sys ${KNOBS}/dacspi 0x400002
 	vset_sys ${KNOBS}/dacspi 0x200000;;
 esac
 
