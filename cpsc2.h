@@ -50,7 +50,7 @@
 #define CPSC2_DAC_MATH_A_IE		(0xff<<0)
 #define CPSC2_DAC_MATH_A_ST		(0xff<<8)
 #define CPSC2_DAC_MATH_B_IE		(0xff<<16)
-#define CPSC2_DAC_MATH_B_ST		(0xff<<16)
+#define CPSC2_DAC_MATH_B_ST		(0xff<<24)
 
 /* COM REGS */
 
