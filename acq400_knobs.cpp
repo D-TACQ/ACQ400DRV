@@ -38,6 +38,8 @@ What does acq400_knobs do?.
 - .ranges file?.
 */
 
+/* fixes error stat: Value too large for defined data type */
+#define _FILE_OFFSET_BITS 64
 
 #include <dirent.h>
 #include <errno.h>
@@ -63,7 +65,7 @@ const char* pattern = "";
 
 using namespace std;
 
-#define VERID "acq400_knobs B1001"
+#define VERID "acq400_knobs B1006"
 
 bool err;
 char* host = 0;		/* server allows connect from host (any) */
@@ -477,24 +479,44 @@ PeerFinder* PeerFinder::create(string def_file)
 Knob* Knob::create(const string _name, mode_t mode)
 {
 	const char* name = _name.c_str();
+	Knob* knob;
+	int verbosek = 0;
+	if (strncmp(name, "streamtonowhered", 10) == 0){
+		VPRINTF("we have it\n");
+		verbosek = 1;
+	}
 	if (HASX(mode)){
-		return new KnobX(name);
+		knob = new KnobX(name);
 	}else if (HASW(mode)){
+		static int limit_check = -2;
+
 		Knob* knob = new KnobRW(name);
-		char cmd[128];
-		char reply[128];
-		sprintf(cmd, "grep %s /usr/share/doc/numerics", name);
-		Pipe pn(cmd, "r");
-		if (fgets(reply, 128, pn.fp)){
-			Validator* v = NumericValidator::create(reply);
-			if (v){
-				knob->validator = v;
+
+		if (limit_check == -2){
+			limit_check = access("/usr/share/doc/numerics", F_OK);
+		}
+		if (limit_check == 0){
+			char cmd[128];
+			char reply[128];
+			sprintf(cmd, "grep %s /usr/share/doc/numerics", name);
+			Pipe pn(cmd, "r");
+			if (fgets(reply, 128, pn.fp)){
+				Validator* v = NumericValidator::create(reply);
+				if (v){
+					knob->validator = v;
+				}
 			}
 		}
 		return knob;
 	}else{
-		return new KnobRO(name);
+		knob = new KnobRO(name);
 	}
+	if (verbosek){
+		knob->print();
+		VPRINTF("::create done\n");
+	}
+	return knob;
+
 }
 
 
@@ -731,6 +753,7 @@ int do_scan()
 		perror("scandir");
 		exit(1);
 	}
+	VPRINTF("scandir returned %d\n", nn);
 
 	for (int ii = 0; ii < nn; ++ii){
 		if (strcmp(namelist[ii]->d_name, "peers") == 0){
@@ -742,11 +765,11 @@ int do_scan()
 		char* alias = namelist[ii]->d_name;
 		struct stat sb;
 		if (stat(alias, &sb) == -1){
+			VPRINTF("ERROR: rejecting %s\n", alias);
 			perror("stat");
 		}else{
 			if (!S_ISREG(sb.st_mode)){
-				;
-				//fprintf(stderr, "not a regular file:%s", alias);
+				VPRINTF("not a regular file:%s", alias);
 			}else{
 				Knob* knob = Knob::create(alias, sb.st_mode);
 				if (PeerFinder::instance()->hasPeers(alias)){
