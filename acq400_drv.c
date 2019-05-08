@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.017"
+#define REVID "CPSC2 4.020"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1781,7 +1781,7 @@ int xo_data_loop(void *data)
 					xo_dev->AO_playloop.cursor, ic, dma_timeout);
 			goto quit;
 		}
-		dev_dbg(DEVP(adev), "back from dma_sync_wait() ..");
+		dev_dbg(DEVP(adev), "44 back from dma_sync_wait() oneshot:%d", xo_dev->AO_playloop.oneshot);
 
 		xo_dev->AO_playloop.cursor += ao_samples_per_hb;
 
@@ -1815,11 +1815,13 @@ int xo_data_loop(void *data)
 			DMA_ASYNC_ISSUE_PENDING(adev->dma_chan[ic]);
 		}
 		yield();
+		dev_dbg(DEVP(adev), "66 oneshot:%d", xo_dev->AO_playloop.oneshot);
 	}
 
 quit:
-	dev_dbg(DEVP(adev), "xo_data_loop() quit out:%d in:%d",
-			adev->stats.xo.dma_buffers_out, adev->stats.xo.dma_buffers_in);
+	dev_dbg(DEVP(adev), "xo_data_loop() quit out:%d in:%d oneshot:%d",
+			adev->stats.xo.dma_buffers_out, adev->stats.xo.dma_buffers_in,
+			xo_dev->AO_playloop.oneshot);
 
 	if (adev->stats.xo.dma_buffers_in < adev->stats.xo.dma_buffers_out){
 		if (wait_event_interruptible_timeout(
@@ -1837,13 +1839,16 @@ quit:
 
 	{
 		struct acq400_sc_dev* sc_dev = container_of(adev0, struct acq400_sc_dev, adev);
-		acq400_visit_set(sc_dev->distributor_set, adev->onStop);
+		acq400_visit_set(sc_dev->distributor_set, ao_stop);
 	}
 
 
 	adev->stats.completed_shot = adev->stats.shot;
 	adev->stats.run = 0;
 	adev->task_active = 0;
+
+	dev_dbg(DEVP(adev), "88 oneshot:%d", xo_dev->AO_playloop.oneshot);
+
 	if (xo_dev->AO_playloop.oneshot == AO_oneshot_rearm &&
 	    (xo_dev->AO_playloop.maxshot==0 || adev->stats.shot < xo_dev->AO_playloop.maxshot)){
 		dev_dbg(DEVP(adev), "xo_data_loop() spawn auto_rearm");

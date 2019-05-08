@@ -227,6 +227,7 @@ struct acq400_dev {
 	struct RegCache reg_cache;
 };
 
+
 #define SC_REG_MAX	0x200
 #define MOD_REG_MAX	0x100
 int dev_rc_register(struct device* dev, struct RegCache* reg_cache, int reg_bytes);
@@ -667,4 +668,5 @@ extern int acq400_get_AXI_DMA_len(struct acq400_dev *adev);
 int xo400_reset_playloop(struct acq400_dev* adev, unsigned playloop_length);
 
 void acq400_enable_adc(struct acq400_dev* adev);
+extern void ao_stop(struct acq400_dev *adev);
 #endif /* ACQ400_STRUCTS_H_ */

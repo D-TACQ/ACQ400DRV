@@ -220,6 +220,10 @@ static void _ao420_onStop(struct acq400_dev *adev)
 	_ao420_stop(adev);
 }
 
+void ao_stop(struct acq400_dev *adev)
+{
+	_ao420_stop(adev);
+}
 static void _cpsc2_dac_onStop(struct acq400_dev *adev)
 {
 	if (adev->task_active){
