@@ -1609,7 +1609,7 @@ int waitXoFifoEmpty(struct acq400_dev *adev)
 			return -1;
 		}else{
 			s0 = s1;
-			msleep(20);
+			msleep(5);
 		}
 	}
 	dev_dbg(DEVP(adev), "waitXoFifoEmpty() 99 FIFO_STA %08x DAC_FIFO_SAMPLES 0x%08x DAC_SAMPLE_CTR 0x%08x",
