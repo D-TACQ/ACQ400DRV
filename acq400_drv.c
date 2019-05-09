@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.020"
+#define REVID "CPSC2 4.022"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1590,16 +1590,30 @@ int waitXoFifoEmpty(struct acq400_dev *adev)
 	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
 	int pollcat = 0;
 	int s1, s0 = 0;
-	while ((s1 = xo_dev->xo.getFifoSamples(adev)) > 0){
-		msleep(20);
-		if (s1 == s0 || ++pollcat > XO_MAX_POLL){
-			dev_err(DEVP(adev), "TIMEOUT waiting for XO FIFO EMPTY");
-			return -1;
+	unsigned fifsta;
+	int eq_count = 0;
+
+	while ((s1 = xo_dev->xo.getFifoSamples(adev)) > 0 &&
+			((fifsta = acq400rd32(adev, DAC_FIFO_STA)) & ADC_FIFO_STA_EMPTY) == 0){
+
+		if (s1 == s0){
+			eq_count++;
+		}else{
+			eq_count = 0;
 		}
-		s0 = s1;
+
+		if (eq_count > 1 || ++pollcat > XO_MAX_POLL){
+			dev_err(DEVP(adev), "TIMEOUT waiting for XO FIFO EMPTY "
+				"pc:%d s0:%d s1:%d FIFO STA:%08x DAC_FIFO_SAMPLES:%08x",
+				pollcat, s0, s1, fifsta, acq400rd32(adev, DAC_FIFO_SAMPLES));
+			return -1;
+		}else{
+			s0 = s1;
+			msleep(20);
+		}
 	}
-	dev_dbg(DEVP(adev), "waitXoFifoEmpty() DAC_SAMPLE_CTR 0x%08x",
-					acq400rd32(adev, DAC_SAMPLE_CTR));
+	dev_dbg(DEVP(adev), "waitXoFifoEmpty() 99 FIFO_STA %08x DAC_FIFO_SAMPLES 0x%08x DAC_SAMPLE_CTR 0x%08x",
+			fifsta, acq400rd32(adev, DAC_FIFO_SAMPLES), acq400rd32(adev, DAC_SAMPLE_CTR));
 	return 0;
 }
 
