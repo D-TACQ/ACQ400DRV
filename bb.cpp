@@ -90,6 +90,7 @@ namespace G {
 	int load_threshold = 2;
 	unsigned load_bufferlen;			// Set bufferlen for load
 	unsigned play_bufferlen;			// Change bufferlen on play
+	unsigned load_playbufferlen;			// load modulo play_bufferlen if set
 };
 
 #include "Buffer.h"
@@ -358,17 +359,38 @@ int _fread(void* buffer, size_t size, size_t nelems, FILE *fp)
 	syslog(LOG_DEBUG, "_fread returns %d\n", nelems);
 	return nelems;
 }
+
+int _load_playbufferlen()
+{
+	int ib;
+	unsigned max_samples = G::play_bufferlen/G::sample_size;
+	int totsam = 0;
+	int nsam;
+
+	for (ib = 0;
+	     (nsam = _fread(Buffer::the_buffers[ib]->getBase(),
+			     G::sample_size, max_samples, G::fp_in));
+	     ++ib, totsam += nsam){
+		;
+	}
+	return ib * G::load_bufferlen/G::sample_size;
+}
+
 int _load() {
-	unsigned nsamples = _fread(Buffer::the_buffers[0]->getBase(),
+	if (G::load_playbufferlen){
+		return _load_playbufferlen();
+	}else{
+		unsigned nsamples = _fread(Buffer::the_buffers[0]->getBase(),
 			G::sample_size, G::max_samples, G::fp_in);
 
-	syslog(LOG_DEBUG, "bb fread returned %d feof:%d ferror:%d errno:%d",
+		syslog(LOG_DEBUG, "bb fread returned %d feof:%d ferror:%d errno:%d",
 			nsamples, feof(G::fp_in), ferror(G::fp_in), ferror(G::fp_in)? errno: 0);
-	if (ferror(G::fp_in)){
-		syslog(LOG_DEBUG, "bb fread ERROR exit");
-		exit(1);
+		if (ferror(G::fp_in)){
+			syslog(LOG_DEBUG, "bb fread ERROR exit");
+			exit(1);
+		}
+		return _load_pad(nsamples);
 	}
-	return _load_pad(nsamples);
 }
 
 int fill() {
@@ -432,6 +454,9 @@ RUN_MODE ui(int argc, const char** argv)
 	}
 	if ((evar = getenv("BB_LOAD_THRESHOLD"))){
 		G::load_threshold = atoi(evar);
+	}
+	if ((evar = getenv("BB_LOAD_PLAYBUFFERLEN"))){
+		G::load_playbufferlen = atoi(evar);
 	}
 	getKnob(-1, NBUF,  &Buffer::nbuffers);
 	getKnob(-1, DFB, 	&G::buffer0);
