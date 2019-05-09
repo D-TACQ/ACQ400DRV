@@ -337,7 +337,7 @@ build_knobs_device() {
 		ACQ480_SITES="${ACQ480_SITES} $site";;
 	9)
 		ACQ423_SITES="${ACQ423_SITES} $site";;	
-	40|42|43|6A)		
+	40|42|43|6A)
 		echo "ao420_init ${site}" >>/tmp/acq420.init-postpowerup-action
 		if [ -e /etc/acq400/$site/dac_mux_master ]; then
 				ln -s /usr/local/bin/muxpattern /etc/acq400/$site/
@@ -609,10 +609,22 @@ fi
 
 ######## Execution Starts Here 
 
-if [ ! -e /etc/sites ]; then
-	echo "ERROR FPGA not loaded exit now"
-	exit 1	
+if [ "$MODEL" = "cpsc2" ]; then
+	echo +++ cpsc2 specific site id
+	cat - >/etc/sites <<EOF
+sites=1,2,3
+good_sites=1,2,3
+EOF
+	MODLIB=/usr/local/lib/modules
+else
+	if [ ! -e /etc/sites ]; then
+		echo "ERROR FPGA not loaded exit now"
+		exit 1	
+	fi
+	
+	MODLIB=/lib/modules/$(uname -r)
 fi
+
 
 lsmod | grep -q acq4.0FMC
 notloaded=$?
@@ -622,7 +634,7 @@ if [ $notloaded -eq 0 ]; then
 	exit 1
 fi
 
-MODLIB=/lib/modules/$(uname -r)
+
 
 /sbin/insmod ${MODLIB}/dmaengine314.ko
 
@@ -828,7 +840,8 @@ ls -l /etc/acq400/0/sync_out_cable_det
 
 nice daemon $WEB_APPEND_JOB
 
-(grep -h numeric /usr/share/doc/acq*help* >/usr/share/doc/numerics)
+[ -d  /usr/share/doc/ ] && \
+	(grep -h numeric /usr/share/doc/acq*help* >/usr/share/doc/numerics)
 
 cat - >> /etc/services <<EOF
 acq400_stream	4210/tcp 
