@@ -379,6 +379,7 @@ install_cal() {
 			PN="${FRU_PART_NUM%% *}"
 			TYP="${PN%%-*}"
 			[ "$TYP" = "CPSC2" ] && TYP="${PN%-*}"
+			[ "$TYP" = "CPSC2" ] && TYP=$PN
 			defcal=/usr/local/cal/${TYP}-defcal.xml
 			if [ -e ${defcal} ]; then
 				cp ${defcal} ${caldef}
