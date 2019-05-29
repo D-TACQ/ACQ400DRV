@@ -11,8 +11,8 @@
         <Model>CPSC2-DAC</Model>
 	<SerialNum>CPSC2D001</SerialNum>
     </Info>
-     <Data AICHAN="32" code_min="-524288" code_max="524288" SW="1">
-	<Range name="HI_RES_10V" sw="1">		
+     <Data AICHAN="32" code_min="-524288" code_max="524288" SW="default">
+	<Range name="HI_RES_10V" sw="default">		
 		<Nominal min="-10" max="10" eoff="0" eslo="1.90735e-5" roff="0"/>
         </Range>
      </Data>
