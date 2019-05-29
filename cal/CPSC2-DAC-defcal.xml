@@ -1,0 +1,33 @@
+<?xml version="1.0" standalone="no" ?>
+<ACQ>
+	<!-- CPSC2-DAC-default.xml
+	this is really for the SPY readback 
+     add calibration data if available via <Calibrated> fields -->
+<!-- calibration data -->
+<AcqCalibration>
+    <Info>
+        <CalDate>20141225</CalDate>
+        <Version>B1007</Version>
+        <Model>CPSC2-DAC</Model>
+	<SerialNum>CPSC2D001</SerialNum>
+    </Info>
+     <Data AICHAN="32" code_min="-524288" code_max="524288" SW="1">
+	<Range name="HI_RES_10V" sw="1">		
+		<Nominal min="-10" max="10" eoff="0" eslo="1.90735e-5" roff="0"/>
+        </Range>
+     </Data>
+</AcqCalibration>
+<ModelSpec>
+        <ChannelBlockMask>
+                <BlockWidth>8</BlockWidth>
+                <BlockSet>"1111","1110","1100","1000"</BlockSet>
+        </ChannelBlockMask>
+        <MaxAggregateRate>16.4 MB/sec</MaxAggregateRate>
+        <MaxDeviceRate>128 kS/sec</MaxDeviceRate>
+        <MinDeviceRate>0 MS/sec</MinDeviceRate>
+        <CalClock>128000</CalClock>
+        <CalMeanN>1024000</CalMeanN>
+</ModelSpec>
+</ACQ>
+
+
