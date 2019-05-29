@@ -464,6 +464,9 @@ RUN_MODE ui(int argc, const char** argv)
 	getKnob(-1, "/etc/acq400/0/dist_bufferlen_play", &G::play_bufferlen);
 	getKnob(-1, "/etc/acq400/0/dist_bufferlen_load", &G::load_bufferlen);
 
+	if (G::play_bufferlen && G::load_playbufferlen==0){
+		G::load_playbufferlen = G::play_bufferlen;
+	}
 	if (G::load_bufferlen){
 		setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::load_bufferlen);
 	}
