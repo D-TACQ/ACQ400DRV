@@ -478,8 +478,8 @@ bool DemuxBuffer<T, N>::demux(bool start, int start_off, int len) {
 	int Tlen = len/sizeof(T);
 	int isam = 0;
 
-	if (verbose > 1) fprintf(stderr, "demux() start_off:%08x src:%p\n",
-			start_off, src);
+	if (verbose > 1) fprintf(stderr, "demux() len:%d Tlen:%d start_off:%08x src:%p\n",
+			len, Tlen, start_off, src);
 
 	if (verbose > 1 && start && ch_id(src[0]) != 0x00){
 		fprintf(stderr, "handling misalign at [0] %08x data_fits_buffer:%d\n",
