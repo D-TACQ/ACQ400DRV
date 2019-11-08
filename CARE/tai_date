@@ -1,0 +1,2 @@
+date -ud @$(hexdump -ve '1/4 "%d\n"' /dev/acq400.0.wr_tai | head -n 1) | sed -e s/UTC/TAI/g
+

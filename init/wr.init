@@ -1,0 +1,108 @@
+#!/bin/sh
+
+export WEB_APPEND_JOB=/tmp/wr-web-append.job
+
+web_append()
+{
+	if [ ! -e $WEB_APPEND_JOB ]; then
+		echo '#!/bin/sh' >$WEB_APPEND_JOB
+		echo '# created by wr.init' >> $WEB_APPEND_JOB
+		chmod a+rx $WEB_APPEND_JOB
+	fi
+	echo "/usr/local/bin/add_webpage_site $1 $2" >> $WEB_APPEND_JOB
+}
+
+get_knob() {
+	printf "%30s %s\n" $1 "$(cat /dev/acq400.0.knobs/$1)"	
+}
+monitor() {
+        echo monitor wr.xml
+        while [ 1 ]
+        do
+                (/usr/local/CARE/tai_date
+                echo ------------------------------
+                cd /etc/acq400/0/
+                for k in wr_tai_cur wr_clk_pv; do 
+                	get_knob $k; 
+                done
+                echo
+				for k in wr_cur_vernier wr_tai_stamp wr_tai_trg; do 
+                	get_knob $k; 
+                done                
+                echo
+                get_knob wr_trg_src
+                echo
+                for k in wr*_count; do 
+                	get_knob $k; 
+                done
+                )| fs2xml -k '' -o /dev/shm/wr-new.xml -s $C2R20
+                mv /dev/shm/wr-new.xml  /dev/shm/wr.xml
+                sleep 1
+        done
+}
+
+
+start_wr() {
+	if [ -e /mnt/local/wrc.le.bin ]; then
+		echo +++ wr load new firmware
+		wr_reset /mnt/local/wrc.le.bin
+	else
+		wr_reset
+	fi
+	NAME=acq400.0
+	MAJOR=$(grep ${NAME} /proc/devices | awk '{ print $1 }')
+	mknod /dev/${NAME}.wr_ts  c ${MAJOR} 20
+	mknod /dev/${NAME}.wr_pps c ${MAJOR} 21
+	mknod /dev/${NAME}.wr_cur c ${MAJOR} 22
+	mknod /dev/${NAME}.wr_tt  c ${MAJOR} 23
+	mknod /dev/${NAME}.wr_tai c ${MAJOR} 24
+	mknod /dev/${NAME}.wr_trg c ${MAJOR} 25
+	web_append wr nomon
+	
+	
+	nice daemon $WEB_APPEND_JOB
+	nice daemon /usr/local/init/wr.init monitor
+}
+
+PIDF_TX=/var/run/wrtd_tx.pid
+PIDF_RX=/var/run/wrtd_tx.pid
+LOG_RX=/var/log/wrtd-rx.log
+LOG_TX=/var/log/wrtd-rx.log
+
+start_wrtd() {
+	WRTD_DNS=50000000
+	WRTD_NICE=-10
+	WRTD_VERBOSE=0
+
+	[ -e /mnt/local/sysconfig/wr.sh ] && source /mnt/local/sysconfig/wr.sh
+
+	/usr/local/bin/procServ \
+		-c / -p $PIDF_RX -L $LOG_RX  4280 \
+		/bin/nice -n $WRTD_NICE /usr/local/bin/wrtd --dns $WRTD_DNS -v $WRTD_VERBOSE rx
+		
+	/usr/local/bin/procServ \
+		-c / -p $PIDF_TX -L $LOG_TX  4281 \
+		/bin/nice -n $WRTD_NICE /usr/local/bin/wrtd --dns $WRTD_DNS -v $WRTD_VERBOSE tx
+}
+
+stop_wrtd() {
+	for pidf in $PIDF_TX $PIDF_TX; do
+		if [ -e $pidf ]; then
+			pid=$(cat $pidf)
+			rm $pidf
+			kill -s TERM $pid
+		fi
+	done
+}
+
+case "$1" in
+monitor)
+	monitor;;
+start|"")
+	wr_reset --is_wr_present=1
+	if [ $? -eq 0 ]; then
+		start_wr
+		start_wrtd
+	fi;;
+esac
+

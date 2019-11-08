@@ -772,6 +772,7 @@ build_knobs
 set_fans $FANSPEED
 grep acq400\.[0-9] /proc/devices | build_nodes
 
+grep filename /tmp/fpga_status | egrep -q -e WR  && /usr/local/init/wr.init
 if [ -e  /dev/acq400.0.knobs/has_axi_dma ]; then
 	AXI_COUNT=$(cat /dev/acq400.0.knobs/has_axi_dma)
 	AXIMOD=${MODLIB}/xilinx_axidma.ko

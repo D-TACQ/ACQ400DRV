@@ -1,0 +1,2 @@
+#!/bin/sh
+grep "generated from file" /tmp/fpga_status | awk '{ print $5 }'

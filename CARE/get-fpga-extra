@@ -1,0 +1,4 @@
+#!/bin/sh
+
+/usr/local/CARE/get-fpga-name | awk -F_ '{ print $NF }'
+

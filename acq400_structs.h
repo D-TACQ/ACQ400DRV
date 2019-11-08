@@ -42,6 +42,7 @@ struct STATS {
 	u32 closes;
 	u32 errors;
 
+	u32 interrupts;
 	u32 fifo_interrupts;
 	u32 dma_transactions;
 	int shot;
@@ -74,6 +75,7 @@ struct RUN_TIME {			/** stats, cleared onStart */
 	int event_count;
 
 	u32 samples_at_event;
+	u32 samples_at_event_latch;
 	u32 sample_clocks_at_event;
 
 	u32 axi64_ints;
@@ -264,6 +266,12 @@ struct acq400_sc_dev {
 		unsigned len;		/* 1..8 */
 		unsigned diX;		/* 0 : off 1: di4 2: di32 */
 	} spad;				/** scratchpad enable */
+	struct WrClient {
+		unsigned wc_count;
+		unsigned wc_ts;			/* time of event, recorded by ISR */
+		unsigned wc_pid;		/* client pid, singleton 		*/
+		wait_queue_head_t wc_waitq;	/* client blocks on this		*/
+	} pps_client, ts_client, wrtt_client;
 };
 
 struct acq400_bolo_dev {
@@ -277,13 +285,15 @@ struct acq400_bolo_dev {
 	} bolo8;
 };
 
+struct ATD {
+	u32 event_source;
+	struct hrtimer timer;
+};
+
 struct XTD_dev {
 	char id[16];
 	struct acq400_dev adev;
-	struct ATD {
-		u32 event_source;
-		struct hrtimer timer;
-	} atd, atd_display;
+	struct ATD atd, atd_display;
 };
 
 struct ACQ480_dev {
@@ -365,6 +375,7 @@ struct acq400_path_descriptor {
 		int bq_len;
 	} bq;
 	unsigned char lbuf[MAXLBUF];
+	u32 samples_at_event;
 	struct EventInfo eventInfo;
 };
 
@@ -492,11 +503,13 @@ static inline void x400_enable_interrupt(struct acq400_dev *adev)
 {
 	u32 int_ctrl = acq400rd32(adev, ADC_INT_CSR);
 	acq400wr32(adev, ADC_INT_CSR,	int_ctrl|0x1);
+	dev_info(DEVP(adev), "x400_enable_interrupt()");
 }
 
 static inline void x400_disable_interrupt(struct acq400_dev *adev)
 {
-	acq400wr32(adev, ADC_INT_CSR, 0x0);
+	u32 int_ctrl = acq400rd32(adev, ADC_INT_CSR);
+	acq400wr32(adev, ADC_INT_CSR, int_ctrl & ~0x1);
 }
 
 
@@ -669,4 +682,10 @@ int xo400_reset_playloop(struct acq400_dev* adev, unsigned playloop_length);
 
 void acq400_enable_adc(struct acq400_dev* adev);
 extern void ao_stop(struct acq400_dev *adev);
+
+#define IRQ_REQUEST_OFFSET	0		/* arg to platform get irq is OFFSET from region. Linux knows best! */
+
+extern int acq400_wr_init_irq(struct acq400_dev* adev);
+extern int acq400_wr_open(struct inode *inode, struct file *file);
+
 #endif /* ACQ400_STRUCTS_H_ */
