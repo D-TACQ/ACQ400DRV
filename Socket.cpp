@@ -42,13 +42,15 @@ protected:
 		servaddr.sin_port = htons(strtoul(port, 0, 10));
 	}
 	virtual ~IpSocket() {}
+	virtual int readBuffer(char* data, int ndata) { return -1; }
 };
 
 class TcpSocket : public IpSocket {
 
+	FILE* fp;
 public:
 	TcpSocket(const char *host, const char* port) :
-		IpSocket(host, port, socket(AF_INET, SOCK_STREAM, 0))
+		IpSocket(host, port, socket(AF_INET, SOCK_STREAM, 0)), fp(0)
 	{
 		if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0){
 			perror("connect error");
@@ -60,6 +62,10 @@ public:
 	virtual int send(const char* data, int len) {
 		/* MSG_DONTWAIT is really NOT helpful ..*/
 		return ::send(sockfd, data, len, 0);
+	}
+	virtual int readBuffer(char* data, int ndata) {
+		if (!fp) fp = fdopen(sockfd, "r");
+		return fread(data, 1, ndata, fp);
 	}
 };
 

@@ -12,6 +12,7 @@
 class Socket {
 public:
 	virtual int send(const char* data, int len) = 0;
+	virtual int readBuffer(char* data, int ndata) = 0;
 	virtual ~Socket() {}
 
 
