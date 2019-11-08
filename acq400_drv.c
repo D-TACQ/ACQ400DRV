@@ -270,9 +270,8 @@ int acq400_reserve_dist_buffers(struct acq400_path_descriptor* pd)
 			}
 		}
 		return 0;
-	}else{
-		return -1;
 	}
+	return 0;	/* distributor_first_buffer==0 is an option */
 }
 
 int acq400_free_buffers(struct acq400_dev *adev, int free_from)
@@ -1412,23 +1411,28 @@ static int ao_auto_rearm(void *clidat)
 	struct acq400_dev* adev = (struct acq400_dev*)clidat;
 	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
 	unsigned dio_sc;
+	int pollcat = 0;
 	wait_queue_head_t wait;
 	init_waitqueue_head(&wait);
 
 	dev_dbg(DEVP(adev), "ao_auto_rearm() 01");
 
 	while (xo_dev->xo.getFifoSamples(adev)){
+		if ((pollcat++ & 0x3f) == 0){
+			dev_dbg(DEVP(adev), "ao_auto_rearm() 20 %d", pollcat);
+		}
 		wait_event_interruptible_timeout(wait, 0, 1);
 	}
 	dio_sc = acq400rd32(adev, DIO432_DIO_SAMPLE_COUNT);
 	adev->onStop(adev);
 	if (IS_DIO432X(adev)){
-		dev_info(DEVP(adev), "ao_auto_rearm FIFO drained count %u", dio_sc);
+		dev_dbg(DEVP(adev), "ao_auto_rearm FIFO drained count %u pollcat %d", dio_sc, pollcat);
 	}
 
 	if (xo_dev->AO_playloop.length > 0 &&
 		xo_dev->AO_playloop.oneshot == AO_oneshot_rearm){
 		dev_dbg(DEVP(adev), "ao_auto_rearm() reset %d", xo_dev->AO_playloop.length);
+		xo_dev->AO_playloop.cursor = 0;
 		xo400_reset_playloop(adev, xo_dev->AO_playloop.length);
 	}
 	dev_dbg(DEVP(adev), "ao_auto_rearm() 99");
@@ -1459,11 +1463,11 @@ static int xo400_fill_fifo(struct acq400_dev* adev)
 {
 	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
 	int headroom;
-	int rc = 1;		/* assume more ints wanted unless complete */
+	int rc = 0;		/* assume more ints wanted unless complete */
 	int maxiter = 1000;
 	static int next_one_verbose;
 
-	dev_dbg(DEVP(adev), "xo420_fill_fifo() 01\n");
+	dev_dbg(DEVP(adev), "%s 01\n",__FUNCTION__);
 
 	if (mutex_lock_interruptible(&adev->awg_mutex)) {
 		return 0;
@@ -1477,6 +1481,7 @@ static int xo400_fill_fifo(struct acq400_dev* adev)
 		int remaining = xo_dev->AO_playloop.length - xo_dev->AO_playloop.cursor;
 		int headroom_lt_remaining = headroom < remaining;
 
+		rc = 1;
 		remaining = min(remaining, headroom);
 
 		dev_dbg(DEVP(adev), "headroom:%d remaining:%d using:%d\n",
@@ -1515,28 +1520,29 @@ static int xo400_fill_fifo(struct acq400_dev* adev)
 			xo_dev->AO_playloop.cursor += AOBYTES2SAMPLES(adev, lenbytes);
 		}
 
-		if (xo_dev->AO_playloop.cursor >= xo_dev->AO_playloop.length){
-			if (xo_dev->AO_playloop.oneshot &&
-				(xo_dev->AO_playloop.repeats==0 || --xo_dev->AO_playloop.repeats==0)){
-				dev_dbg(DEVP(adev), "ao420 oneshot done disable interrupt");
-				x400_disable_interrupt(adev);
-				rc = 0;
-				kthread_run(ao_auto_rearm, adev, "%s.awgrearm", adev->dev_name);
-				goto done_no_check;
-			}else{
-				xo_dev->AO_playloop.cursor = 0;
-			}
-		}
+
 		if (--maxiter == 0){
 			dev_warn(DEVP(adev), "xo400_fill_fifo() working too hard breaking to release mutex");
 			break;
+		}
+	}
+	if (xo_dev->AO_playloop.length > 0 && xo_dev->AO_playloop.cursor >= xo_dev->AO_playloop.length){
+		if (xo_dev->AO_playloop.oneshot &&
+			(xo_dev->AO_playloop.repeats==0 || --xo_dev->AO_playloop.repeats==0)){
+			dev_dbg(DEVP(adev), "%s done disable interrupt", __FUNCTION__);
+			x400_disable_interrupt(adev);
+			rc = 0;
+			kthread_run(ao_auto_rearm, adev, "%s.awgrearm", adev->dev_name);
+			goto done_no_check;
+		}else{
+			xo_dev->AO_playloop.cursor = 0;
 		}
 	}
 
 	xo_check_fiferr(adev, xo_dev->xo.fsr);
 done_no_check:
 	mutex_unlock(&adev->awg_mutex);
-	dev_dbg(DEVP(adev), "xo420_fill_fifo() done filling, samples:%08x headroom %d\n",
+	dev_dbg(DEVP(adev), "%s done filling, samples:%08x headroom %d\n", __FUNCTION__,
 			xo_dev->xo.getFifoSamples(adev), ao420_getFifoHeadroom(adev));
 	return rc;
 }
@@ -1552,7 +1558,7 @@ static irqreturn_t xo400_dma(int irq, void *dev_id)
 		u32 start_samples = xo_dev->xo.getFifoSamples(adev);
 		dev_dbg(DEVP(adev), "xo400_dma() start_samples: %u, headroom %d\n",
 					start_samples, ao420_getFifoHeadroom(adev));
-		if (xo400_fill_fifo(adev)){
+		if (xo400_fill_fifo(adev) && adev->lotide){
 			x400_enable_interrupt(adev);
 		}
 		add_fifo_histo_ao42x(adev, start_samples);
@@ -1962,16 +1968,11 @@ int xo400_reset_playloop(struct acq400_dev* adev, unsigned playloop_length)
 				dev_dbg(DEVP(adev), "xo400_reset_playloop wait task_active -> 0 ");
 				msleep(100);
 			}
+			acq400_visit_set(sc_dev->distributor_set, adev->onStart);
 		}else if (use_frontside){
 			xo400_getDMA(adev);
 			xo400_fill_fifo(adev);
 			ao420_clear_fifo_flags(adev);
-		}
-		/* else do nothing */
-
-		if (first_in_set){
-			acq400_visit_set(sc_dev->distributor_set, adev->onStart);
-		}else if (use_frontside){
 			adev->onStart(adev);
 		}
 		/* else do nothing */
@@ -1980,6 +1981,7 @@ int xo400_reset_playloop(struct acq400_dev* adev, unsigned playloop_length)
 			acq400_visit_set(sc_dev->distributor_set, adev->onStop);
 		}else if (use_frontside){
 			adev->onStop(adev);
+			xo_dev->AO_playloop.cursor = 0;
 		}
 	}
 
@@ -2290,6 +2292,8 @@ int ai_data_loop(void *data)
 					adev->DMA_READY,
 					adev->dma_callback_done || kthread_should_stop(),
 					dma_timeout) <= 0){
+				adev->rt.refill_error = 2;
+				wake_up_interruptible_all(&adev->refill_ready);
 				dev_err(DEVP(adev), "TIMEOUT waiting for DMA\n");
 				goto quit;
 			}
@@ -2358,6 +2362,7 @@ quit:
 	}
 #undef DMA_ASYNC_MEMCPY
 #undef DMA_ASYNC_MEMCPY_NWFE
+
 }
 
 /* this is the much-vaunted hrtimer - program in nsec,
@@ -2670,14 +2675,17 @@ static int allocate_hbm(struct acq400_dev* adev, int nb, int bl, int dir)
 	int ix = 0;
 	struct HBM* cursor;
 
+	dev_info(DEVP(adev), "allocate_hbm() nb:%d bl:0x%08x\n", nb, bl);
+	adev->hb = kmalloc(nb*sizeof(struct HBM*), GFP_KERNEL);
+
 	if (IS_SC(adev)){
 	    ix += hbm_allocate(DEVP(adev), ix, reserve_buffers, bl, &adev->GRESV, dir);
+	    nb -= reserve_buffers;
 	}
-	ix += hbm_allocate(DEVP(adev), ix, nb-reserve_buffers, bl, &adev->EMPTIES, dir);
+	ix += hbm_allocate(DEVP(adev), ix, nb, bl, &adev->EMPTIES, dir);
 
 	dev_info(DEVP(adev), "setting nbuffers %d\n", ix);
 	ix = 0;
-	adev->hb = kmalloc(nb*sizeof(struct HBM*), GFP_KERNEL);
 	list_for_each_entry(cursor, &adev->GRESV, list){
 		dev_dbg(DEVP(adev), "setting ix G %d %d\n", ix, cursor->ix);
 		adev->hb[ix] = cursor;
@@ -2742,7 +2750,6 @@ int init_axi64_hbm(struct acq400_dev* adev)
 	}
 }
 
-#define IRQ_REQUEST_OFFSET	0		/* arg to platform get irq is OFFSET from region. Linux knows best! */
 
 int acq400_mod_init_irq(struct acq400_dev* adev)
 {
@@ -2752,13 +2759,14 @@ int acq400_mod_init_irq(struct acq400_dev* adev)
 		return 0;
 	}
 	dev_info(DEVP(adev), "acq400_mod_init_irq %d", irq);
+
 	if (IS_AO42X(adev)||IS_DIO432X(adev)){
 		rc = devm_request_threaded_irq(
-				DEVP(adev), irq, ao400_isr, xo400_dma, IRQF_SHARED,
+				DEVP(adev), irq, ao400_isr, xo400_dma, IRQF_NO_THREAD,
 				adev->dev_name,	adev);
 	}else{
 		rc = devm_request_irq(
-				DEVP(adev), irq, acq400_isr, IRQF_SHARED, adev->dev_name, adev);
+				DEVP(adev), irq, acq400_isr, IRQF_NO_THREAD, adev->dev_name, adev);
 	}
 	if (rc){
 		dev_err(DEVP(adev),"unable to get IRQ %d K414 KLUDGE IGNORE\n", irq);
@@ -2783,6 +2791,11 @@ int acq400_modprobe_sc(struct acq400_dev* adev)
 	acq400_init_proc(adev);
 	acq2006_createDebugfs(adev);
 	acq400sc_init_defaults(adev);
+	if (IS_CPSC2_WR(adev)){
+		if (acq400_wr_init_irq(adev)){
+			return -1;
+		}
+	}
 	return 0;
 }
 int acq400_modprobe(struct acq400_dev* adev)

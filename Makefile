@@ -79,6 +79,7 @@ APPS := mmap acq400_stream permute acq435_decode \
 	muxdec dmadescfs_test tblock2file acq400_sls bb bbq_send_ai \
 	fix_state bpaste clocks_to_first_edge \
 	mgtdram_descgen bigcat egu2int dawg watchdog_PIL \
+	dump_regs \
 	wr_reset wrtd wrtt_mon
 
 

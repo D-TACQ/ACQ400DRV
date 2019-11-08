@@ -608,6 +608,146 @@ static ssize_t show_axi_freq(
 
 static DEVICE_ATTR(axi_freq, S_IRUGO, show_axi_freq, 0);
 
+static ssize_t show_wr_tai_cur(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct acq400_dev* adev = acq400_devices[dev->id];
+	u32 tl = acq400rd32(adev, WR_TAI_CUR_L);
+	u32 th = acq400rd32(adev, WR_TAI_CUR_H);
+
+	unsigned long long tai = th;
+	tai = tai << 32 | tl;
+
+	return sprintf(buf, "%llu\n", tai);
+}
+
+static DEVICE_ATTR(wr_tai_cur, S_IRUGO, show_wr_tai_cur, 0);
+
+static ssize_t store_wr_tai_trg(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	struct acq400_dev* adev = acq400_devices[dev->id];
+	u32 tai_trg;
+	u32 tai_sec, clocks;
+
+	if (sscanf(buf, "%u,%u", &tai_sec, &clocks) == 2){
+		tai_trg = tai_sec << 28 | clocks;
+		if (tai_trg != 0){
+			tai_trg |= WR_TAI_TRG_EN;
+		}
+		acq400wr32(adev, WR_TAI_TRG, tai_trg);
+		return count;
+	} else if (sscanf(buf, "%u", &tai_trg) == 1){
+		if (tai_trg != 0){
+			tai_trg |= WR_TAI_TRG_EN;
+		}
+		acq400wr32(adev, WR_TAI_TRG, tai_trg);
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+static ssize_t show_wr_tai_trg(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct acq400_dev* adev = acq400_devices[dev->id];
+	unsigned tai_trg = acq400rd32(adev, WR_TAI_TRG);
+	return sprintf(buf, "0x%08x %u %u\n", tai_trg, (tai_trg>>28)&0x7, tai_trg&0x0fffffff);
+}
+
+static DEVICE_ATTR(wr_tai_trg, S_IRUGO|S_IWUSR, show_wr_tai_trg, store_wr_tai_trg);
+
+
+static ssize_t show_wr_stamp(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf, u32 reg)
+{
+	struct acq400_dev* adev = acq400_devices[dev->id];
+	unsigned tai_stamp = acq400rd32(adev, WR_TAI_STAMP);
+	return sprintf(buf, "0x%08x %u %u\n", tai_stamp, (tai_stamp>>28)&0x7, tai_stamp&0x0fffffff);
+}
+static ssize_t show_wr_tai_stamp(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	return show_wr_stamp(dev, attr, buf, WR_TAI_STAMP);
+}
+
+static DEVICE_ATTR(wr_tai_stamp, S_IRUGO, show_wr_tai_stamp, 0);
+
+static ssize_t show_wr_cur_vernier(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	return show_wr_stamp(dev, attr, buf, WR_CUR_VERNR);
+}
+
+static DEVICE_ATTR(wr_cur_vernier, S_IRUGO, show_wr_cur_vernier, 0);
+
+MAKE_BITS(wr_clk_pv, WR_CLK_GEN, MAKE_BITS_FROM_MASK, WR_CLK_GEN_PV);
+MAKE_BITS(wr_clk_pv3, WR_CLK_GEN, MAKE_BITS_FROM_MASK, WR_CLK_GEN_PV3);
+
+
+MAKE_SIGNAL(wr_trg_src, WR_CTRL, WR_CTRL_TRG_SRC_SHL, WR_CTRL_TS_INTEN, ENA, DIS, 1);
+
+#define MAKE_WR_EVENT_COUNT(FUN) 								\
+static ssize_t store_wr_##FUN##count(								\
+	struct device * dev,									\
+	struct device_attribute *attr,								\
+	const char * buf,									\
+	size_t count)										\
+{												\
+	struct acq400_dev* adev = acq400_devices[dev->id];					\
+	struct acq400_sc_dev* sc_dev = container_of(adev, struct acq400_sc_dev, adev);		\
+	unsigned clear;										\
+	if (sscanf(buf, "%u", &clear) == 1 && clear==1){					\
+		sc_dev->FUN.wc_count = 0;							\
+		return count;									\
+	}else{											\
+		return -1;									\
+	}											\
+}												\
+static ssize_t show_wr_##FUN##count(								\
+	struct device * dev,									\
+	struct device_attribute *attr,								\
+	char * buf)										\
+{												\
+	struct acq400_dev* adev = acq400_devices[dev->id];					\
+	struct acq400_sc_dev* sc_dev = container_of(adev, struct acq400_sc_dev, adev);		\
+	return sprintf(buf, "%u\n", sc_dev->FUN.wc_count);					\
+}												\
+static DEVICE_ATTR(wr_##FUN##_count, S_IRUGO|S_IWUSR, show_wr_##FUN##count, store_wr_##FUN##count)
+
+MAKE_WR_EVENT_COUNT(pps_client);
+MAKE_WR_EVENT_COUNT(ts_client);
+MAKE_WR_EVENT_COUNT(wrtt_client);
+
+static const struct attribute *acq2106_wr_attrs[] = {
+	&dev_attr_wr_clk_pv.attr,
+	&dev_attr_wr_clk_pv3.attr,
+	&dev_attr_wr_trg_src.attr,
+	&dev_attr_wr_tai_cur.attr,
+	&dev_attr_wr_tai_trg.attr,
+	&dev_attr_wr_tai_stamp.attr,
+	&dev_attr_wr_cur_vernier.attr,
+	&dev_attr_wr_pps_client_count.attr,
+	&dev_attr_wr_ts_client_count.attr,
+	&dev_attr_wr_wrtt_client_count.attr,
+	NULL
+};
+
+
 
 static ssize_t show_gpg_mode(
 	struct device * dev,
@@ -1012,7 +1152,7 @@ static ssize_t _store_optimise_bufferlen(
 	int newbl = spb*mindma;
 
 	dev_dbg(DEVP(adev), "store_optimise_bufferlen ss:%d mindma:0x%x spb:%d len:0x%x",
-		sample_size, mindma, spb, newbl);
+			sample_size, mindma, spb, newbl);
 
 	acq400_set_bufferlen(adev, newbl);
 
@@ -1268,7 +1408,8 @@ static ssize_t show_stats(
 	char * buf)
 {
 	struct STATS *stats = &acq400_devices[dev->id]->stats;
-	return sprintf(buf, "fifo_ints=%u dma_transactions=%u fifo_errs=%d\n",
+	return sprintf(buf, "ints=%u fifo_ints=%u dma_transactions=%u fifo_errs=%d\n",
+			stats->interrupts,
 			stats->fifo_interrupts, stats->dma_transactions,
 			stats->fifo_errors);
 }
@@ -1736,11 +1877,16 @@ static ssize_t show_nacc(
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 acc_dec = acq400rd32(adev, ADC_ACC_DEC);
-	unsigned shift = (acc_dec&ADC_ACC_DEC_SHIFT_MASK)>>
+	if (acc_dec == ADC_NACC_PASSTHRU){
+		return sprintf(buf, "0,0,0\n");
+	}else{
+		unsigned shift = (acc_dec&ADC_ACC_DEC_SHIFT_MASK)>>
 					getSHL(ADC_ACC_DEC_SHIFT_MASK);
-
-	return sprintf(buf, "%u,%u\n",
-			(acc_dec&ADC_ACC_DEC_LEN)+1, shift);
+		unsigned start = (acc_dec&ADC_ACC_DEC_START_MASK)>>
+					getSHL(ADC_ACC_DEC_START_MASK);
+		return sprintf(buf, "%u,%u,%u\n",
+			(acc_dec&ADC_ACC_DEC_LEN)+1, shift, start);
+	}
 }
 
 static ssize_t store_nacc(
@@ -1750,22 +1896,31 @@ static ssize_t store_nacc(
 	size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
-	int nacc;
-	int shift = 999;
+	unsigned nacc;
+	unsigned shift = 999;
+	unsigned start = 0;
 
-	if (sscanf(buf, "%u,%u", &nacc, &shift) >= 1){
-		u32 acdc;
+	if (sscanf(buf, "%u,%u,%u", &nacc, &shift, &start) >= 1){
+		u32 acdc = 0;
 
-		nacc = max(nacc, 1);
-		nacc = min(nacc, ADC_MAX_NACC);
-		if (shift == 999){
-			for (shift = 0; 1<<shift < nacc; ++shift)
-				;
+		if (nacc > 0){
+			nacc = min(nacc, ADC_MAX_NACC);
+			start = min(start,nacc-1);
+
+			if (shift == 999){
+				for (shift = 0; 1<<shift < nacc; ++shift)
+					;
+				if ((1<<shift) > nacc){
+					shift -= 1;
+				}
+				start = nacc - (1<<shift);
+			}
+			shift = min(shift, ADC_ACC_DEC_SHIFT_MAX);
+
+			acdc = nacc-1;
+			acdc |= shift<<getSHL(ADC_ACC_DEC_SHIFT_MASK);
+			acdc |= start<<getSHL(ADC_ACC_DEC_START_MASK);
 		}
-		shift = min(shift, ADC_ACC_DEC_SHIFT_MAX);
-
-		acdc = nacc-1;
-		acdc |= shift<<getSHL(ADC_ACC_DEC_SHIFT_MASK);
 		acq400wr32(adev, ADC_ACC_DEC, acdc);
 		return count;
 	}else{
@@ -1774,6 +1929,34 @@ static ssize_t store_nacc(
 }
 
 static DEVICE_ATTR(nacc, S_IRUGO|S_IWUSR, show_nacc, store_nacc);
+static DEVICE_ATTR(ACC, S_IRUGO|S_IWUSR, show_nacc, store_nacc);
+
+static ssize_t store_dec(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	unsigned ndec;
+	unsigned start = 0;
+
+	if (sscanf(buf, "%u", &ndec) == 1){
+		u32 acdc= 0;
+
+		if (ndec > 0){
+			ndec = min(ndec, ADC_MAX_NACC);
+			start = ndec-1;
+			acdc = ndec-1;
+			acdc |= start<<getSHL(ADC_ACC_DEC_START_MASK);
+		}
+		acq400wr32(adev, ADC_ACC_DEC, acdc);
+		return count;
+	}else{
+		return -1;
+	}
+}
+static DEVICE_ATTR(DEC, S_IRUGO|S_IWUSR, show_nacc, store_dec);
 
 static ssize_t show_is_triggered(
 	struct device * dev,
@@ -1899,15 +2082,23 @@ static DEVICE_ATTR(sod, S_IRUGO|S_IWUSR, show_sod, store_sod);
 
 MAKE_BIT_N(sync_trg_to_clk, ADC_CTRL, MAKE_BITS_FROM_MASK, ADC_CTRL_SYNC_TRG_N, 0);
 
+static ssize_t show_is_adc(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	return sprintf(buf, "%d\n", IS_ADC(adev));
+}
+
+static DEVICE_ATTR(is_adc, S_IRUGO, show_is_adc, 0);
 
 static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_module_type.attr,
 	&dev_attr_module_role.attr,
 	&dev_attr_module_name.attr,
-	&dev_attr_fpga_rev.attr,
 	&dev_attr_nbuffers.attr,
 	&dev_attr_bufferlen.attr,
-	&dev_attr_dist_bufferlen.attr,
 	&dev_attr_optimise_bufferlen.attr,
 	&dev_attr_site.attr,
 	&dev_attr_data32.attr,
@@ -1937,16 +2128,23 @@ static const struct attribute *sysfs_device_attrs[] = {
 	&dev_attr_sysclkhz.attr,
 	&dev_attr_active_chan.attr,
 	&dev_attr_nacc.attr,
+	&dev_attr_ACC.attr,
+	&dev_attr_DEC.attr,
 	&dev_attr_is_triggered.attr,
 	&dev_attr_event0_count.attr,
 	&dev_attr_sync_trg_to_clk.attr,
+	&dev_attr_is_adc.attr,
+	&dev_attr_evt_sc_latch.attr,
 	NULL,
 };
 
 
+MAKE_BITS(emulate_acq196, ADC_CTRL, MAKE_BITS_FROM_MASK, ADC_CTRL_424_EMUL_196);
+
 static const struct attribute *acq424_attrs[] = {
 	&dev_attr_clk_min_max.attr,
 	&dev_attr_adc_conv_time.attr,
+	&dev_attr_emulate_acq196.attr,
 	NULL
 };
 static const struct attribute *acq425_attrs[] = {
@@ -1971,9 +2169,7 @@ static const struct attribute *acq435_attrs[] = {
 	&dev_attr_bitslice_frame.attr,
 	&dev_attr_sw_emb_word1.attr,
 	&dev_attr_sw_emb_word2.attr,
-	&dev_attr_evt_sc_latch.attr,
 	&dev_attr_gate_sync.attr,
-
 	NULL
 };
 
@@ -2894,7 +3090,9 @@ static const struct attribute *sc_common_attrs[] = {
 	&dev_attr_hb_last.attr,
 	&dev_attr_has_axi_dma.attr,
 	&dev_attr_has_axi_dma_stack.attr,
+	&dev_attr_dist_bufferlen.attr,
 	&dev_attr_jettison_buffers_from.attr,
+	&dev_attr_fpga_rev.attr,
 	NULL
 };
 static const struct attribute *acq2006sc_attrs[] = {
@@ -3085,6 +3283,9 @@ void acq400_createSysfs(struct device *dev)
 
 		if (IS_ACQ2X06SC(adev)){
 			specials[nspec++] = acq2006sc_attrs;
+			if (IS_CPSC2_WR(adev)) {
+				specials[nspec++] = acq2106_wr_attrs;
+			}
 		}else if (IS_ACQ1001SC(adev)){
 			if (IS_ACQ1014(adev)){
 				dev_info(dev, "ACQ1014: loading extra knobs");

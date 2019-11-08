@@ -244,16 +244,23 @@ extern int xo_use_distributor;
 void _dio432_DO_onStart(struct acq400_dev *adev)
 {
 	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+
+	x400_disable_interrupt(adev);
+	acq400wr32(adev, DIO432_DO_LOTIDE, adev->lotide);
+
 	if (xo_use_distributor){
-		acq400wr32(adev, DIO432_DO_LOTIDE, adev->lotide);
 		dev_dbg(DEVP(adev), "_dio432_DO_onStart() 05");
 	}else if (xo_dev->AO_playloop.oneshot == 0 ||
 		xo_dev->AO_playloop.length > adev->lotide){
-		dev_dbg(DEVP(adev), "_dio432_DO_onStart() 10");
+
 		acq400wr32(adev, DIO432_DO_LOTIDE, adev->lotide);
-		x400_enable_interrupt(adev);
+		if (adev->lotide){
+			dev_dbg(DEVP(adev), "_dio432_DO_onStart() 10, set lotide, enable_interrupt");
+			x400_enable_interrupt(adev);
+		}else{
+			dev_dbg(DEVP(adev), "_dio432_DO_onStart() 15, clear lotide, interrupt stays disabled");
+		}
 	}else{
-		acq400wr32(adev, DIO432_DO_LOTIDE, 0);
 		dev_dbg(DEVP(adev), "_dio432_DO_onStart() 20");
 	}
 	acq400wr32(adev, DIO432_DIO_CTRL, acq400rd32(adev, DIO432_DIO_CTRL)|DIO432_CTRL_DIO_EN);
@@ -795,6 +802,7 @@ static void dio432_init_defaults(struct acq400_dev *adev)
 	adev->onStop = dio432_onStop;
 	xo_dev->xo.getFifoSamples = _dio432_DO_getFifoSamples;
 	xo_dev->xo.fsr = DIO432_DO_FIFO_STATUS;
+	xo_dev->xo.max_fifo_samples = 8000;
 	adev->isFifoError = dio432_isFifoError;
 	if ((IS_DIO432FMC(adev)||IS_DIO432PMOD(adev)) && FPGA_REV(adev) < 5){
 		dev_warn(DEVP(adev), "OUTDATED FPGA PERSONALITY, please update");

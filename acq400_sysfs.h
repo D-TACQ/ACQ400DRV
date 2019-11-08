@@ -259,3 +259,4 @@ static ssize_t show_clk_count_##name(						\
 	return sprintf(buf, "%u\n", (counter&field)>>shl);			\
 }										\
 static DEVICE_ATTR(scount_##name, S_IRUGO, show_clk_count_##name, 0)
+

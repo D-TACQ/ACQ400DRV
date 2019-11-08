@@ -30,21 +30,12 @@ C2R20=/dev/shm/c2rR20
 
 [ -e $C2R20 ] || cCrR 2 20 > $C2R20
 
-dump_regs() {
-	(
-	cd $DIR
-	for file in $(ls -i | sort | awk '{ print $2 }')
-	do
-		[ -d $file ] || printf "%34s %s\n" $file $(cat $file)
-	done
-	)
-}
 
 monitor() {
 	echo monitor $XMLNAME.xml
 	while [ 1 ]
 	do
-		dump_regs | fs2xml -k '' -o /dev/shm/$XMLNAME-new.xml -s $C2R20
+		dump_regs $DIR | fs2xml -k '' -o /dev/shm/$XMLNAME-new.xml -s $C2R20
 		mv /dev/shm/$XMLNAME-new.xml  /dev/shm/$XMLNAME.xml 
 		sleep 1		
 	done

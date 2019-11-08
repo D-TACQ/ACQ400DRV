@@ -1201,6 +1201,14 @@ int acq400_open_ui(struct inode *inode, struct file *file)
         	case ACQ400_MINOR_AXI_DMA_ONCE:
         		rc = acq400_axi_dma_once_open(inode, file);
         		break;
+        	case ACQ400_MINOR_WR_TS:
+        	case ACQ400_MINOR_WR_PPS:
+        	case ACQ400_MINOR_WR_CUR:
+        	case ACQ400_MINOR_WR_CUR_TAI:
+        	case ACQ400_MINOR_WR_CUR_TRG:
+        	case ACQ400_MINOR_WRTT:
+        		rc = acq400_wr_open(inode, file);
+        		break;
             	default:
         		if (minor >= ACQ400_MINOR_MAP_PAGE &&
         		    minor < ACQ400_MINOR_MAP_PAGE+16  ){

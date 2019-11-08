@@ -229,7 +229,6 @@ struct acq400_dev {
 	struct RegCache reg_cache;
 };
 
-
 #define SC_REG_MAX	0x200
 #define MOD_REG_MAX	0x100
 int dev_rc_register(struct device* dev, struct RegCache* reg_cache, int reg_bytes);
