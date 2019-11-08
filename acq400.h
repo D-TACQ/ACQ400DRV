@@ -444,7 +444,11 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_ACQ2106_STAGGER(adev) \
 	(IS_ACQ2106_STACK(adev) && (GET_MOD_ID_VERSION(adev)&0x4) != 0)
 
+#ifdef FPGA_IS_COMPLETE
 #define IS_CPSC2_WR(adev) 	((GET_MOD_ID_VERSION(adev)&0x8) != 0)
+#else
+#define IS_CPSC2_WR(adev)	(1)
+#endif
 
 #define IS_ACQ2X06SC(adev) (IS_ACQ2006SC(adev) || IS_ACQ2106SC(adev))
 #define IS_ACQ1001SC(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ1001SC)

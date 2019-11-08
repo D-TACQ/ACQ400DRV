@@ -3283,9 +3283,7 @@ void acq400_createSysfs(struct device *dev)
 
 		if (IS_ACQ2X06SC(adev)){
 			specials[nspec++] = acq2006sc_attrs;
-			if (IS_CPSC2_WR(adev)) {
-				specials[nspec++] = acq2106_wr_attrs;
-			}
+
 		}else if (IS_ACQ1001SC(adev)){
 			if (IS_ACQ1014(adev)){
 				dev_info(dev, "ACQ1014: loading extra knobs");
@@ -3298,6 +3296,9 @@ void acq400_createSysfs(struct device *dev)
 		}else if (IS_CPSC2_SC(adev)){
 			specials[nspec++] = acq2006sc_attrs;
 			specials[nspec++] = cpsc2_sc_attrs;
+			if (IS_CPSC2_WR(adev)) {
+				specials[nspec++] = acq2106_wr_attrs;
+			}
 		}
 	}else{
 		if (sysfs_create_files(&dev->kobj, sysfs_device_attrs)){
