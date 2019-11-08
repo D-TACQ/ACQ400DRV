@@ -99,6 +99,7 @@ case "$1" in
 monitor)
 	monitor;;
 start|"")
+#	PS1=FIXME /bin/sh
 	wr_reset --is_wr_present=1
 	if [ $? -eq 0 ]; then
 		start_wr
