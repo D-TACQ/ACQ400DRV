@@ -137,6 +137,7 @@ int acq400_wr_init_irq(struct acq400_dev* adev)
 	int rc;
 	int irq = platform_get_irq(adev->pdev, IRQ_REQUEST_OFFSET);
 	if (irq <= 0){
+		dev_err(DEVP(adev), "acq400_wr_init_irq %d", irq);
 		return 0;
 	}
 	dev_info(DEVP(adev), "acq400_wr_init_irq %d", irq);
