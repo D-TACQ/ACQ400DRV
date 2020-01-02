@@ -2264,12 +2264,15 @@ class StreamHeadLivePP : public StreamHeadHB0 {
 
 	int  _stream();
 	int verbose;
+	bool show_es;
 public:
 	StreamHeadLivePP():
 			pre(0), post(4096),
 			sample_size(G::nchan*G::wordsize) {
 		const char* vs = getenv("StreamHeadLivePPVerbose");
 		vs && (verbose = atoi(vs));
+		const char* ses = getenv("StreamHeadLivePPShowES");
+		ses && (show_es = atoi(ses));
 
 		fprintf(stderr, "StreamHeadLivePP() pid:%d\n", getpid());
 		startEventWatcher();
@@ -2415,7 +2418,7 @@ int StreamHeadLivePP::_stream() {
 		}
 		fprintf(stderr, "StreamHeadLivePP::stream() found %d %p\n",
 					ibuf, es);
-		char *es1 = es + sample_size;
+		char *es1 = es + (show_es? 0: sample_size);
 
 		// all info referenced to buffer 0!
 		Buffer* buf = Buffer::the_buffers[0];
