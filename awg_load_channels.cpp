@@ -28,7 +28,9 @@
  * TODO
 \* ------------------------------------------------------------------------- */
 
-
+/* @@TODO this isn't going to work. MUST compute play_bufferlen _before_ outputting any data.
+ * use of stat encouraged.
+ */
 
 #include <stdio.h>
 #include <vector>
@@ -88,6 +90,9 @@ POPT_AUTOHELP
 POPT_TABLEEND
 };
 
+#define PAGE	0x1000
+#define MINPAGES 4
+
 void ui(int argc, const char** argv)
 {
 	poptContext opt_context =
@@ -100,6 +105,8 @@ void ui(int argc, const char** argv)
 			;
 		}
 	}
+
+	G::minsam =  (MINPAGES*PAGE) / ((G::data32? 4: 2) * G::nchan);
 }
 
 
