@@ -438,6 +438,8 @@ build_site0() {
 	       ln -s /usr/local/CARE/stack_480 /etc/acq400/0
 	    fi 
 	esac
+	
+	ln -s /usr/local/CARE/awg_load_channels.oneshot_auto $ek/awg_load_channels
 }
 
 build_mgt400_node() {

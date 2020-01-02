@@ -233,7 +233,7 @@ wrtd: 	wrtd.o Multicast.o
 	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
 
 awg_load_channels: awg_load_channels.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt
 	
 rtpackage:
 	tar cvzf dmadescfs-$(DC).tgz dmadescfs* scripts/load.dmadescfs
