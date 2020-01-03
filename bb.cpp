@@ -156,13 +156,16 @@ int G_nsamples;
 void set_playloop_length(int nsamples)
 {
 	char cmd[128];
+
 	if (G::play_bufferlen){
-		unsigned ll = G::load_bufferlen;
-		unsigned pl = G::play_bufferlen;
-		while ((pl&0x1) == 0){
-			ll >>= 1; pl >>= 1;
+		if (G::load_bufferlen){
+			unsigned ll = G::load_bufferlen;
+			unsigned pl = G::play_bufferlen;
+			while ((pl&0x1) == 0){
+				ll >>= 1; pl >>= 1;
+			}
+			nsamples = nsamples * pl / ll;
 		}
-		nsamples = nsamples * pl / ll;
 		setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::play_bufferlen);
 	}
 	sprintf(cmd, "set.site %d playloop_length %d %d",
@@ -247,6 +250,7 @@ int _load_pad(int nsamples)
 	if (G::verbose) fprintf(stderr, "return nsamples %d\n", nsamples);
 
 	return nsamples;
+#undef MARK
 }
 void _load_concurrent() {
 	const int bls = Buffer::bufferlen/G::sample_size;
@@ -366,6 +370,7 @@ int _load_playbufferlen()
 	unsigned max_samples = G::play_bufferlen/G::sample_size;
 	int totsam = 0;
 	int nsam;
+	int nb;
 
 	for (ib = 0;
 	     (nsam = _fread(Buffer::the_buffers[ib]->getBase(),
@@ -373,7 +378,8 @@ int _load_playbufferlen()
 	     ++ib, totsam += nsam){
 		;
 	}
-	return ib * G::load_bufferlen/G::sample_size;
+	nb = ib * max_samples;
+	return nb;
 }
 
 int _load() {
@@ -503,7 +509,9 @@ RUN_MODE ui(int argc, const char** argv)
 		}
 	}
 
+
 	const char* mode = poptGetArg(opt_context);
+
 	if (mode != 0){
 		if (strcmp(mode, "load") == 0){
 			return M_LOAD;
@@ -543,6 +551,7 @@ int main(int argc, const char** argv)
 {
 	RUN_MODE rm = ui(argc, argv);
 	BufferManager bm(G::buffer0);
+
 	switch(rm){
 	case M_FILL:
 		return fill();
