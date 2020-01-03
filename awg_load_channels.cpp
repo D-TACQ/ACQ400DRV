@@ -28,14 +28,16 @@
  * TODO
 \* ------------------------------------------------------------------------- */
 
-/* @@TODO this isn't going to work. MUST compute play_bufferlen _before_ outputting any data.
- * use of stat encouraged.
- */
 
 #include <stdio.h>
 #include <vector>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <assert.h>
 
 #include "popt.h"
+#include "Knob.h"
 
 
 template <class T>
@@ -46,21 +48,32 @@ class Channel {
 		S_FP_VALID,
 		S_EOF
 	} state;
+	int _nsam;
 public:
-	Channel(int ic) : last_value(0) {
+	Channel(int ic) : last_value(0), _nsam(0) {
 		char fname[80];
 		snprintf(fname, 80, "/dev/shm/AWG.%02d", ic);
 		fp = fopen(fname, "r");
 		if (fp == NULL){
 			state = S_EOF;
 		}else{
-			state = S_FP_VALID;
+			struct stat statbuf;
+			if (fstat(fileno(fp), &statbuf) != 0){
+				perror(fname);
+				state = S_EOF;
+			}else{
+				_nsam = statbuf.st_size/sizeof(T);
+				state = S_FP_VALID;
+			}
 		}
 	}
 	~Channel() {
 		if (fp){
 			fclose(fp);
 		}
+	}
+	int nsam() {
+		return _nsam;
 	}
 
 	T* next() {
@@ -79,13 +92,14 @@ public:
 namespace G{
 	int nchan = 8;
 	int data32 = 1;
-	int port = 54202;
+	int mode = 2;
 	int minsam = 4;
 };
 
 struct poptOption opt_table[] = {
 { "nchan", 'n', POPT_ARG_INT, &G::nchan, 0, "number of AWG channels" },
 { "data32", 'd', POPT_ARG_INT, &G::data32, 0, "set 32 bit data"},
+{ "mode", 'm', POPT_ARG_INT, &G::mode, 0, "set mode 0:cont, 1:oneshot, 2:oneshot_repeat, -1: stdio" },
 POPT_AUTOHELP
 POPT_TABLEEND
 };
@@ -105,21 +119,49 @@ void ui(int argc, const char** argv)
 			;
 		}
 	}
-
-	G::minsam =  (MINPAGES*PAGE) / ((G::data32? 4: 2) * G::nchan);
 }
 
+#define MINDMA 64
+
+void set_playbuffer_len(unsigned play_len)
+{
+	Knob buffer_len("/sys/module/acq420fmc/parameters/bufferlen");
+	unsigned bl;
+	buffer_len.get(&bl);
+
+	if (play_len > 4*bl){
+		play_len = bl;		/* HUGE use full buffers */
+	}else{
+		play_len /= 4;		/* we're going to use 4 buffers */
+	}
+	if (play_len < PAGE*MINPAGES){
+		play_len = PAGE*MINPAGES;
+	}else{
+		if (play_len%MINDMA){
+			int residue = play_len%MINDMA;
+			play_len += MINDMA - residue;
+		}
+	}
+	Knob playbuffer_len("/etc/acq400/0/dist_bufferlen_play");
+	playbuffer_len.set(play_len);
+}
 
 template <class T>
-int load(void) {
+int load(FILE* out) {
 	std::vector<Channel<T>*> channels;
+	G::minsam = (MINPAGES*PAGE) / (sizeof(T) * G::nchan);
 	for (int ch = 1; ch <= G::nchan; ++ch){
-		channels.push_back(new Channel<T>(ch));
+		Channel<T> *channel = new Channel<T>(ch);
+		channels.push_back(channel);
+		if (channel->nsam() > G::minsam){
+			G::minsam = channel->nsam();
+		}
 	}
+	set_playbuffer_len(G::minsam*sizeof(T) * G::nchan);
 
 	for (int isam = 0; isam < G::minsam; ++isam){
 		for (Channel<T>* ch: channels){
-			fwrite(ch->next(), sizeof(T), 1, stdout);
+			fwrite(ch->next(), sizeof(T), 1, out);
 		}
 	}
 	return 0;
@@ -128,9 +170,22 @@ int load(void) {
 int main(int argc, const char** argv)
 {
 	ui(argc, argv);
-	if (G::data32){
-		return load<int>();
-	}else{
-		return load<short>();
+	FILE *fp = stdout;
+
+	if (G::mode != -1){
+		char cmd[80];
+		snprintf(cmd, 80, "bb load --mode %d", G::mode);
+		fp = popen(cmd, "w");
+		assert(fp);
 	}
+	int rc;
+	if (G::data32){
+		rc = load<int>(fp);
+	}else{
+		rc = load<short>(fp);
+	}
+	if (fp != stdout){
+		pclose(fp);
+	}
+	return rc;
 }

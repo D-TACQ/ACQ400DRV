@@ -439,7 +439,7 @@ build_site0() {
 	    fi 
 	esac
 	
-	ln -s /usr/local/CARE/awg_load_channels.oneshot_auto $ek/awg_load_channels
+	ln -s /usr/local/bin/awg_load_channels $ek/awg_load_channels
 }
 
 build_mgt400_node() {

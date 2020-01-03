@@ -232,7 +232,7 @@ mgtdram_descgen: 	mgtdram_descgen.o
 wrtd: 	wrtd.o Multicast.o
 	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
 
-awg_load_channels: awg_load_channels.o
+awg_load_channels: awg_load_channels.o knobs.o
 	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt
 	
 rtpackage:
