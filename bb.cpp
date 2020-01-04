@@ -378,6 +378,9 @@ int _load_playbufferlen()
 	     ++ib, totsam += nsam){
 		;
 	}
+	if (G::load_bufferlen){
+		max_samples = G::load_bufferlen/G::sample_size;
+	}
 	nb = ib * max_samples;
 	return nb;
 }
