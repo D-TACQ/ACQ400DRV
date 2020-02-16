@@ -347,9 +347,45 @@ void acq400_del_proc(struct acq400_dev* adev)
 	remove_proc_entry(adev->site_no, acq400_proc_root);
 }
 
+static int ktime_check_show(struct seq_file *m, void *v)
+{
+	unsigned jiffies0 = jiffies;
+	unsigned jiffies1;
+
+	msleep(1000);
+	jiffies1 = jiffies;
+	seq_printf(m, "HZ:%u j0 %u j1 %u dj:%u\n", HZ, jiffies0, jiffies1,
+			jiffies1>jiffies0? jiffies1-jiffies0: jiffies0-jiffies1);
+
+	return 0;
+}
+
+static int proc_ktime_check_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ktime_check_show, NULL);
+}
+static ssize_t add_timing_check(void)
+{
+	static const struct file_operations ktime_check_ops = {
+		.owner 		= THIS_MODULE,
+		.open           = proc_ktime_check_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+	};
+	struct proc_dir_entry *entry;
+
+	/* create the current config file */
+	entry = proc_create("ktime_check", S_IRUGO, acq400_proc_root, &ktime_check_ops);
+	if (!entry)
+		return -ENOMEM;
+
+	return 0;
+}
 void acq400_module_init_proc(void)
 {
 	acq400_proc_root = proc_mkdir("driver/acq400", 0);
+	add_timing_check();
 }
 void acq400_module_remove_proc()
 {

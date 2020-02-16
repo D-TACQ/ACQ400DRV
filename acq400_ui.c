@@ -39,6 +39,9 @@ int acq400_event_count_limit = 1;
 module_param(acq400_event_count_limit, int, 0644);
 MODULE_PARM_DESC(acq400_event_count_limit, "limit number of events per shot 0: no limit");
 
+int hz = HZ;
+module_param(hz, int, 0444);
+MODULE_PARM_DESC(hz, "show kernel value for HZ");
 
 int xo400_awg_open(struct inode *inode, struct file *file)
 /* if write mode, reset length */
