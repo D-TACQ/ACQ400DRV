@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.023"
+#define REVID "CPSC2 4.024"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1589,7 +1589,7 @@ void xo400_getDMA(struct acq400_dev* adev)
 
 
 
-#define XO_MAX_POLL 100
+#define XO_MAX_POLL 1000
 
 int waitXoFifoEmpty(struct acq400_dev *adev)
 {
