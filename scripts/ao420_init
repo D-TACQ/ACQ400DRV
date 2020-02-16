@@ -43,9 +43,11 @@ ao428elf)
 		/sbin/insmod ao428.ko)
 		rm -f /dev/hwmon/2/*	
 		ln -s /sys/class/hwmon/hwmon4/device/temp1_input /dev/hwmon/2/temp
+		ln -s /usr/local/CARE/dac20_autozero /etc/acq400/2/dac20_autozero
 	fi
-	ln -s /usr/local/CARE/dac20_autozero /etc/acq400/2/dac20_autozero
 	;;
+cpsc2dac)
+	ln -s /usr/local/CARE/dac20_autozero /etc/acq400/2/dac20_autozero;;
 esac
 
 cat - >>/etc/acq400/$SITE/groups <<EOF
