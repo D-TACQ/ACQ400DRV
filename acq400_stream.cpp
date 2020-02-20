@@ -2436,6 +2436,7 @@ int StreamHeadLivePP::_stream() {
 		if (verbose){
 			fprintf(stderr, "StreamHeadLivePP::stream() found %d %p pre %d post %d\n",
 					ibuf, es, pre, post);
+		}
 		char *es1 = es + (show_es? 0: sample_size);
 
 		// all info referenced to buffer 0!
