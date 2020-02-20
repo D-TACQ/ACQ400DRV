@@ -305,11 +305,12 @@ private:
 
 	bool data_fits_buffer;
 	char** new_names;
+	char** old_names;
 	char OUT_ROOT[128];
 	char OUT_ROOT_NEW[128];
 	char OUT_ROOT_OLD[128];
 	char CLEAN_COMMAND[160];
-	char FIN_COMMAND[160];
+	char FIN_FILE[160];
 
 	static u32 ID_MASK;
 
@@ -330,21 +331,23 @@ private:
 			ID_MASK = 0xff;
 		}
 	}
+	void _make_names(const char* root, char** names){
+		char buf[160];
+
+		for (unsigned ic = 0; ic < nchan; ++ic){
+			int len = sprintf(buf, "%s/CH%02d", root, lchan(ic));
+			names[ic] = new char[len+1];
+			strcpy(names[ic], buf);
+		}
+	}
 	void make_names() {
 		sprintf(OUT_ROOT, FMT_OUT_ROOT, G::devnum);
 		sprintf(OUT_ROOT_NEW, FMT_OUT_ROOT_NEW, G::devnum);
 		sprintf(OUT_ROOT_OLD, FMT_OUT_ROOT_OLD, G::devnum);
-		sprintf(CLEAN_COMMAND, "rm -Rf %s", OUT_ROOT_OLD);
-		sprintf(FIN_COMMAND,   "date >%s.fin", OUT_ROOT);
+		sprintf(FIN_FILE,   "%s.fin", OUT_ROOT);
 
-		new_names = new char* [nchan];
-		char buf[160];
-
-		for (unsigned ic = 0; ic < nchan; ++ic){
-			int len = sprintf(buf, "%s/CH%02d", OUT_ROOT_NEW, lchan(ic));
-			new_names[ic] = new char[len+1];
-			strcpy(new_names[ic], buf);
-		}
+		_make_names(OUT_ROOT_NEW, new_names = new char* [nchan]);
+		_make_names(OUT_ROOT_OLD, old_names = new char* [nchan]);
 	}
 	void start() {
 		mkdir(OUT_ROOT_NEW, 0777);
@@ -353,11 +356,25 @@ private:
 		}
 		startchan = 0;
 	}
+	void clean_old() {
+		for (unsigned ic = 0; ic < nchan; ++ic){
+			unlink(old_names[ic]);
+		}
+		rmdir(OUT_ROOT_OLD);
+	}
+	void fin_cmd() {
+		FILE *fp = fopen(FIN_FILE, "w");
+		time_t now;
+
+		time(&now);
+		fprintf(fp, "%s\n", ctime(&now));
+		fclose(fp);
+	}
 	void finish() {
-		system(CLEAN_COMMAND);
+		clean_old();
 		rename(OUT_ROOT, OUT_ROOT_OLD);
 		rename(OUT_ROOT_NEW, OUT_ROOT);
-		system(FIN_COMMAND);
+		fin_cmd();
 		if (G::script_runs_on_completion != 0){
 			system(G::script_runs_on_completion);
 		}
