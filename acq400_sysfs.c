@@ -1082,8 +1082,7 @@ static ssize_t show_reg_rtm_translen(
 	struct device_attribute *attr,
 	char * buf)
 {
-	struct acq400_dev* adev = acq400_devices[dev->id];
-	int ff = IS_ACQ480(adev)? acq480_rtm_translen_offset: 0;
+	int ff = IS_ACQ480(acq400_devices[dev->id])? acq480_rtm_translen_offset: 0;
 
 	return show_reg(dev, attr, buf, ADC_TRANSLEN, "%u\n", ff);
 }
