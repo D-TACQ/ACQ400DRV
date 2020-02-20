@@ -304,7 +304,7 @@ private:
 	static T** ddcursors;
 
 	bool data_fits_buffer;
-	char** fnames;
+	char** new_names;
 	char OUT_ROOT[128];
 	char OUT_ROOT_NEW[128];
 	char OUT_ROOT_OLD[128];
@@ -337,13 +337,13 @@ private:
 		sprintf(CLEAN_COMMAND, "rm -Rf %s", OUT_ROOT_OLD);
 		sprintf(FIN_COMMAND,   "date >%s.fin", OUT_ROOT);
 
-		fnames = new char* [nchan];
+		new_names = new char* [nchan];
 		char buf[160];
 
 		for (unsigned ic = 0; ic < nchan; ++ic){
 			int len = sprintf(buf, "%s/CH%02d", OUT_ROOT_NEW, lchan(ic));
-			fnames[ic] = new char[len+1];
-			strcpy(fnames[ic], buf);
+			new_names[ic] = new char[len+1];
+			strcpy(new_names[ic], buf);
 		}
 	}
 	void start() {
@@ -379,9 +379,9 @@ private:
 	bool demux(bool start, int start_off, int len);
 
 	bool writeChan(int ic){
-		FILE* fp = fopen(fnames[ic], "w");
+		FILE* fp = fopen(new_names[ic], "w");
 		if (fp ==0){
-			perror(fnames[ic]);
+			perror(new_names[ic]);
 			return true;
 		}
 		int nelems = ddcursors[ic]-dddata[ic];
@@ -389,7 +389,7 @@ private:
 		fclose(fp);
 		if (nwrite != nelems || (verbose&&ic==0) || verbose>1){
 			fprintf(stderr, "DemuxBuffer::writeChan(%s) ic:%d %d %d %s\n",
-					fnames[ic], ic, nwrite, nelems, nwrite!=nelems? "ERROR":"");
+					new_names[ic], ic, nwrite, nelems, nwrite!=nelems? "ERROR":"");
 		}
 		return false;
 	}
