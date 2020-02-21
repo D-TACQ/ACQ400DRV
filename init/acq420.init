@@ -620,7 +620,7 @@ sites=1,2,3
 good_sites=1,2,3
 EOF
 	MODLIB=/usr/local/lib/modules	
-	echo "cpsc2,435,428" >/etc/acq400/0/SITELIST
+	echo "cpsc2,1=435,2=428" >/etc/acq400/0/SITELIST
 else
 	if [ ! -e /etc/sites ]; then
 		echo "ERROR FPGA not loaded exit now"
