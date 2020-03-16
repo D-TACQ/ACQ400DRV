@@ -39,8 +39,10 @@
 
 /* DAC bitfields */
 
-#define CPSC2_DAC_WF_CLEAR		(0x1<<21)
-#define CPSC2_DAC_PKT_CLEAR		(0x1<<20)
+#define CPSC2_DACB_WF_CLEAR		(0x1<<23)
+#define CPSC2_DACB_PKT_CLEAR		(0x1<<22)
+#define CPSC2_DACA_WF_CLEAR		(0x1<<21)
+#define CPSC2_DACA_PKT_CLEAR		(0x1<<20)
 #define CPSC2_DAC_CTRL_SFP_MODE		(0x3<<18)
 #define CPSC2_DACB_WFnSFP		(0x1<<17)
 #define CPSC2_DACA_WFnSFP		(0x1<<16)
