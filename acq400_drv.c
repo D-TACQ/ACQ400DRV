@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.026"
+#define REVID "CPSC2 4.027"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1779,6 +1779,7 @@ int xo_data_loop(void *data)
 				adev->DMA_READY,
 				adev->dma_callback_done || kthread_should_stop(),
 				dma_timeout) <= 0){
+			xo400_awg_abort(adev);
 			dev_err(DEVP(adev), "TIMEOUT waiting for DMA %d\n", __LINE__);
 			goto quit;
 		}
@@ -1847,6 +1848,7 @@ quit:
 		if (wait_event_interruptible_timeout(
 			adev->DMA_READY,
 			adev->dma_callback_done, dma_timeout) <= 0){
+			xo400_awg_abort(adev);
 			dev_err(DEVP(adev), "TIMEOUT waiting for DMA %d\n", __LINE__);
 		}
 	}

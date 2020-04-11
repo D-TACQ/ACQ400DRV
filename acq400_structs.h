@@ -679,6 +679,7 @@ extern int acq400_get_AXI_DMA_len(struct acq400_dev *adev);
 #define NSEC_PER_MSEC	1000000L
 
 int xo400_reset_playloop(struct acq400_dev* adev, unsigned playloop_length);
+int xo400_awg_abort(struct acq400_dev* adev);
 
 void acq400_enable_adc(struct acq400_dev* adev);
 extern void ao_stop(struct acq400_dev *adev);

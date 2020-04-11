@@ -224,6 +224,13 @@ void ao_stop(struct acq400_dev *adev)
 {
 	_ao420_stop(adev);
 }
+
+int xo400_awg_abort(struct acq400_dev* adev)
+{
+	acq400setbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+	msleep(100);
+	acq400clrbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+}
 static void _cpsc2_dac_onStop(struct acq400_dev *adev)
 {
 	if (adev->task_active){
@@ -231,9 +238,7 @@ static void _cpsc2_dac_onStop(struct acq400_dev *adev)
 		dev_dbg(DEVP(adev), "drain off any PRI AWG BEFORE shutdown");
 		xo_dev->AO_playloop.oneshot = 1;
 		msleep(100);
-		acq400setbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
-		msleep(100);
-		acq400clrbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+		xo400_awg_abort(adev);
 	}
 
 	_ao420_stop(adev);
