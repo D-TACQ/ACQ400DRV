@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.029"
+#define REVID "CPSC2 4.030"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1802,15 +1802,6 @@ int xo_data_loop(void *data)
 			dev_err(DEVP(adev), "here with no callback int should not happen ..");
 		}
 
-		dev_dbg(DEVP(adev), "calling dma_sync_wait() ..");
-#if 0
-		if(dma_sync_wait(adev->dma_chan[ic], adev->dma_cookies[ic]) != DMA_SUCCESS){
-			dev_err(DEVP(adev), "dma_sync_wait TIMEOUT cursor:%d chan:%d timeout:%ld",
-					xo_dev->AO_playloop.cursor, ic, dma_timeout);
-			goto quit;
-		}
-		dev_dbg(DEVP(adev), "44 back from dma_sync_wait() oneshot:%d", xo_dev->AO_playloop.oneshot);
-#endif
 		xo_dev->AO_playloop.cursor += ao_samples_per_hb;
 
 		if (last_push_done && continuous_at_start){
