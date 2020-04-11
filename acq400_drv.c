@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.027"
+#define REVID "CPSC2 4.029"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1740,12 +1740,15 @@ int xo_data_loop(void *data)
 
 #define DMA_ASYNC_ISSUE_PENDING(chan) _dma_async_issue_pending(adev, chan, __LINE__)
 
-#define DMA_COUNT_IN do { 				\
-		++adev->stats.xo.dma_buffers_in;	\
-		dev_dbg(DEVP(adev), "DMA_COUNT_IN %d", adev->stats.xo.dma_buffers_in); \
+#define DMA_COUNT_IN do { 														\
+		--adev->dma_callback_done; 												\
+		++adev->stats.xo.dma_buffers_in;										\
+		dev_dbg(DEVP(adev), "DMA_COUNT_IN %d", adev->stats.xo.dma_buffers_in); 	\
 	} while(0)
 
 
+#define DMA_TERMINATE(chan) \
+		chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
 
 	go_rt(MAX_RT_PRIO-4);
 	adev->task_active = 1;
@@ -1780,6 +1783,11 @@ int xo_data_loop(void *data)
 				adev->dma_callback_done || kthread_should_stop(),
 				dma_timeout) <= 0){
 			xo400_awg_abort(adev);
+			/*
+			DMA_TERMINATE(adev->dma_chan[0]);
+			DMA_TERMINATE(adev->dma_chan[1]);
+			*/
+			DMA_COUNT_IN;
 			dev_err(DEVP(adev), "TIMEOUT waiting for DMA %d\n", __LINE__);
 			goto quit;
 		}
@@ -1789,21 +1797,20 @@ int xo_data_loop(void *data)
 			dev_info(DEVP(adev), "kthread_should_stop");
 			goto quit;
 		}else if (adev->dma_callback_done){
-			--adev->dma_callback_done;
 			DMA_COUNT_IN;
 		}else {
 			dev_err(DEVP(adev), "here with no callback int should not happen ..");
 		}
 
 		dev_dbg(DEVP(adev), "calling dma_sync_wait() ..");
-
+#if 0
 		if(dma_sync_wait(adev->dma_chan[ic], adev->dma_cookies[ic]) != DMA_SUCCESS){
 			dev_err(DEVP(adev), "dma_sync_wait TIMEOUT cursor:%d chan:%d timeout:%ld",
 					xo_dev->AO_playloop.cursor, ic, dma_timeout);
 			goto quit;
 		}
 		dev_dbg(DEVP(adev), "44 back from dma_sync_wait() oneshot:%d", xo_dev->AO_playloop.oneshot);
-
+#endif
 		xo_dev->AO_playloop.cursor += ao_samples_per_hb;
 
 		if (last_push_done && continuous_at_start){
@@ -1853,7 +1860,6 @@ quit:
 		}
 	}
 	if (adev->dma_callback_done){
-		--adev->dma_callback_done;
 		DMA_COUNT_IN;
 	}
 	waitXoFifoEmpty(adev);
