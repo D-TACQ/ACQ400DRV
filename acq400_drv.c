@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.030"
+#define REVID "CPSC2 4.031"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1725,9 +1725,9 @@ int xo_data_loop(void *data)
 			adev->stats.xo.dma_buffers_in = 0;
 
 #define NOFL nflags
-#define WFEV wflags		/* Wait For EV 	*/
-#define STEV sflags 		/* Set EV 	*/
-#define WFST xflags		/* Wait For EV, Set EV */
+#define WFEV wflags		/* Wait For EV 			*/
+#define STEV sflags 	/* Set EV 				*/
+#define WFST xflags		/* Wait For EV, Set EV 	*/
 
 #define DMA_ASYNC_PUSH(lvar, adev, chan, hbm, flags)	do {		\
 	unsigned _flags = DMA_DS0_FLAGS|(flags[chan]);			\
@@ -1833,7 +1833,6 @@ int xo_data_loop(void *data)
 			IBINCR;
 			DMA_ASYNC_ISSUE_PENDING(adev->dma_chan[ic]);
 		}
-		yield();
 		dev_dbg(DEVP(adev), "66 oneshot:%d", xo_dev->AO_playloop.oneshot);
 	}
 
