@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.032"
+#define REVID "CPSC2 4.033"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1591,6 +1591,26 @@ void xo400_getDMA(struct acq400_dev* adev)
 
 #define XO_MAX_POLL 1000
 
+
+void set_awg_abort_en(struct acq400_dev* adev)
+{
+	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
+	acq400wr32(adev, DAC_CTRL, dac_ctrl|DAC_CTRL_AWG_ABORT);
+}
+
+void set_awg_abort_clr(struct acq400_dev* adev){
+	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
+	acq400wr32(adev, DAC_CTRL, dac_ctrl &= ~DAC_CTRL_AWG_ABORT);
+}
+
+void set_awg_abort_pulse(struct acq400_dev* adev)
+{
+	set_awg_abort_en(adev);
+	msleep(10);
+	set_awg_abort_clr(adev);
+}
+
+
 int waitXoFifoEmpty(struct acq400_dev *adev)
 {
 	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
@@ -1608,10 +1628,12 @@ int waitXoFifoEmpty(struct acq400_dev *adev)
 			eq_count = 0;
 		}
 
-		if (eq_count > 1 || ++pollcat > XO_MAX_POLL){
+		if (eq_count > 2 || ++pollcat > XO_MAX_POLL){
+			u32 dfs1 = acq400rd32(adev, DAC_FIFO_SAMPLES);
+			set_awg_abort_pulse(adev);
 			dev_err(DEVP(adev), "TIMEOUT waiting for XO FIFO EMPTY "
-				"pc:%d s0:%d s1:%d FIFO STA:%08x DAC_FIFO_SAMPLES:%08x",
-				pollcat, s0, s1, fifsta, acq400rd32(adev, DAC_FIFO_SAMPLES));
+				"pc:%d s0:%d s1:%d FIFO STA:%08x DAC_FIFO_SAMPLES:%08x after ABO:%08x",
+				pollcat, s0, s1, fifsta, dfs1, acq400rd32(adev, DAC_FIFO_SAMPLES));
 			return -1;
 		}else{
 			s0 = s1;
@@ -1676,23 +1698,6 @@ void incr_push(struct acq400_dev *adev, struct XO_dev* xo_dev)
 	}
 }
 
-void set_awg_abort_en(struct acq400_dev* adev)
-{
-	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
-	acq400wr32(adev, DAC_CTRL, dac_ctrl|DAC_CTRL_AWG_ABORT);
-}
-
-void set_awg_abort_clr(struct acq400_dev* adev){
-	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
-	acq400wr32(adev, DAC_CTRL, dac_ctrl &= ~DAC_CTRL_AWG_ABORT);
-}
-
-void set_awg_abort_pulse(struct acq400_dev* adev)
-{
-	set_awg_abort_en(adev);
-	msleep(10);
-	set_awg_abort_clr(adev);
-}
 
 
 int xo_data_loop(void *data)
@@ -1759,8 +1764,10 @@ int xo_data_loop(void *data)
 #define DMA_ASYNC_ISSUE_PENDING(chan) _dma_async_issue_pending(adev, chan, __LINE__)
 
 #define DMA_COUNT_IN do { 														\
-		--adev->dma_callback_done; 												\
-		++adev->stats.xo.dma_buffers_in;										\
+		if (adev->dma_callback_done) {											\
+			--adev->dma_callback_done; 											\
+			++adev->stats.xo.dma_buffers_in;									\
+		}																		\
 		dev_dbg(DEVP(adev), "DMA_COUNT_IN %d", adev->stats.xo.dma_buffers_in); 	\
 	} while(0)
 
