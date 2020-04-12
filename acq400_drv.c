@@ -24,7 +24,7 @@
 #include "dmaengine.h"
 
 
-#define REVID "CPSC2 4.031"
+#define REVID "CPSC2 4.032"
 
 /* Define debugging for use during our driver bringup */
 #undef PDEBUG
@@ -1676,6 +1676,24 @@ void incr_push(struct acq400_dev *adev, struct XO_dev* xo_dev)
 	}
 }
 
+void set_awg_abort_en(struct acq400_dev* adev)
+{
+	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
+	acq400wr32(adev, DAC_CTRL, dac_ctrl|DAC_CTRL_AWG_ABORT);
+}
+
+void set_awg_abort_clr(struct acq400_dev* adev){
+	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
+	acq400wr32(adev, DAC_CTRL, dac_ctrl &= ~DAC_CTRL_AWG_ABORT);
+}
+
+void set_awg_abort_pulse(struct acq400_dev* adev)
+{
+	set_awg_abort_en(adev);
+	msleep(10);
+	set_awg_abort_clr(adev);
+}
+
 
 int xo_data_loop(void *data)
 /** xo_data_loop() : outputs using distributor and PRI on SC, but loop is
@@ -1867,6 +1885,12 @@ quit:
 
 	dev_dbg(DEVP(adev), "88 oneshot:%d", xo_dev->AO_playloop.oneshot);
 
+	if (adev->stats.xo.dma_buffers_out != adev->stats.xo.dma_buffers_in){
+		dev_err(DEVP(adev), "xo_data_loop() 90 out:%d in:%d",
+				adev->stats.xo.dma_buffers_out, adev->stats.xo.dma_buffers_in);
+		set_awg_abort_pulse(adev);
+	}
+
 	if (xo_dev->AO_playloop.oneshot == AO_oneshot_rearm &&
 	    (xo_dev->AO_playloop.maxshot==0 || adev->stats.shot < xo_dev->AO_playloop.maxshot)){
 		dev_dbg(DEVP(adev), "xo_data_loop() spawn auto_rearm");
@@ -1874,10 +1898,7 @@ quit:
 	}
 	dev_dbg(DEVP(adev), "xo_data_loop() 99 out:%d in:%d",
 			adev->stats.xo.dma_buffers_out, adev->stats.xo.dma_buffers_in);
-	if (adev->stats.xo.dma_buffers_out != adev->stats.xo.dma_buffers_in){
-		dev_err(DEVP(adev), "xo_data_loop() 99 out:%d in:%d",
-				adev->stats.xo.dma_buffers_out, adev->stats.xo.dma_buffers_in);
-	}
+
 	return 0;
 }
 
@@ -1912,16 +1933,6 @@ void xo400_distributor_feeder_control(struct acq400_dev* adev, int enable)
 }
 
 
-void set_awg_abort_en(struct acq400_dev* adev)
-{
-	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
-	acq400wr32(adev, DAC_CTRL, dac_ctrl|DAC_CTRL_AWG_ABORT);
-}
-
-void set_awg_abort_clr(struct acq400_dev* adev){
-	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
-	acq400wr32(adev, DAC_CTRL, dac_ctrl &= ~DAC_CTRL_AWG_ABORT);
-}
 
 int xo400_reset_playloop(struct acq400_dev* adev, unsigned playloop_length)
 {
