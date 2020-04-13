@@ -228,8 +228,9 @@ void ao_stop(struct acq400_dev *adev)
 int xo400_awg_abort(struct acq400_dev* adev)
 {
 	acq400setbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
-	msleep(100);
+	msleep(10);
 	acq400clrbits(adev, DAC_CTRL, DAC_CTRL_AWG_ABORT);
+	return 0;
 }
 static void _cpsc2_dac_onStop(struct acq400_dev *adev)
 {
