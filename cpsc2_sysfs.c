@@ -32,11 +32,14 @@ const struct attribute *cpsc2_sc_attrs[] = {
 		NULL
 };
 
-SCOUNT_KNOB(SFP1_PKT_CNT, 	CPSC2_DAC_SFP1_PKT_CNT);
+SCOUNT_KNOB(SFP1_PKT_CNT, 		CPSC2_DAC_SFP1_PKT_CNT);
 SCOUNT_KNOB(SFP1_SKIP_PKT_CNT, 	CPSC2_DAC_SFP1_SKIP_PKT_CNT);
-SCOUNT_KNOB(SFP2_PKT_CNT, 	CPSC2_DAC_SFP2_PKT_CNT);
+SCOUNT_KNOB(SFP2_PKT_CNT, 		CPSC2_DAC_SFP2_PKT_CNT);
 SCOUNT_KNOB(SFP2_SKIP_PKT_CNT, 	CPSC2_DAC_SFP2_SKIP_PKT_CNT);
 
+MAKE_DNUM(burstlen, 			MAKE_BITS_FROM_MASK, CPSC2_DAC_RTM_LENGTH);
+
+MAKE_BITS(burstmode,   	  DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DAC_RTM_MODE);
 MAKE_BITS(awgB_clr,   	  DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DACB_WF_CLEAR);
 MAKE_BITS(pktB_clr,   	  DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DACB_PKT_CLEAR);
 MAKE_BITS(awgA_clr,   	  DAC_CTRL, MAKE_BITS_FROM_MASK, CPSC2_DACA_WF_CLEAR);
@@ -63,6 +66,9 @@ const struct attribute *cpsc2_dac_attrs[] = {
 	&dev_attr_scount_SFP1_SKIP_PKT_CNT.attr,
 	&dev_attr_scount_SFP2_PKT_CNT.attr,
 	&dev_attr_scount_SFP2_SKIP_PKT_CNT.attr,
+
+	&dev_attr_burstlen.attr,
+	&dev_attr_burstmode.attr,
 
 	&dev_attr_awgB_clr.attr,
 	&dev_attr_pktB_clr.attr,

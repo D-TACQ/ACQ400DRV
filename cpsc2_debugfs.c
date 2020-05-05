@@ -30,6 +30,7 @@ void cpsc2_dac_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(CPSC2_DAC_SLOW_SET_CH(6));
 	DBG_REG_CREATE(CPSC2_DAC_SLOW_SET_CH(7));
 	DBG_REG_CREATE(CPSC2_DAC_SLOW_SET_CH(8));
+	DBG_REG_CREATE(CPSC2_DAC_RTM_LENGTH);
 }
 
 void cpsc2_com_createDebugfs(struct acq400_dev* adev, char* pcursor)
