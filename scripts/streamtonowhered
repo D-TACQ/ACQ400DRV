@@ -6,16 +6,18 @@ PIDF=/var/run/run.$SERVICE.pid
 #LOG=/var/log/run.$SERVICE.log
 LPORT=$(get-port-from-service acq4xx-$SERVICE-console)
 
+SIGTERM=15
+
 start() {
-	/usr/local/bin/procServ --restrict -c / -p $PIDF $LPORT \
-		/usr/local/bin/streamtonowhere
+		/usr/local/bin/procServ --restrict -c / -p $PIDF --killsig=$SIGTERM $LPORT \
+			/usr/local/bin/streamtonowhere
 }
 
 stop() {
         if [ -r ${PIDF} ]; then
         	echo 1 > /dev/acq400.0.knobs/estop
-                kill -s TERM $(cat ${PIDF})
-                rm ${PIDF}
+            kill -s TERM $(cat ${PIDF})
+            rm ${PIDF}
 		sleep 1
 		set.site 0 state 0
         fi
