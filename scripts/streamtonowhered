@@ -16,10 +16,10 @@ start() {
 stop() {
         if [ -r ${PIDF} ]; then
         	echo 1 > /dev/acq400.0.knobs/estop
-            kill -s TERM $(cat ${PIDF})
+            kill -${SIGTERM} $(cat ${PIDF})
             rm ${PIDF}
-		sleep 1
-		set.site 0 state 0
+			sleep 0.1
+			set.site 0 state 0
         fi
 }
 

@@ -14,13 +14,13 @@ echo $SAMPLE_SIZE $OVERSAMPLING $SITE >>$LOG
 STREAM_OPTS="$STREAM_OPTS --state-file /dev/shm/state"
 
 if [ "x$ACQ400D_TRIG" = "xsoft_trigger" ]; then
-	STREAM_OPTS="$STREAM_OPTS --soft-trigger=1"	
+	STREAM_OPTS="$STREAM_OPTS --soft-trigger=1 -v1"	
 fi
 
 ACQ400_STREAM=acq400_stream
 
 echo $ACQ400_STREAM --$SSPEC $STREAM_OPTS $SAMPLE_SIZE $OVERSAMPLING $SITE  >>$LOG
-$ACQ400_STREAM --$SSPEC $STREAM_OPTS $SAMPLE_SIZE $OVERSAMPLING $SITE 2>/dev/null
+$ACQ400_STREAM --$SSPEC $STREAM_OPTS $SAMPLE_SIZE $OVERSAMPLING $SITE 2>/dev/console
 
 fix_state; cat /dev/shm/state 1>&2
 

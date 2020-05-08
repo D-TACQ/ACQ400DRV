@@ -866,7 +866,9 @@ public:
 					}
 				}
 				if (!checkit_ok){
-					fprintf(stderr, "checkit_ok reject\n");
+					if (verbose){
+						fprintf(stderr, "checkit_ok reject\n");
+					}
 					return 0;
 				}
 			}
@@ -1369,7 +1371,7 @@ void acq400_stream_getstate(void);
 #include <sys/wait.h>
 #include <sys/select.h>
 
-static void wait_and_cleanup_sighandler(int signo);
+
 
 
 void ident(const char* tid = "acq400_stream") {
@@ -1384,16 +1386,31 @@ void ident(const char* tid = "acq400_stream") {
 	fclose(fp);
 }
 
+static bool it_was_sig_term;
+
+
+static void default_wait_on_sigterm(int signo)
+{
+	pid_t wpid;
+	int status = 0;
+	while ((wpid = wait(&status)) > 0){
+		;
+	}
+	exit(0);
+}
+static void wait_and_cleanup_sighandler(int signo)
+{
+	it_was_sig_term = true;
+}
 static void wait_and_cleanup(pid_t child)
 {
 	sigset_t  emptyset, blockset;
 
-	if (verbose) fprintf(stderr, "wait_and_cleanup 01 pid %d\n", getpid());
+	if (verbose) fprintf(stderr, "_cleanup 01 pid %d\n", getpid());
 
 	ident();
 	sigemptyset(&blockset);
 	sigaddset(&blockset, SIGHUP);
-	sigaddset(&blockset, SIGTERM);
 	sigaddset(&blockset, SIGINT);
 	sigaddset(&blockset, SIGCHLD);
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
@@ -1421,9 +1438,10 @@ static void wait_and_cleanup(pid_t child)
 		int ready = pselect(1, &readfds, NULL, &exceptfds, NULL, &emptyset);
 
 		if (ready == -1 && errno != EINTR){
-			perror("pselect");
-			finished = true;
-			break;
+			if (it_was_sig_term){
+				perror("pselect");
+				finished = true;
+			}
 		}else if (FD_ISSET(0, &exceptfds)){
 			if (verbose) fprintf(stderr, "exception on stdin\n");
 			finished = true;
@@ -1449,11 +1467,22 @@ static void wait_and_cleanup(pid_t child)
 			if (verbose) fprintf(stderr, "out of pselect, not sure why\n");
 		}
 	}
+	sigaddset(&blockset, SIGTERM);
+	sigdelset(&blockset, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &blockset, NULL);
+	fprintf(stderr, "_cleanup exterminate\n");
+    Progress::instance().setState(ST_CLEANUP);
+    kill(0, SIGTERM);
 
-	fprintf(stderr, "wait_and_cleanup exterminate\n");
-        Progress::instance().setState(ST_CLEANUP);
-        kill(0, SIGTERM);
-        exit(0);
+	int nwait = 0;
+	pid_t wpid;
+	int status = 0;
+	while ((wpid = waitpid(-getpgrp(), &status, 0)) > 0){
+		++nwait;
+		fprintf(stderr, "%d waited for %d\n", nwait, wpid);
+	}
+
+    exit(0);
 }
 
 static void hold_open(int site)
@@ -1526,15 +1555,15 @@ static void hold_open(const char* sites)
 			for (int isite = 0; isite < G::nsites; ++isite ){
 				child = fork();
 
-		                if (child == 0) {
-		                	syslog(LOG_DEBUG, "%d  %10s %d\n", getpid(), "hold_open", isite);
-		                	holder_wait_and_pass_aggsem();
-		                	hold_open(G::the_sites[isite]);
-		                	assert(1);
-		                }else{
-		                	sched_yield();
-		                	holders.push_back(child);
-		                }
+				if (child == 0) {
+					syslog(LOG_DEBUG, "%d  %10s %d\n", getpid(), "hold_open", isite);
+					holder_wait_and_pass_aggsem();
+					hold_open(G::the_sites[isite]);
+					assert(1);
+				}else{
+					sched_yield();
+					holders.push_back(child);
+				}
 			}
 		}
 	}
@@ -1718,7 +1747,11 @@ void init(int argc, const char** argv) {
 	}
 	/* do this early so all descendents get the same pgid .. so we can kill them :-) */
 	setpgid(0, 0);
-
+	struct sigaction sa;
+	sa.sa_handler = default_wait_on_sigterm;
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGTERM, &sa, NULL);
 
 	Buffer::sample_size = sample_size();
 
@@ -1756,16 +1789,23 @@ void init(int argc, const char** argv) {
 
 }
 
+
 class StreamHead {
 
 	static bool has_pre_post_live_demux(void);
 	static StreamHead* createLiveDataInstance();
+
 protected:
 	int fc;
 	int fout;
+
 	StreamHead(int _fc, int _fout = 1) : fc(_fc), fout(_fout) {
 		assert(fc >= 0);
 		assert(fout >= 0);
+
+		const char* vs = getenv("StreamHeadVerbose");
+		vs && (verbose = atoi(vs));
+		if (verbose) fprintf(stderr, "StreamHead::verbose=%d\n", verbose);
 	}
 	virtual ~StreamHead() {}
 
@@ -1788,6 +1828,8 @@ protected:
 		return 0;
 	}
 
+	static int verbose;
+
 public:
 	virtual void stream() {
 		int ib;
@@ -1804,6 +1846,8 @@ public:
 	static StreamHead* instance();
 };
 
+int StreamHead::verbose;
+
 
 #define TRG_POLL_MS 10
 
@@ -1815,7 +1859,7 @@ protected:
 	int f_ev;
 	int nfds;
 	bool event_received;
-	int verbose;
+
 	int buffers_searched;
 
 
@@ -2034,7 +2078,9 @@ protected:
 
 	void reportFindEvent(Buffer* the_buffer, enum FE_STATUS festa){
 		int ib = the_buffer == 0? 0: the_buffer->ib();
-		fprintf(stderr, "findEvent=%d,%d,%d\n", festa, ib, buffers_searched);
+		if (verbose){
+			fprintf(stderr, "findEvent=%d,%d,%d\n", festa, ib, buffers_searched);
+		}
 	}
 	virtual char* findEvent(Buffer* the_buffer) {
 		unsigned stride = G::nchan*G::wordsize/sizeof(unsigned);
@@ -2070,14 +2116,12 @@ public:
 	StreamHeadImpl(Progress& progress) : StreamHead(1234),
 		actual(progress),
 		samples_buffer(Buffer::bufferlen/sample_size()),
-		f_ev(0), nfds(0), event_received(0), verbose(0),
+		f_ev(0), nfds(0), event_received(0),
 		buffers_searched(0),
 		evX(*AbstractES::evX_instance()),
 		ev0(*AbstractES::ev0_instance()) {
-			const char* vs = getenv("StreamHeadImplVerbose");
-			vs && (verbose = atoi(vs));
+			if (verbose) fprintf(stderr, "StreamHead() pid %d progress: %s\n", getpid(), actual.name);
 
-			if (verbose) fprintf(stderr, "StreamHeadImpl() pid %d progress: %s\n", getpid(), actual.name);
 			reportFindEvent(0, FE_IDLE);
 	}
 	virtual void startStream() {
@@ -2280,7 +2324,7 @@ class StreamHeadLivePP : public StreamHeadHB0 {
 	}
 
 	int  _stream();
-	int verbose;
+	static int verbose;
 	bool show_es;
 public:
 	StreamHeadLivePP():
@@ -2288,6 +2332,7 @@ public:
 			sample_size(G::nchan*G::wordsize) {
 		const char* vs = getenv("StreamHeadLivePPVerbose");
 		vs && (verbose = atoi(vs));
+		if (verbose) fprintf(stderr, "StreamHeadLivePP() verbose=%d\n", verbose);
 		const char* ses = getenv("StreamHeadLivePPShowES");
 		ses && (show_es = atoi(ses));
 
@@ -2296,7 +2341,7 @@ public:
 		startSampleIntervalWatcher();
 
 
-		if (verbose) fprintf(stderr, "StreamHeadImpl() pid %d progress: %s\n", getpid(), actual.name);
+		if (verbose) fprintf(stderr, "StreamHeadLivePP() pid %d progress: %s\n", getpid(), actual.name);
 
 		if (verbose) fprintf(stderr, "StreamHeadLivePP: buffer[0] : %p\n",
 				Buffer::the_buffers[0]->getBase());
@@ -2311,6 +2356,8 @@ public:
 	}
 	virtual void stream();
 };
+
+int StreamHeadLivePP::verbose;
 
 bool StreamHead::has_pre_post_live_demux(void) {
 	return StreamHeadLivePP::hasPP();
@@ -2800,21 +2847,6 @@ Progress& Progress::instance(FILE *fp) {
 	return *_instance;
 }
 
-
-static bool cleanup_done;
-
-static void wait_and_cleanup_sighandler(int signo)
-{
-	if (verbose) fprintf(stderr,"wait_and_cleanup_sighandler(%d) pid:%d %s\n",
-			signo, getpid(), cleanup_done? "FRESH": "DONE");
-	if (!cleanup_done){
-		kill(0, SIGTERM);
-		cleanup_done = true;
-		Progress::instance().setState(ST_CLEANUP);
-		if (verbose) fprintf(stderr,"wait_and_cleanup_sighandler progress done\n");
-	}
-	exit(0);
-}
 void acq400_stream_getstate(void)
 {
 	Progress::instance().print();
