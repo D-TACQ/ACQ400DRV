@@ -1393,8 +1393,14 @@ static void default_wait_on_sigterm(int signo)
 {
 	pid_t wpid;
 	int status = 0;
+	if (verbose){
+		fprintf(stderr, "default_wait_on_sigterm() %d\n", getpid());
+	}
+
 	while ((wpid = wait(&status)) > 0){
-		;
+		if (verbose){
+			fprintf(stderr, "default_wait_on_sigterm() %d reaps %d\n", getpid(), wpid);
+		}
 	}
 	exit(0);
 }

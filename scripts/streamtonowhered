@@ -7,17 +7,19 @@ PIDF=/var/run/run.$SERVICE.pid
 LPORT=$(get-port-from-service acq4xx-$SERVICE-console)
 
 SIGTERM=15
-
+HATXNOEFFECT=0
 start() {
-		/usr/local/bin/procServ --restrict -c / -p $PIDF --killsig=$SIGTERM $LPORT \
+		/usr/local/bin/procServ --restrict -c / -p $PIDF --killsig=-$HATXNOEFFECT $LPORT \
 			/usr/local/bin/streamtonowhere
 }
 
+ACQ400_MAIN_PIDF=/var/run/acq400_stream.0.pid
+
 stop() {
-        if [ -r ${PIDF} ]; then
+        if [ -r ${ACQ400_MAIN_PIDF} ]; then
         	echo 1 > /dev/acq400.0.knobs/estop
-            kill -${SIGTERM} $(cat ${PIDF})
-            rm ${PIDF}
+            kill -${SIGTERM} $(cat ${ACQ400_MAIN_PIDF})
+            rm ${ACQ400_MAIN_PIDF}
 			sleep 0.1
 			set.site 0 state 0
         fi
