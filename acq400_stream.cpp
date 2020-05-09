@@ -1394,12 +1394,12 @@ static void default_wait_on_sigterm(int signo)
 	pid_t wpid;
 	int status = 0;
 	if (verbose){
-		fprintf(stderr, "default_wait_on_sigterm() %d\n", getpid());
+		fprintf(stderr, "%s %d\n", _PFN, getpid());
 	}
 
 	while ((wpid = wait(&status)) > 0){
 		if (verbose){
-			fprintf(stderr, "default_wait_on_sigterm() %d reaps %d\n", getpid(), wpid);
+			fprintf(stderr, "%s %d reaps %d\n", _PFN, getpid(), wpid);
 		}
 	}
 	exit(0);
@@ -1412,7 +1412,7 @@ static void wait_and_cleanup(pid_t child)
 {
 	sigset_t  emptyset, blockset;
 
-	if (verbose) fprintf(stderr, "_cleanup 01 pid %d\n", getpid());
+	if (verbose) fprintf(stderr, "%s 01 pid %d\n", _PFN, getpid());
 
 	ident();
 	sigemptyset(&blockset);
@@ -1476,7 +1476,7 @@ static void wait_and_cleanup(pid_t child)
 	sigaddset(&blockset, SIGTERM);
 	sigdelset(&blockset, SIGCHLD);
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
-	fprintf(stderr, "_cleanup exterminate\n");
+	fprintf(stderr, "%s %d exterminate\n", _PFN, getpid());
     Progress::instance().setState(ST_CLEANUP);
     kill(0, SIGTERM);
 
