@@ -24,8 +24,9 @@ stop() {
 			sleep 0.1
 			set.site 0 state 0
         fi
-        sleep 1
+        
         if [ -r ${PDIF}]; then
+		sleep 1
         	kill -${SIGTERM} $(cat ${PIDF})
         fi
 }
@@ -40,7 +41,7 @@ status() {
 
 case $1 in
 start|"")
-        start;;
+	stop; start;;
 stop)
         stop;;
 status)
