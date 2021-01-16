@@ -1,6 +1,8 @@
 #!/bin/sh
 
-echo acq420.init B1010
+echo acq420.init B1011
+
+mkdir -p /etc/sysconfig
 
 echo changing loglevel to debug
 echo 9 > /proc/sys/kernel/printk
