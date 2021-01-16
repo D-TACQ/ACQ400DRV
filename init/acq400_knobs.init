@@ -3,7 +3,11 @@
 
 echo KNOBS INIT 01
 [ ! -e /var/run ] && (mkdir /var/run; echo mkdir /var/run required )
-ls -l /usr/local/bin/acq400_knobs
+BADNFSPERMS="/usr/local/bin/acq400_knobs /usr/local/bin/streamtonowhere"
+echo permissions fixup for procServ .. ok, but why now\?
+ls -l ${BADNFSPERMS}
+chmod 555 ${BADNFSPERMS}
+ls -l ${BADNFSPERMS}
 echo KNOBS_INIT 10
 stop_knob_servers() {
 	for dir in /etc/acq400/[0-9]*
