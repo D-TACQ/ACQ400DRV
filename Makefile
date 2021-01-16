@@ -27,6 +27,8 @@ obj-m += fmc10x.o
 obj-m += ad9510.o
 obj-m += ads62p49.o
 obj-m += ao428.o
+
+obj-m += bwg.o
 #obj-m += acq400-spi-bytebang.o
 
 DC := $(shell date +%y%m%d%H%M%S)
@@ -57,6 +59,8 @@ dmaengine314-objs := dmaengine.o of-dma.o
 
 mgt400-objs := mgt400_drv.o mgt400_sysfs.o mgt400_procfs.o mgt400_debugfs.o \
  		acq400_reg_cache.o
+ 		
+bwg-objs := bwg_drv.o bwg_sysfs.o bwg_debugfs.o
 
 acq480-objs := acq480_drv.o hbm.o zynq_peripheral_spi_shim.o
 
