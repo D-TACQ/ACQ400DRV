@@ -84,13 +84,13 @@ int bwg_clear_histo(struct bwg_dev *mdev, int minor);
 #define MRM_RAM_B	0x30000
 
 
-#define CH_OFF(ch, iw)	(MEM_RAM_A + CH_LEN*(chix) + (iw)*sizeof(u32))
+
 
 #define MINOR_REGS	0
 #define MINOR_CH(chn)		(chn)    // 1..8
 
 #define CHIX(minor)	((minor)-1)
-
+#define CH_OFF(chix, iw)	(MEM_RAM_A + CH_LEN*(chix) + (iw)*sizeof(u32))
 
 
 #define BWG_MINOR_COUNT	9

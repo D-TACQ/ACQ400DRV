@@ -168,6 +168,29 @@ ssize_t bwg_write(struct file *file, const char __user *buf, size_t count, loff_
 
 }
 
+int bwg_mmap(struct file* file, struct vm_area_struct* vma)
+{
+	struct bwg_dev* bdev = BWG_DEV(file);
+	unsigned long vsize = vma->vm_end - vma->vm_start;
+	unsigned long psize = bdev->mem->end-bdev->mem->start+1;
+	unsigned pfn = bdev->mem->start >> PAGE_SHIFT;
+
+	dev_dbg(DEVP(bdev), "%c vsize %lu psize %lu %s",
+		'D', vsize, psize, vsize>psize? "EINVAL": "OK");
+
+	if (vsize > psize){
+		return -EINVAL;                   /* request too big */
+	}
+	if (io_remap_pfn_range(
+		vma, vma->vm_start, pfn, vsize, vma->vm_page_prot)){
+		return -EAGAIN;
+	}else{
+		return 0;
+	}
+}
+
+
+
 int bwg_release(struct inode *inode, struct file *file)
 {
 	int rc = 0;
@@ -194,72 +217,73 @@ struct file_operations bwg_fops = {
         .open = bwg_open,
         .read = bwg_read,
 	.write = bwg_write,
-        .release = bwg_release
+	.mmap = bwg_mmap,
+	.release = bwg_release
 };
 
 static int bwg_probe(struct platform_device *pdev)
 {
         int rc = 0;
         dev_t devno;
-        struct bwg_dev* mdev = bwg_allocate_dev(pdev);
+        struct bwg_dev* bdev = bwg_allocate_dev(pdev);
         dev_info(&pdev->dev, "%s", __FUNCTION__);
 
-        if (!mdev){
+        if (!bdev){
         	dev_err(&pdev->dev, "unable to allocate device structure\n");
         	rc = -ENODEV;
         	goto remove;
         }
         if (ndev){
-        	dev_err(DEVP(mdev), "ONE device only allowed");
+        	dev_err(DEVP(bdev), "ONE device only allowed");
         	goto remove;
         }
-        mdev->pdev->dev.id = 0;
+        bdev->pdev->dev.id = 0;
         ndev += 1;
 
-        mdev->mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-        if (mdev->mem == NULL){
-        	dev_err(DEVP(mdev), "No resources found");
+        bdev->mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+        if (bdev->mem == NULL){
+        	dev_err(DEVP(bdev), "No resources found");
         	rc = -ENODEV;
         	goto remove;
         }
-        if (!request_mem_region(mdev->mem->start,
-                mdev->mem->end-mdev->mem->start+1, mdev->devname)) {
-                dev_err(DEVP(mdev), "can't reserve i/o memory at 0x%08X\n",
-                        mdev->mem->start);
+        if (!request_mem_region(bdev->mem->start,
+                bdev->mem->end-bdev->mem->start+1, bdev->devname)) {
+                dev_err(DEVP(bdev), "can't reserve i/o memory at 0x%08X\n",
+                        bdev->mem->start);
                 rc = -ENODEV;
                 goto fail;
         }
-        snprintf(mdev->devname, 16, "bwg.%d", mdev->pdev->dev.id);
+        snprintf(bdev->devname, 16, "bwg.%d", bdev->pdev->dev.id);
         if (dummy_bram){
-        	unsigned blen = mdev->mem->end-mdev->mem->start+1;
-        	mdev->va = kzalloc(blen, GFP_KERNEL);
-        	dev_info(&pdev->dev, "%s dummy_bram %p len %x", __FUNCTION__, mdev->va, blen);
+        	unsigned blen = bdev->mem->end-bdev->mem->start+1;
+        	bdev->va = kzalloc(blen, GFP_KERNEL);
+        	dev_info(&pdev->dev, "%s dummy_bram %p len %x", __FUNCTION__, bdev->va, blen);
         }else{
-        	mdev->va = ioremap(mdev->mem->start, mdev->mem->end-mdev->mem->start+1);
+        	bdev->va = ioremap(bdev->mem->start, bdev->mem->end-bdev->mem->start+1);
         }
 
-        rc = alloc_chrdev_region(&devno, 0, BWG_MINOR_COUNT, mdev->devname);
+        rc = alloc_chrdev_region(&devno, 0, BWG_MINOR_COUNT, bdev->devname);
         if (rc < 0) {
-        	dev_err(DEVP(mdev), "unable to register chrdev\n");
+        	dev_err(DEVP(bdev), "unable to register chrdev\n");
                 goto fail;
         }
 
-        mdev->mod_id = bwg_rd32(mdev, MOD_ID);
+        bdev->mod_id = bwg_rd32(bdev, MOD_ID);
 
-        cdev_init(&mdev->cdev, &bwg_fops);
-        mdev->cdev.owner = THIS_MODULE;
-        rc = cdev_add(&mdev->cdev, devno, BWG_MINOR_COUNT);
+        cdev_init(&bdev->cdev, &bwg_fops);
+        bdev->cdev.owner = THIS_MODULE;
+        rc = cdev_add(&bdev->cdev, devno, BWG_MINOR_COUNT);
         if (rc < 0){
         	goto fail;
         }
 
-        bwg_createSysfs(&mdev->pdev->dev);
-        bwg_createDebugfs(mdev);
+        bwg_createSysfs(&bdev->pdev->dev);
+        bwg_createDebugfs(bdev);
         return rc;
 
 fail:
 remove:
-	kfree(mdev);
+	kfree(bdev);
 	return rc;
 }
 
