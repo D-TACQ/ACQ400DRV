@@ -25,7 +25,7 @@
 #include "acq400.h"
 #include "bwg.h"
 
-#define REVID "0.002"
+#define REVID "0.003"
 
 #ifdef MODULE_NAME
 #undef MODULE_NAME
@@ -47,28 +47,28 @@ int ndev;
 #define DEVP(mdev)		(&(mdev)->pdev->dev)
 
 
-void bwgwr32(struct bwg_dev *mdev, int offset, u32 value)
+void bwg_wr32(struct bwg_dev *bdev, int offset, u32 value)
 {
-	if (mdev->RW32_debug){
-		dev_info(DEVP(mdev), "bwgwr32 %p [0x%02x] = %08x\n",
-				mdev->va + offset, offset, value);
+	if (bdev->RW32_debug){
+		dev_info(DEVP(bdev), "bwgwr32 %p [0x%02x] = %08x\n",
+				bdev->va + offset, offset, value);
 	}else{
-		dev_dbg(DEVP(mdev), "bwgwr32 %p [0x%02x] = %08x\n",
-				mdev->va + offset, offset, value);
+		dev_dbg(DEVP(bdev), "bwgwr32 %p [0x%02x] = %08x\n",
+				bdev->va + offset, offset, value);
 	}
 
-	iowrite32(value, mdev->va + offset);
+	iowrite32(value, bdev->va + offset);
 }
 
-u32 bwgrd32(struct bwg_dev *mdev, int offset)
+u32 bwg_rd32(struct bwg_dev *bdev, int offset)
 {
-	u32 rc = ioread32(mdev->va + offset);
-	if (mdev->RW32_debug){
-		dev_info(DEVP(mdev), "bwgrd32 %p [0x%02x] = %08x\n",
-			mdev->va + offset, offset, rc);
+	u32 rc = ioread32(bdev->va + offset);
+	if (bdev->RW32_debug){
+		dev_info(DEVP(bdev), "bwgrd32 %p [0x%02x] = %08x\n",
+			bdev->va + offset, offset, rc);
 	}else{
-		dev_dbg(DEVP(mdev), "bwgrd32 %p [0x%02x] = %08x\n",
-			mdev->va + offset, offset, rc);
+		dev_dbg(DEVP(bdev), "bwgrd32 %p [0x%02x] = %08x\n",
+			bdev->va + offset, offset, rc);
 	}
 	return rc;
 }
@@ -102,10 +102,9 @@ int bwg_open(struct inode *inode, struct file *file)
 	if (file->f_flags & O_WRONLY) {
 		struct bwg_dev* bwg_dev = BWG_DEV(file);
 		int chix = CHIX(PD(file)->minor);
-		u32* pbwg_ram = PBWG_CHRAM(bwg_dev, chix);
 		int iw;
 		for (iw = 0; iw < CH_MAX_SAM; ++iw){
-			iowrite32(0, pbwg_ram+iw);
+			bwg_wr32(bwg_dev, CH_LEN*(chix)+iw*sizeof(u32), 0);
 		}
 		bwg_dev->bwg_chan[chix].cursor = 0;
 	}
@@ -118,7 +117,6 @@ ssize_t bwg_read(
 	int chix = CHIX(PD(file)->minor);
 	int len = bwg_dev->bwg_chan[chix].cursor*sizeof(u32);
 	unsigned bcursor = *f_pos;	/* f_pos counts in bytes */
-	u32* pbwg_ram = PBWG_CHRAM(bwg_dev, chix);
 	int rc;
 	int iw;
 
@@ -134,7 +132,7 @@ ssize_t bwg_read(
 		}
 	}
 	for (iw = 0; iw < count/sizeof(u32); ++iw){
-		PD(file)->ch_buf[iw] = ioread32(pbwg_ram+bcursor/sizeof(u32)+iw);
+		PD(file)->ch_buf[iw] = bwg_rd32(bwg_dev, CH_LEN*(chix)+iw*sizeof(u32));
 	}
 	rc = copy_to_user(buf, PD(file)->ch_buf, count);
 	if (rc){
@@ -175,12 +173,11 @@ int bwg_release(struct inode *inode, struct file *file)
 	struct bwg_dev* bwg_dev = BWG_DEV(file);
 	unsigned* src = PD(file)->ch_buf;
 	int chix = CHIX(PD(file)->minor);
-	u32* pbwg_ram = PBWG_CHRAM(bwg_dev, chix);
 	int rc = 0;
 	int iw;
 
 	for (iw = 0; iw < PD(file)->cursor; ++iw){
-		iowrite32(src[iw], pbwg_ram+iw);
+		bwg_wr32(bwg_dev, CH_LEN*(chix)+iw*sizeof(u32), src[iw]);
 	}
 	dev_dbg(DEVP(bwg_dev), "%s %d\n", __FUNCTION__, iw);
 	if (file->f_flags & O_WRONLY) {
@@ -247,7 +244,7 @@ static int bwg_probe(struct platform_device *pdev)
                 goto fail;
         }
 
-        mdev->mod_id = bwgrd32(mdev, MOD_ID);
+        mdev->mod_id = bwg_rd32(mdev, MOD_ID);
 
         cdev_init(&mdev->cdev, &bwg_fops);
         mdev->cdev.owner = THIS_MODULE;
