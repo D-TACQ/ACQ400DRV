@@ -60,7 +60,12 @@ void bwg_createDebugfs(struct bwg_dev* mdev)
 		return;
 	}
 	DBG_REG_CREATE(MOD_ID);
-
+	DBG_REG_CREATE(WRX_CR);
+	DBG_REG_CREATE(WRA_LEN);
+	DBG_REG_CREATE(WRB_LEN);
+	DBG_REG_CREATE(NCOA_INCR);
+	DBG_REG_CREATE(NCOB_INCR);
+	DBG_REG_CREATE(WRX_SR);
 #if 0
 	dev_rc_finalize(DEVP(adev), &adev->reg_cache, adev->of_prams.site);
 #endif

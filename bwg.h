@@ -8,10 +8,8 @@
 #ifndef BWG_H_
 #define BWG_H_
 
-#define DESC_HISTOLEN	128
-#define DATA_HISTOLEN	128
-#define DESC_HMASK  	(DESC_HISTOLEN-1)
-#define DATA_HMASK	(DATA_HISTOLEN-1)
+#undef NCHAN
+#define NCHAN	8
 
 struct bwg_dev {
 	struct of_prams {
@@ -23,6 +21,9 @@ struct bwg_dev {
 	char devname[16];
 	u32 mod_id;
 
+	struct BWG_CHAN {
+		unsigned cursor;
+	} bwg_chan[NCHAN];
 	struct platform_device *pdev;
 	struct resource *mem;
 	void *va;
@@ -33,18 +34,25 @@ struct bwg_dev {
 };
 
 #define dev_virtaddr	va
+#define CH_LEN		0x4000
+#define CH_MAX_SAM	(CH_LEN/sizeof(u32))
 
 struct bwg_path_descriptor {
 	struct bwg_dev* dev;
 	int minor;
+	unsigned cursor;
+	u32 ch_buf[CH_LEN/sizeof(u32)];
 };
 
 #undef PD
 #undef PDSZ
-#define PD(filp)	((struct bwg_path_descriptor*)filp->private_data)
-#define SETPD(filp, value)	(filp->private_data = (value))
-#define PDSZ		(sizeof (struct bwg_path_descriptor))
-#define DEVP(adev)		(&(adev)->pdev->dev)
+#define PD(filp)			((struct bwg_path_descriptor*)filp->private_data)
+#define BWG_DEV(filp)			(PD(filp)->dev)
+#define SETPD(filp, value)		(filp->private_data = (value))
+#define PDSZ				(sizeof (struct bwg_path_descriptor))
+#define DEVP(adev)			(&(adev)->pdev->dev)
+
+#define PBWG_CHRAM(bwg_dev, chix)	((u32*)(bwg_dev->va+CH_LEN*(chix)))
 
 extern struct bwg_dev* bwg_devices[];
 
@@ -76,6 +84,10 @@ int bwg_clear_histo(struct bwg_dev *mdev, int minor);
 
 #define MINOR_REGS	0
 #define MINOR_CH(chn)		(chn)    // 1..8
+
+#define CHIX(minor)	((minor)-1)
+
+
 
 #define BWG_MINOR_COUNT	9
 
