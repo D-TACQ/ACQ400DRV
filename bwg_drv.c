@@ -25,7 +25,7 @@
 #include "acq400.h"
 #include "bwg.h"
 
-#define REVID "0.004"
+#define REVID "0.005"
 
 #ifdef MODULE_NAME
 #undef MODULE_NAME
@@ -132,7 +132,7 @@ ssize_t bwg_read(
 		}
 	}
 	for (iw = 0; iw < count/sizeof(u32); ++iw){
-		PD(file)->ch_buf[iw] = bwg_rd32(bwg_dev, CH_OFF(chix, iw));
+		PD(file)->ch_buf[iw] = bwg_rd32(bwg_dev, bcursor+CH_OFF(chix, iw));
 	}
 	rc = copy_to_user(buf, PD(file)->ch_buf, count);
 	if (rc){
