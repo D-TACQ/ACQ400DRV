@@ -104,7 +104,7 @@ int bwg_open(struct inode *inode, struct file *file)
 		int chix = CHIX(PD(file)->minor);
 		int iw;
 		for (iw = 0; iw < CH_MAX_SAM; ++iw){
-			bwg_wr32(bwg_dev, CH_LEN*(chix)+iw*sizeof(u32), 0);
+			bwg_wr32(bwg_dev, CH_OFF(chix, iw), 0);
 		}
 		bwg_dev->bwg_chan[chix].cursor = 0;
 	}
@@ -132,7 +132,7 @@ ssize_t bwg_read(
 		}
 	}
 	for (iw = 0; iw < count/sizeof(u32); ++iw){
-		PD(file)->ch_buf[iw] = bwg_rd32(bwg_dev, CH_LEN*(chix)+iw*sizeof(u32));
+		PD(file)->ch_buf[iw] = bwg_rd32(bwg_dev, CH_OFF(chix, iw));
 	}
 	rc = copy_to_user(buf, PD(file)->ch_buf, count);
 	if (rc){
@@ -170,17 +170,17 @@ ssize_t bwg_write(struct file *file, const char __user *buf, size_t count, loff_
 
 int bwg_release(struct inode *inode, struct file *file)
 {
-	struct bwg_dev* bwg_dev = BWG_DEV(file);
-	unsigned* src = PD(file)->ch_buf;
-	int chix = CHIX(PD(file)->minor);
 	int rc = 0;
-	int iw;
 
-	for (iw = 0; iw < PD(file)->cursor; ++iw){
-		bwg_wr32(bwg_dev, CH_LEN*(chix)+iw*sizeof(u32), src[iw]);
-	}
-	dev_dbg(DEVP(bwg_dev), "%s %d\n", __FUNCTION__, iw);
 	if (file->f_flags & O_WRONLY) {
+		struct bwg_dev* bwg_dev = BWG_DEV(file);
+		unsigned* src = PD(file)->ch_buf;
+		int chix = CHIX(PD(file)->minor);
+		int iw;
+		dev_dbg(DEVP(bwg_dev), "%s write\n", __FUNCTION__);
+		for (iw = 0; iw < PD(file)->cursor; ++iw){
+			bwg_wr32(bwg_dev, CH_OFF(chix, iw), src[iw]);
+		}
 		bwg_dev->bwg_chan[chix].cursor = PD(file)->cursor;
 	}
 	kfree(PD(file));

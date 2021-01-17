@@ -52,7 +52,8 @@ struct bwg_path_descriptor {
 #define PDSZ				(sizeof (struct bwg_path_descriptor))
 #define DEVP(adev)			(&(adev)->pdev->dev)
 
-#define PBWG_CHRAM(bwg_dev, chix)	((u32*)(bwg_dev->va+CH_LEN*(chix)))
+
+
 
 extern struct bwg_dev* bwg_devices[];
 
@@ -79,8 +80,11 @@ int bwg_clear_histo(struct bwg_dev *mdev, int minor);
 /* MEMORY REGIONS 	*/
 
 #define MEM_REGS	0x00000
-#define MEM_RAM_A	0x10000
-#define MRM_RAM_B	0x20000
+#define MEM_RAM_A	0x20000
+#define MRM_RAM_B	0x30000
+
+
+#define CH_OFF(ch, iw)	(MEM_RAM_A + CH_LEN*(chix) + (iw)*sizeof(u32))
 
 #define MINOR_REGS	0
 #define MINOR_CH(chn)		(chn)    // 1..8
