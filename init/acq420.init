@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo acq420.init B1011
+echo ++ acq420.init cpsc2 B1012
 
 mkdir -p /etc/sysconfig
 
@@ -666,9 +666,7 @@ else
 		exit 1
 fi
 
-if [ "x$(/usr/local/CARE/get-fpga-extra)" = "xNCO" ]; then
-	/usr/local/init/bwg.init
-fi
+
 
 #	mount -t debugfs none /sys/kernel/debug/
 echo "for debug:"
@@ -824,21 +822,10 @@ else
 EOF
 fi
 
-if [ "x${ACQ480_SITES}" != "x" ]; then
-	for site in $ACQ480_SITES
-	do
-		web_append acq480.$site nomon
-		[ $AXI_COUNT -gt 1 ] && \
-			/usr/local/CARE/acq480_init_two_lane $site		
-	done
-	echo 1 > /etc/acq400/0/acq480_force_training
-fi
 
-if [ "x${BOLO8_SITES}" != "x" ]; then
-	echo +++ Enable Bolo AFTER Analog power up..
-	/usr/local/bin/bolo8.init ${BOLO8_SITES}
+if [ "x$(/usr/local/CARE/get-fpga-extra)" = "xNCO" ]; then
+	/usr/local/init/bwg.init
 fi
-
 
 [ -e /mnt/local/sysconfig/acq400_streamd.conf ] && \
 	cp /mnt/local/sysconfig/acq400_streamd* /etc/sysconfig/
