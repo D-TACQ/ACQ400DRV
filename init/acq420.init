@@ -666,7 +666,9 @@ else
 		exit 1
 fi
 
-
+if [ "x$(/usr/local/CARE/get-fpga-extra)" = "xNCO" ]; then
+	/usr/local/init/bwg.init
+fi
 
 #	mount -t debugfs none /sys/kernel/debug/
 echo "for debug:"
