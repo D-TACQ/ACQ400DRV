@@ -70,12 +70,16 @@ int bwg_clear_histo(struct bwg_dev *mdev, int minor);
 /* REGS */
 #undef MOD_ID
 #define MOD_ID		(0x0000)
-#define WRX_CR		(0x0004)
-#define WRA_LEN		(0x0008)
-#define WRB_LEN		(0x000C)
-#define NCOA_INCR	(0x0010)
-#define NCOB_INCR   (0x0014)
-#define WRX_SR		(0x0020)
+#define __WA		(0x0020)
+#define __WB		(0x0040)
+
+#define WA_CR		(__WA+0x0)
+#define WA_LEN		(__WA+0x4)
+#define WA_NCO		(__WA+0x8)
+
+#define WB_CR		(__WB+0x0)
+#define WB_LEN		(__WB+0x4)
+#define WB_NCO		(__WB+0x8)
 
 /* MEMORY REGIONS 	*/
 

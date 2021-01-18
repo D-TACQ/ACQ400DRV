@@ -218,3 +218,9 @@ ssize_t acq400_store_dnum(
 	}
 }
 
+EXPORT_SYMBOL_GPL(acq400_show_dnum);
+EXPORT_SYMBOL_GPL(acq400_store_dnum);
+EXPORT_SYMBOL_GPL(acq400_store_bits);
+EXPORT_SYMBOL_GPL(acq400_show_bits);
+
+

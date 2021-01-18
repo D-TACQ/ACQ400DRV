@@ -25,6 +25,7 @@
 /* ------------------------------------------------------------------------- */
 
 #include "acq400.h"
+#include "acq400_sysfs.h"
 #include "bwg.h"
 
 static ssize_t show_module_type(
@@ -70,8 +71,22 @@ static DEVICE_ATTR(RW32_debug,
 		S_IRUGO|S_IWUSR, show_RW32_debug, store_RW32_debug);
 
 
+MAKE_BITS(wa_cr,  WA_CR, MAKE_BITS_FROM_MASK, 0xffffffff);
+MAKE_DNUM(wa_len, WA_LEN, 0xffffffff);
+MAKE_DNUM(wa_nco, WA_NCO, 0xffffffff);
+
+MAKE_BITS(wb_cr,  WB_CR, MAKE_BITS_FROM_MASK, 0xffffffff);
+MAKE_DNUM(wb_len, WB_LEN, 0xffffffff);
+MAKE_DNUM(wb_nco, WB_NCO, 0xffffffff);
+
 
 static const struct attribute *sysfs_base_attrs[] = {
+	&dev_attr_wa_cr.attr,
+	&dev_attr_wa_len.attr,
+	&dev_attr_wa_nco.attr,
+	&dev_attr_wb_cr.attr,
+	&dev_attr_wb_len.attr,
+	&dev_attr_wb_nco.attr,
 	&dev_attr_module_type.attr,
 	&dev_attr_RW32_debug.attr,
 	NULL
