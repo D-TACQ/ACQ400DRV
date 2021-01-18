@@ -808,6 +808,7 @@ set.sys /sys/module/acq420fmc/parameters/cache_sites_mask $CACHE_SITES_MASK
 echo ++ Enable analog power..
 
 set.sys /dev/gpio/15VA_EN 1
+echo 1 >/dev/acq400.1.knobs/es_enable
 		
 if [ -e /dev/acq400.0.knobs/celf_power_en ]; then
 	set.sys /dev/acq400.0.knobs/celf_power_en 1	
