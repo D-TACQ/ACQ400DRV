@@ -25,7 +25,7 @@
 #include "acq400.h"
 #include "bwg.h"
 
-#define REVID "0.007"
+#define REVID "0.008"
 
 #ifdef MODULE_NAME
 #undef MODULE_NAME
@@ -200,7 +200,7 @@ int bwg_release(struct inode *inode, struct file *file)
 		unsigned* src = PD(file)->ch_buf;
 		int chix = CHIX(PD(file)->minor);
 		int iw;
-		dev_dbg(DEVP(bwg_dev), "%s write\n", __FUNCTION__);
+		dev_dbg(DEVP(bwg_dev), "%s write from %05x\n", __FUNCTION__, CH_OFF(chix, 0));
 		for (iw = 0; iw < PD(file)->cursor; ++iw){
 			bwg_wr32(bwg_dev, CH_OFF(chix, iw), src[iw]);
 		}
