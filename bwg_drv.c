@@ -25,7 +25,7 @@
 #include "acq400.h"
 #include "bwg.h"
 
-#define REVID "0.006"
+#define REVID "0.007"
 
 #ifdef MODULE_NAME
 #undef MODULE_NAME
@@ -276,7 +276,7 @@ static int bwg_probe(struct platform_device *pdev)
         if (rc < 0){
         	goto fail;
         }
-
+        bwg_devices[pdev->id] = bdev;
         bwg_createSysfs(&bdev->pdev->dev);
         bwg_createDebugfs(bdev);
         return rc;
