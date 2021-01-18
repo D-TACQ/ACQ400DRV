@@ -71,6 +71,129 @@ static DEVICE_ATTR(RW32_debug,
 		S_IRUGO|S_IWUSR, show_RW32_debug, store_RW32_debug);
 
 
+/* generic show_bits, store_bits */
+
+ssize_t acq400_show_bits(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	unsigned REG,
+	unsigned SHL,
+	unsigned MASK)
+{
+	u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
+	u32 field = (regval>>SHL)&MASK;
+
+	return sprintf(buf, "%x\n", field);
+}
+
+ssize_t acq400_show_bitN(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	unsigned REG,
+	unsigned SHL,
+	unsigned MASK)
+{
+	u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
+	u32 field = (regval>>SHL)&MASK;
+
+	return sprintf(buf, "%x\n", !field);
+}
+
+ssize_t acq400_store_bitN(
+		struct device * dev,
+		struct device_attribute *attr,
+		const char * buf,
+		size_t count,
+		unsigned REG,
+		unsigned SHL,
+		unsigned MASK,
+		unsigned show_warning)
+{
+	u32 field;
+	if (sscanf(buf, "%x", &field) == 1){
+		u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
+		regval &= ~(MASK << SHL);
+		regval |= ((!field)&MASK) << SHL;
+		if (show_warning){
+			dev_warn(dev, "deprecated %04x = %08x", REG, regval);
+		}
+		bwg_wr32(bwg_devices[dev->id], REG, regval);
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+ssize_t acq400_store_bits(
+		struct device * dev,
+		struct device_attribute *attr,
+		const char * buf,
+		size_t count,
+		unsigned REG,
+		unsigned SHL,
+		unsigned MASK,
+		unsigned show_warning)
+{
+	u32 field;
+	if (sscanf(buf, "%x", &field) == 1){
+		u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
+		regval &= ~(MASK << SHL);
+		regval |= (field&MASK) << SHL;
+		if (show_warning){
+			dev_warn(dev, "deprecated %04x = %08x", REG, regval);
+		}
+		bwg_wr32(bwg_devices[dev->id], REG, regval);
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+ssize_t acq400_show_dnum(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	unsigned REG,
+	unsigned SHL,
+	unsigned MASK)
+{
+	u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
+	u32 field = (regval>>SHL)&MASK;
+	u32 sbit = (MASK+1) >> 1;
+	if ((sbit&field) != 0){
+		while(sbit <<= 1){
+			field |= sbit;
+		}
+	}
+
+	return sprintf(buf, "%d\n", (int)field);
+}
+ssize_t acq400_store_dnum(
+		struct device * dev,
+		struct device_attribute *attr,
+		const char * buf,
+		size_t count,
+		unsigned REG,
+		unsigned SHL,
+		unsigned MASK)
+{
+	int field;
+	if (sscanf(buf, "%d", &field) == 1){
+		u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
+		regval &= ~(MASK << SHL);
+		regval |= (field&MASK) << SHL;
+		bwg_wr32(bwg_devices[dev->id], REG, regval);
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+
+
+
 MAKE_BITS(wa_cr,  WA_CR, MAKE_BITS_FROM_MASK, 0xffffffff);
 MAKE_DNUM(wa_len, WA_LEN, 0xffffffff);
 MAKE_DNUM(wa_nco, WA_NCO, 0xffffffff);

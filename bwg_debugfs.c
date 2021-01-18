@@ -36,9 +36,9 @@ struct dentry* bwg_debug_root;
 
 
 
-void bwg_createDebugfs(struct bwg_dev* mdev)
+void bwg_createDebugfs(struct bwg_dev* bdev)
 {
-#define adev	mdev
+#define adev	bdev
 	char* pcursor;
 	if (!bwg_debug_root){
 		bwg_debug_root = debugfs_create_dir("bwg", 0);
@@ -47,15 +47,11 @@ void bwg_createDebugfs(struct bwg_dev* mdev)
 			return;
 		}
 	}
-#if 0
-	dev_rc_init(DEVP(adev), &adev->reg_cache,
-			adev->dev_virtaddr, adev->of_prams.site, MOD_REG_MAX);
-#endif
 	pcursor = adev->debug_names = kmalloc(4096, GFP_KERNEL);
 	adev->debug_dir = debugfs_create_dir(
 			adev->devname, bwg_debug_root);
 
-	if (!mdev->debug_dir){
+	if (!bdev->debug_dir){
 		dev_warn(&adev->pdev->dev, "failed create dir %s", adev->devname);
 		return;
 	}

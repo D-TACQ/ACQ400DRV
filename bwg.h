@@ -67,6 +67,9 @@ void bwg_clear_counters(struct bwg_dev* mdev);
 
 int bwg_clear_histo(struct bwg_dev *mdev, int minor);
 
+void bwg_wr32(struct bwg_dev *bdev, int offset, u32 value);
+u32 bwg_rd32(struct bwg_dev *bdev, int offset);
+
 /* REGS */
 #undef MOD_ID
 #define MOD_ID		(0x0000)
