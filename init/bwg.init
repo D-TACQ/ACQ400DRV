@@ -9,7 +9,7 @@ SITE=14
 MAJOR=$(grep bwg /proc/devices | awk '{ print $1 }')
 
 for ch in $(seq 1 8); do
-	mknod /dev/bwg.$ch c $MAJOR $ch
+	mknod /dev/bwg.$(printf "%02d" $ch) c $MAJOR $ch
 done
 
 mkdir -p /etc/acq400/$SITE
