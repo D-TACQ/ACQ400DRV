@@ -276,7 +276,7 @@ static int bwg_probe(struct platform_device *pdev)
         if (rc < 0){
         	goto fail;
         }
-        bwg_devices[pdev->id] = bdev;
+        bwg_devices[pdev->dev.id] = bdev;
         bwg_createSysfs(&bdev->pdev->dev);
         bwg_createDebugfs(bdev);
         return rc;
