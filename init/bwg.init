@@ -20,8 +20,9 @@ ln -s /sys/bus/platform/devices/80000000.bwg/w* /etc/acq400/$SITE
 cat - >> $WEB_APPEND_JOB <<EOF
 #!/bin/sh
 nice /usr/local/bin/monitorregs /sys/kernel/debug/bwg/bwg.0 &
-/usr/local/bin/add_webpage_site bwg.0 14
- EOF
+/usr/local/bin/add_webpage_site bwg.0 nomon
+(cd /dev/shm;  ln -s bwg.0.xml bwg0.xml)
+EOF
 
 chmod a+rx $WEB_APPEND_JOB
 
