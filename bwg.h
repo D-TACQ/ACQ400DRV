@@ -84,7 +84,7 @@ u32 bwg_rd32(struct bwg_dev *bdev, int offset);
 #define WB_CR		(__WB+0x0)
 #define WB_LEN		(__WB+0x4)
 #define WB_NCO		(__WB+0x8)
-#define WB_STA		(__WA+0xc)
+#define WB_STA		(__WB+0xc)
 
 /* MEMORY REGIONS 	*/
 
