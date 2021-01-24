@@ -207,10 +207,10 @@ static ssize_t show_sta(
 	struct device * dev,
 	struct device_attribute *attr,
 	char * buf,
-	unsigned REG)
+	unsigned REG, const char* NAME)
 {
 	u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
-	return sprintf(buf, "%u,%u\n", regval>>16, regval&0x0ffff);
+	return sprintf(buf, "%s %u,%u\n", NAME, regval>>16, regval&0x0ffff);
 }
 
 
@@ -220,7 +220,7 @@ static ssize_t show_sta##NAME(						\
 	struct device_attribute *a,					\
 	char *b)							\
 {									\
-	return show_sta(d, a, b, REG);					\
+	return show_sta(d, a, b, REG, #NAME);				\
 }									\
 									\
 static DEVICE_ATTR(NAME, S_IRUGO, show_sta##NAME, 0)
