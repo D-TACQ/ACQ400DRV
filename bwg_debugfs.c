@@ -60,9 +60,11 @@ void bwg_createDebugfs(struct bwg_dev* bdev)
 	DBG_REG_CREATE(WA_CR);
 	DBG_REG_CREATE(WA_LEN);
 	DBG_REG_CREATE(WA_NCO);
+	DBG_REG_CREATE(WA_STA);
 	DBG_REG_CREATE(WB_CR);
 	DBG_REG_CREATE(WB_LEN);
 	DBG_REG_CREATE(WB_NCO);
+	DBG_REG_CREATE(WB_STA);
 
 #if 0
 	dev_rc_finalize(DEVP(adev), &adev->reg_cache, adev->of_prams.site);

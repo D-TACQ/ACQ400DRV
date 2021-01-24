@@ -203,13 +203,40 @@ MAKE_DNUM(wb_len, WB_LEN, 0xffffffff);
 MAKE_DNUM(wb_nco, WB_NCO, 0xffffffff);
 
 
+static ssize_t show_sta(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	unsigned REG)
+{
+	u32 regval = bwg_rd32(bwg_devices[dev->id], REG);
+	return sprintf(buf, "%u,%u\n", regval>>16, regval&0x0ffff);
+}
+
+
+#define MAKE_STA(NAME, REG)						\
+static ssize_t show_sta##NAME(						\
+	struct device *d,						\
+	struct device_attribute *a,					\
+	char *b)							\
+{									\
+	return show_sta(d, a, b, REG);					\
+}									\
+									\
+static DEVICE_ATTR(NAME, S_IRUGO, show_sta##NAME, 0)
+
+MAKE_STA(wa_sta, WA_STA);
+MAKE_STA(wb_sta, WB_STA);
+
 static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_wa_cr.attr,
 	&dev_attr_wa_len.attr,
 	&dev_attr_wa_nco.attr,
+	&dev_attr_wa_sta.attr,
 	&dev_attr_wb_cr.attr,
 	&dev_attr_wb_len.attr,
 	&dev_attr_wb_nco.attr,
+	&dev_attr_wb_sta.attr,
 	&dev_attr_module_type.attr,
 	&dev_attr_RW32_debug.attr,
 	NULL

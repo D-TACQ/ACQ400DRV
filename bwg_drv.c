@@ -25,7 +25,7 @@
 #include "acq400.h"
 #include "bwg.h"
 
-#define REVID "0.008"
+#define REVID "0.009"
 
 #ifdef MODULE_NAME
 #undef MODULE_NAME
