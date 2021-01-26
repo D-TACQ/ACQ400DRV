@@ -79,15 +79,19 @@
 #include <sched.h>
 
 //#define BUFFER_IDENT 6
-#define VERID	"B1025"
+#define VERID	"B1038"
 
 #define NCHAN	4
 
 #include <semaphore.h>
 #include <syslog.h>
 
+#include <sys/statvfs.h>
+
 #include "local.h"		/* chomp() hopefully, not a lot of other garbage */
 #include "knobs.h"
+#include "acq-util.h"
+#include "ES.h"
 
 #define _PFN	__PRETTY_FUNCTION__
 
@@ -193,65 +197,6 @@ unsigned b2s(unsigned bytes) {
 	return bytes/sample_size();
 }
 
-bool ISACQ480() {
-	char mval[80];
-	if (getKnob(0, "/etc/acq400/1/MODEL", mval) >= 0){
-		return strstr(mval, "ACQ480") != NULL ||
-				strstr(mval, "ACQ482") != NULL;
-	}
-	return false;
-}
-class AbstractES {
-public:
-	virtual bool isES(unsigned *cursor) = 0;
-	static AbstractES* evX_instance();
-	static AbstractES* ev0_instance();
-};
-
-template <int MASK, unsigned PAT, unsigned MATCHES>
-class ES : public AbstractES {
-	bool is_es_word(unsigned word) {
-		return (word&MASK) == PAT;
-	}
-public:
-	bool isES(unsigned *cursor){
-		bool is_es = false;
-		unsigned matches = MATCHES;
-		for (int ic = 0; matches != 0; ++ic, matches >>= 1){
-			if ((matches&0x1) != 0){
-				if (is_es_word(cursor[ic])){
-					is_es = true;
-				}else{
-					return false;
-				}
-			}
-		}
-		return is_es;
-	}
-};
-
-AbstractES* AbstractES::evX_instance() {
-	static AbstractES* _instance;
-	if (!_instance){
-		if (ISACQ480()){
-			_instance = new ES<0xfffffff0, 0xaa55f150, 0x0a>;
-		}else{
-			_instance = new ES<0xfffffff0, 0xaa55f150, 0x0f>;
-		}
-	}
-	return _instance;
-}
-AbstractES* AbstractES::ev0_instance() {
-	static AbstractES* _instance;
-	if (!_instance){
-		if (ISACQ480()){
-			_instance = new ES<0xffffffff, 0xaa55f151, 0x0a>;
-		}else{
-			_instance = new ES<0xffffffff, 0xaa55f151, 0x0f>;
-		}
-	}
-	return _instance;
-}
 
 static int createOutfile(const char* fname) {
 	int fd = open(fname,
@@ -279,20 +224,14 @@ class DemuxBufferCommon: public Buffer {
 
 public:
 	DemuxBufferCommon(Buffer* cpy): Buffer(cpy) {}
-
-	static int demuxBufferVerbose() {
-		char *vfs = getenv("DemuxBufferVerbose");
-		if (vfs){
-			 return atoi(vfs);
-		}else{
-			return 0;
-		}
-	};
-
+	static int demux_size;
 	static int verbose;
+	static int show_es;
 };
 
-int DemuxBufferCommon::verbose = DemuxBufferCommon::demuxBufferVerbose();
+int DemuxBufferCommon::demux_size = ::getenv_default("DemuxBufferSize");
+int DemuxBufferCommon::verbose = ::getenv_default("DemuxBufferVerbose");
+int DemuxBufferCommon::show_es = ::getenv_default("DemuxBufferShowES");
 
 template <class T, DemuxBufferType N>
 class DemuxBuffer: public DemuxBufferCommon {
@@ -413,10 +352,11 @@ private:
 public:
 
 	virtual int writeBuffer(int out_fd, int b_opts) {
+		int demux_len = demux_size? demux_size: buffer_len;
 		if ((b_opts&BO_START) != 0){
 			start();
 		}
-		demux((b_opts&BO_START),0, buffer_len);
+		demux((b_opts&BO_START),0, demux_len);
 		if ((b_opts&BO_FINISH) != 0){
 			for (unsigned ic = 0; ic < nchan; ++ic){
 				if (writeChan(ic)){
@@ -426,7 +366,7 @@ public:
 			}
 			finish();
 		}
-		return buffer_len;
+		return demux_len;
 	}
 	virtual int writeBuffer(int out_fd, int b_opts, int start_off, int len)
 	{
@@ -497,8 +437,8 @@ bool DemuxBuffer<T, N>::demux(bool start, int start_off, int len) {
 	int Tlen = len/sizeof(T);
 	int isam = 0;
 
-	if (verbose > 1) fprintf(stderr, "demux() len:%d Tlen:%d start_off:%08x src:%p\n",
-			len, Tlen, start_off, src);
+	if (verbose > 1) fprintf(stderr, "demux() start_off:%08x src:%p\n",
+			start_off, src);
 
 	if (verbose > 1 && start && ch_id(src[0]) != 0x00){
 		fprintf(stderr, "handling misalign at [0] %08x data_fits_buffer:%d\n",
@@ -535,10 +475,10 @@ bool DemuxBuffer<T, N>::demux(bool start, int start_off, int len) {
 	/* run to the end of buffer. nsam could be rounded down,
 	 * so do not use it.
 	 */
-	if (verbose) fprintf(stderr, "can skip ES");
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
 
 	for (isam = startoff/nchan; true; ++isam, ichan = 0){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -565,6 +505,7 @@ bool DemuxBuffer<T, N>::demux(bool start, int start_off, int len) {
 	/* does not happen */
 	return true;
 }
+
 template<class T, DemuxBufferType N> unsigned DemuxBuffer<T, N>::ID_MASK;
 template<class T, DemuxBufferType N> int DemuxBuffer<T, N>::startchan;
 template<class T, DemuxBufferType N> T** DemuxBuffer<T, N>::dddata;
@@ -596,10 +537,10 @@ bool DemuxBuffer<short, DB_REGULAR>::demux(bool start, int start_off, int len) {
 	/* run to the end of buffer. nsam could be rounded down,
 	 * so do not use it.
 	 */
-	if (verbose) fprintf(stderr, "can skip ES");
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
 
 	for (isam = startoff/nchan; true; ++isam, ichan = 0){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -652,10 +593,10 @@ bool DemuxBuffer<short, DB_DOUBLE>::demux(bool start, int start_off, int len) {
 	/* run to the end of buffer. nsam could be rounded down,
 	 * so do not use it.
 	 */
-	if (verbose) fprintf(stderr, "can skip ES");
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
 
 	for (isam = startoff/nchan; true; ++isam, ichan = 0){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -1345,24 +1286,6 @@ struct poptOption opt_table[] = {
 };
 
 
-char *getRoot(int devnum)
-{
-	char *_root = new char [128];
-	struct stat sb;
-
-	sprintf(_root, "/dev/acq420.%d", devnum);
-	if (stat(_root, &sb) == 0){
-		return _root;
-	}
-
-	sprintf(_root, "/dev/acq400.%d", devnum);
-	if (stat(_root, &sb) == 0){
-		return _root;
-	}
-
-	fprintf(stderr, "ERROR: /dev/acq4x0.%d NOT FOUND\n", devnum);
-	exit(1);
-}
 const char* root;
 
 void acq400_stream_getstate(void);
@@ -1478,16 +1401,16 @@ static void wait_and_cleanup(pid_t child)
 	sigaddset(&blockset, SIGTERM);
 	sigdelset(&blockset, SIGCHLD);
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
-	fprintf(stderr, "%s %d exterminate\n", _PFN, getpid());
-    Progress::instance().setState(ST_CLEANUP);
-    kill(0, SIGTERM);
+	verbose && fprintf(stderr, "%s %d exterminate\n", _PFN, getpid());
+	Progress::instance().setState(ST_CLEANUP);
+	kill(0, SIGTERM);
 
 	int nwait = 0;
 	pid_t wpid;
 	int status = 0;
 	while ((wpid = waitpid(-getpgrp(), &status, 0)) > 0){
 		++nwait;
-		fprintf(stderr, "%d waited for %d\n", nwait, wpid);
+		verbose && fprintf(stderr, "%d waited for %d\n", nwait, wpid);
 	}
 
     exit(0);
@@ -1728,7 +1651,10 @@ void init(int argc, const char** argv) {
 			G::stream_mode = SM_TRANSIENT;
 			break;
 		case 'S':
-			G::state_fp = fopen(G::state_file, "w");
+			G::state_fp = fopen(G::state_file, "r+");
+			if (G::state_fp == 0){
+				G::state_fp = fopen(G::state_file, "w");
+			}
 			if (G::state_fp == 0){
 				perror(G::state_file);
 				exit(1);
@@ -1779,11 +1705,6 @@ void init(int argc, const char** argv) {
 
 	root = getRoot(G::devnum);
 
-	if (ISACQ480() && G::nchan == 4){
-		G::double_up = true;
-		if (verbose) fprintf(stderr, "G::double_up set true\n");
-	}
-
 	for (unsigned ii = 0; ii < Buffer::nbuffers; ++ii){
 		Buffer::create(root, Buffer::bufferlen);
 	}
@@ -1828,7 +1749,7 @@ protected:
 			assert(ib <= Buffer::nbuffers);
 			return ib;
 		}else{
-			return rc;
+			return rc<0 ? rc: -1;
 		}
 	}
 	virtual char* findEvent(Buffer* the_buffer) {
@@ -1863,7 +1784,7 @@ class StreamHeadImpl: public StreamHead {
 
 protected:
 	Progress& actual;
-	const int samples_buffer;
+	int samples_buffer;
 	int f_ev;
 	int nfds;
 	bool event_received;
@@ -1937,8 +1858,8 @@ protected:
 		if (verbose) fprintf(stderr, "schedule_soft_trigger()");
 		pid_t child = fork();
 		if (child == 0){
-			nice(2);
-			sched_yield();
+			ident("acq400_stream_st");
+			goRealTime(10);
 			soft_trigger_control();
 			exit(0);
 		}
@@ -3509,6 +3430,7 @@ vector<Segment>& BufferDistribution::getSegments() {
 	return segments;
 }
 
+/* BLock Transfer */
 class BLT {
 	const char* base;
 	char* cursor;
@@ -4069,9 +3991,10 @@ public:
 		DemuxingStreamHeadPrePost(progress, _demuxer, _pre, _post), bale_out(false)
 	{
 		bd_scale = 2;
+		samples_buffer *= 2;
 		char* bo = getenv("DemuxingStreamHeadPrePostDualBufferBaleOut");
 		if (bo) bale_out = atoi(bo);
-		fprintf(stderr, "%s %s\n", _PFN, bale_out? "bale_out": "");
+		fprintf(stderr, "%s %s samples_buffer %d\n", _PFN, bale_out? "bale_out": "", samples_buffer);
 	}
 };
 void checkHolders() {
@@ -4118,14 +4041,16 @@ void waitHolders() {
 
 StreamHead* StreamHead::createLiveDataInstance()
 {
-	ident("acq400_stream_hb0");
+	ident("acq400_stream_LDI");
 
 	for (nb_cat = 1;
 	     nb_cat*Buffer::bufferlen/(G::nchan*G::wordsize) < G::nsam; ++nb_cat){
 		;
 	}
 	BufferCloner::cloneBuffers<DemuxBufferCloner>();
-	stream_fmt = "%s.hb0";
+
+	const char* _sf = ::getenv("StreamHead_LDI_SOURCE");
+	stream_fmt = _sf? _sf: "%s.hb0";
 
 	bool live_pp = G::stream_mode != SM_TRANSIENT && has_pre_post_live_demux();
 	setKnob(0, "/etc/acq400/0/live_mode", live_pp? "2": "1");
@@ -4135,6 +4060,8 @@ StreamHead* StreamHead::createLiveDataInstance()
 		return new StreamHeadHB0;
 	}
 }
+
+#define ECL_NOLIMIT	0
 
 void setEventCountLimit(int limit)
 {
@@ -4148,10 +4075,11 @@ StreamHead* StreamHead::instance() {
 	if (_instance == 0){
 
 		setEventCountLimit(
-				G::show_events? G::show_events:
-				G::stream_mode == SM_TRANSIENT? 1: 0);
+				G::show_events? ECL_NOLIMIT:
+				G::stream_mode == SM_TRANSIENT? 1: ECL_NOLIMIT);
 
 		if (G::is_spy){
+			goRealTime(10);
 			return _instance = new StreamHead(
 					open("/dev/acq400.0.bqf", O_RDONLY), 1);
 		}
@@ -4166,6 +4094,7 @@ StreamHead* StreamHead::instance() {
 			return _instance;
 		}
 
+		goRealTime(10);
 		ident("acq400_stream_main");
 
 		if (G::stream_mode == SM_TRANSIENT){

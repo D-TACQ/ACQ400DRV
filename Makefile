@@ -171,7 +171,7 @@ watchdog_PIL: watchdog_PIL.o
 udp_client: udp_client.o
 	$(CC) -o $@ $^ -L../lib -lpopt
 	
-acq400_stream: acq400_stream.o Buffer.o 
+acq400_stream: acq400_stream.o
 	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lpthread -lrt
 
 bb: bb.o Buffer.o
@@ -248,7 +248,8 @@ awg_load_channels: awg_load_channels.o knobs.o
 rtpackage:
 	tar cvzf dmadescfs-$(DC).tgz dmadescfs* scripts/load.dmadescfs
 
-$(LIBACQSONAME): acq-util.c knobs.cpp
+LIBSRCS = acq-util.c knobs.cpp acq_rt.cpp Buffer.cpp ES.cpp
+$(LIBACQSONAME): $(LIBSRCS)
 	$(CXX) -shared -Wl,-soname,$(LIBACQSONAME) -fPIC -o $@ $^
 	-ln -s $(LIBACQSONAME) $(LIBACQSO)
 	cp -a $(LIBACQSONAME) $(LIBACQSO) ../lib
