@@ -1,0 +1,12 @@
+b=${1}
+source /etc/sites
+for s in $(echo $sites | tr , \  ); do
+    echo $(caget $(grep :SYS:$s$b:.*V. /tmp/records.dbl)) | awk '{
+        printf "%s ", $1; for(i=2; i<=NF; ++i){
+	    printf "%5.2f ", $i; ++i
+	    gsub(".*:SYS:","",$i); printf "%s ", $i
+        }
+        print ""
+    }'
+done
+

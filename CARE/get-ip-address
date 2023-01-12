@@ -1,0 +1,10 @@
+#!/bin/sh
+
+for ethx in eth0 eth1 lo; do
+	if [ "$(cat /sys/class/net/${ethx}/operstate)" = "up" ]; then
+		break
+	fi
+done
+
+/sbin/ifconfig ${ethx} | grep 'inet addr' | cut -d: -f2 | awk '{print $1}'
+

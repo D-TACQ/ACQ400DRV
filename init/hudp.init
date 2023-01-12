@@ -1,0 +1,74 @@
+#!/bin/sh
+
+export WEB_APPEND_JOB=/tmp/hudp-web-append.job
+
+HK=/dev/acq400.10.knobs
+
+cCrR() {
+cat - <<EOF
+        <pageFormat>
+                <noCols>$1</noCols>
+                <colItems>$2</colItems>
+        </pageFormat>
+EOF
+}
+
+C2R15=/dev/shm/c2rR15
+
+[ -e $C2R15 ] || cCrR 2 15 > $C2R15
+
+web_append()
+{
+	if [ ! -e $WEB_APPEND_JOB ]; then
+cat - >$WEB_APPEND_JOB <<EOF
+#!/bin/sh
+# created by hudp.init
+/usr/local/bin/add_webpage_site $1 $2
+EOF
+    chmod a+rx $WEB_APPEND_JOB
+    fi	
+}
+
+get_knob() {
+	printf "%30s %s\n" $1 "$(cat ${HK}/$1)"	
+}
+monitor() {
+        echo monitor hudp.xml
+        
+        while [ 1 ]
+        do
+                (
+                	cd ${HK}
+                    for k in ip gw netmask mac -- rx_src_ip rx_port rx_pkt_len rx_pkt_count -- src_port dst_ip dst_port tx_sample_sz tx_spp tx_calc_pkt_sz tx_pkt_count; do
+                        case $k in
+                        --)
+                            printf "%30s %s\n" ------- -------;;
+                        *)
+                		    get_knob $k;;
+                        esac
+                    done
+		    printf "%30s %s\n" ------- -------
+		    hudp_config
+                )| fs2xml -k '' -o /dev/shm/hudp-new.xml -s $C2R15
+                mv /dev/shm/hudp-new.xml  /dev/shm/hudp.xml
+                sleep 1
+        done
+}
+
+
+start_hudp() {
+    echo $(/usr/local/CARE/set_mac3) > ${HK}/mac 
+    web_append hudp nomon
+    nice daemon $WEB_APPEND_JOB
+    nice daemon /usr/local/init/hudp.init monitor
+}
+
+case "$1" in
+monitor)
+	monitor;;
+start|"")
+	start_hudp;;
+stop)
+	stop_hudp;;
+esac
+

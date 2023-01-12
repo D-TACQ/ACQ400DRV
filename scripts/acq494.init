@@ -1,0 +1,194 @@
+#!/usr/local/bin/expect
+# acq494 T50R termination and jitter cleaner JC
+
+
+set LNAMES1 { T50R_4 T50R_3 T50R_2 T50R_1  }
+set DIR1    { out    out    out	   out     }
+
+
+set VERBOSE 0
+if { [info exists ::env(ACQ494_VERBOSE) ] } {
+	set VERBOSE $::env(ACQ494_VERBOSE)
+}
+
+
+proc link_gpio {lnames outputs root gpio1 ngpio} {
+	set nc [llength $lnames]
+	set ngpio [expr min ($ngpio, $nc ) ]
+	set gpio2 [expr $gpio1 + $ngpio]
+	for {set ix 0} {[expr $gpio1+$ix < $gpio2]} {incr ix} {		
+		set name [lindex $lnames $ix]		
+		if { [string length $name] > 0 } {
+			set gpx [expr $gpio1 + $ix]
+			set io [lindex $outputs $ix]
+			exec set.sys /sys/class/gpio/export $gpx
+			exec set.sys  /sys/class/gpio/gpio$gpx/direction $io
+			exec ln -s /sys/class/gpio/gpio$gpx/value \
+				$root/$name
+			exec ln -s /sys/class/gpio/gpio$gpx/direction \
+				$root/.direction.$name
+		}
+	}
+}
+
+proc get_gpio12 {site addr} {
+	set bus [expr $site + 1]
+	set baddr "$bus-00$addr"
+	set gpath "/sys/bus/i2c/devices/$baddr/gpio/gpiochip"
+	set gpiochip [glob "$gpath*"]
+	set pin1 [string range $gpiochip \
+			[string length $gpath] [string length $gpiochip]]
+	#	puts "get_gpio1 returning $pin1"
+	set ngpio [exec cat $gpiochip/ngpio]
+	return [list $pin1 $ngpio]
+}
+
+
+proc build_50R {site} {
+	global LNAMES1 DIR1
+
+	puts "build 50R knobs acq494 site:$site"
+	set lnames1 $LNAMES1
+	
+	set gpiox {}
+	
+	if { [catch {get_gpio12 $site 20} gpiox] } {
+		puts "ERROR: failed to find device 20"
+		return
+	}
+	lassign $gpiox gpio1 ngpio
+	set ngpio 4
+	link_gpio $lnames1 $DIR1 "/dev/acq494/$site" $gpio1 $ngpio
+	
+	for {set ic 1} {$ic <= $ngpio} {incr ic} {
+		#file delete -force /etc/acq400/$site/T50R_$ic
+		set tname [lindex $LNAMES1 [expr $ic - 1]]			
+		exec ln -s /dev/acq494/$site/$tname \
+			/etc/acq400/$site/$tname
+	}	
+	set fp [open "/etc/acq400/$site/groups" a+]
+	puts $fp {T50R=T50R_[0-9]*}
+	close $fp	
+}
+
+proc set_acq400_knob {site knob} {
+	set filename "/dev/acq400.$site.knobs/$knob"
+	set fileId [open $filename "w"]
+	puts $fileId 1
+	close $fileId
+}
+proc clr_acq400_knob {site knob} {
+	set filename "/dev/acq400.$site.knobs/$knob"	
+	set fileId [open $filename "w"]
+	puts $fileId 0
+	close $fileId
+}
+
+proc write_knob {knob value} {
+	global VERBOSE
+	set kb [open $knob w]
+	if { $VERBOSE } {
+		puts "write_knob $value to $kb $knob"
+	}
+	puts $kb $value
+	close $kb
+#	puts "write_knob 99"
+}
+
+set CFG { bf 0f 32 a0 86 01 c0 73 a1 13 00 0a cc cc f1 7d 00 }
+
+
+proc spi_device_init {idev} {
+	global CFG
+	set cfg_len [llength $CFG]
+	set root [format "/sys/bus/spi/devices/spi1.%d" $idev]
+	set power [format "%s/tdc_gpx2_power" $root]
+	set init [format "%s/tdc_gpx2_init" $root]
+	
+	puts "spi_device_init $idev"
+	
+	set pollcat 0
+	while {[file exists $power] != 1} {			
+		incr pollcat
+		if { $pollcat >= 10 } {
+			puts "failed to see $power"
+			exit 1
+		} else {
+			puts "waiting for $power"	
+		}
+		after 100
+	}
+
+	write_knob $power 1
+	
+	for { set reg 0 } { $reg < $cfg_len } { incr reg } {
+		write_knob [format "%s/tdc_gpx2_cfg%02d" $root $reg] [lindex $CFG $reg]
+	}
+	write_knob $init 1
+}
+
+
+proc device_init {site} {
+	set ::env(SITE) $site
+}
+set SITES ""
+
+set use_gpio 1
+
+proc print {args} {
+    set cmd [lindex $args 0]
+    puts stdout "$> $cmd"
+}
+
+trace add execution source enterstep print
+
+proc wait_clock {} {
+	set pollcat 0
+	while {[file exists /etc/acq400/0/SIG:CLK_MB:READY] != 1} {
+		puts "acq494.init wait_clock 1 $pollcat"
+		incr pollcat
+		after 2500
+	}
+	
+	set pollcat 0
+	while {[lindex [split [exec get.site 0 SIG:CLK_MB:READY]] 1] != 1} {
+		puts "acq494.init wait_clock 2 $pollcat"
+		incr pollcat
+		after 900
+	}
+}
+
+
+if { $::argc > 0 } {
+	foreach site $::argv {
+		if { [string length $SITES] > 0 } {
+			set SITES "$SITES,"
+		}
+		set SITES "$SITES$site"	
+	}
+	exec /sbin/insmod  /usr/local/lib/modules/acq494.ko acq494_sites=$SITES
+	
+	if {$use_gpio} {
+	    	foreach site $::argv {	        	
+			exec mkdir -p /dev/acq494/$site
+			build_50R $site			
+		}
+	}
+
+	wait_clock
+	
+	set idev 0
+	foreach site $::argv {
+		set site [lindex $::argv $idev]
+		#exec set.site 0 "SYS:CLK:OE_CLK1_ELF$site" 1
+		spi_device_init [expr $site - 1]
+		exec set.site $site tdc_en 1
+		incr idev
+	}
+} else {
+	puts "usage acq494.init site1 site 2..."	
+}
+
+
+
+

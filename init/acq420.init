@@ -5,246 +5,274 @@ echo acq420.init B1010
 echo changing loglevel to debug
 echo 9 > /proc/sys/kernel/printk
 
-BLEN=4194304
-NBUF=128
+BLEN=1048576
+NBUF=512
+
+# check for AXI DMA
+grep load.*_64B /tmp/fpga_status
+if [ $? -eq 0 ]; then
+    BLEN=4194304
+    NBUF=128
+fi
+
 
 DROOT=/sys/kernel/debug
 
 SYSCONF=/mnt/local/sysconfig
+ULB=/usr/local/bin
+
+HAS_MGTDRAM=none
 
 if [ -e /mnt/local/acq400_stream ]; then
-	echo override from /mnt/local/acq400_stream
-	cp /mnt/local/acq400_stream /usr/local/bin
+    echo override from /mnt/local/acq400_stream
+    cp /mnt/local/acq400_stream $ULB
 fi
 
 [ -e /mnt/local/sysconfig/acq400_streamd.conf ] && \
-	cp /mnt/local/sysconfig/acq400_streamd.conf /etc/sysconfig
+    cp /mnt/local/sysconfig/acq400_streamd.conf /etc/sysconfig
 
 if [ -e /mnt/local/sysconfig/acq400.sh ]; then
-	cp /mnt/local/sysconfig/acq400.sh /etc/profile.d
-	echo "source /mnt/local/sysconfig/acq400.sh"
-	source /mnt/local/sysconfig/acq400.sh
+    cp /mnt/local/sysconfig/acq400.sh /etc/profile.d
+    echo "source /mnt/local/sysconfig/acq400.sh"
+    source /mnt/local/sysconfig/acq400.sh
 fi
 ln -s $DROOT/dynamic_debug/control /dev/ddc
 
 source /tmp/u-boot_env
 if [ "x${EBREAK}" = "xyes" ]; then
-	echo acq420.init: BREAK to emergency shell ^D when done
-	PS1="${PS1%>*} EBREAK ${PS1#*>}" /bin/sh
+    echo acq420.init: BREAK to emergency shell ^D when done
+    PS1="${PS1%>*} EBREAK ${PS1#*>}" /bin/sh
 fi
 MODEL=${devicetree_image%*.dtb}; 
 MODEL=${MODEL#*/}
 export MODEL
 
 if [ "x$MODEL" = "x" ]; then
-	HN=$(hostname)
-	MODEL=${HN%_*}
+    HN=$(hostname)
+    MODEL=${HN%_*}
 fi
 
 SN=${dtsn}
 
 is_adc() {
-	sn=$(cat /etc/acq400/$1/SERIAL)
-	elf=${sn%????????}
-	case $elf in
-	E|F)
-		snt=${sn%????}
-		echo ${snt#????};;
-	*)
-		echo 0;;
-	esac
+    sn=$(cat /etc/acq400/$1/SERIAL)
+    elf=${sn%????????}
+    case $elf in
+    E|F)
+        snt=${sn%????}
+        echo ${snt#????};;
+    *)
+        echo 0;;
+    esac
 }
 
 build_hb_node() {
-	nn=$(printf "$3" $2)
-	let minor="1000+$2"
-	mknod $nn c $1 $minor			
+    nn=$(printf "$3" $2)
+    let minor="1000+$2"
+    mknod $nn c $1 $minor           
 }
 build_hb() {
-	MAJOR=$1
-	NAME=$2
+    MAJOR=$1
+    NAME=$2
 
-	HBDIR=/dev/${NAME}.hb
-	NB=$(cat /dev/${NAME}.knobs/nbuffers)
-	mkdir $HBDIR
-	if [ $NB -gt 0 ]; then
-		let NB0=$NB-1
-		for hb in $(seq 0 $NB0); do
-			if [ $hb -lt 10 ]; then
-				build_hb_node $MAJOR $hb "$HBDIR/%02d"					
-			fi
-			NN=$(printf "$HBDIR/%03d" $hb)
-			let minor="1000+$hb"
-			mknod $NN c $MAJOR $minor		
-		done
-	fi
+    HBDIR=/dev/${NAME}.hb
+    NB=$(cat /dev/${NAME}.knobs/nbuffers)
+    mkdir $HBDIR
+    if [ $NB -gt 0 ]; then
+        let NB0=$NB-1
+        for hb in $(seq 0 $NB0); do
+            if [ $hb -lt 10 ]; then
+                build_hb_node $MAJOR $hb "$HBDIR/%02d"                  
+            fi
+            NN=$(printf "$HBDIR/%03d" $hb)
+            let minor="1000+$hb"
+            mknod $NN c $MAJOR $minor       
+        done
+    fi
 }
 build_nodes() {
-	finit=0
-	while [ $finit -eq 0 ]; do
-		read M_DEV
-		if [ "$M_DEV" = "" ]; then
-			finit=1;
-		else
-			MAJOR=${M_DEV% *}
-			NAME=${M_DEV#* }		
-			ID=${M_DEV#*.}
+    finit=0
+    while [ $finit -eq 0 ]; do
+        read M_DEV
+        if [ "$M_DEV" = "" ]; then
+            finit=1;
+        else
+            MAJOR=${M_DEV% *}
+            NAME=${M_DEV#* }        
+            ID=${M_DEV#*.}
 
-			echo +++ build nodes site $ID			
-			mknod /dev/${NAME} 			c ${MAJOR} 0
-			mknod /dev/${NAME}.c 		c ${MAJOR} 1
-			mknod /dev/${NAME}.histo 	c ${MAJOR} 2
-			mknod /dev/${NAME}.hb0 		c ${MAJOR} 3
-			mknod /dev/${NAME}.cs 		c ${MAJOR} 4
-			if [ $ID -eq 0 ]; then
-				mknod /dev/${NAME}.gpg	c ${MAJOR}  5
-				mknod /dev/${NAME}.rsv  c ${MAJOR} 11
-				mknod /dev/${NAME}.rsvd c ${MAJOR} 18
-				mknod /dev/${NAME}.bq   c ${MAJOR} 15	
-				mknod /dev/${NAME}.bqf  c ${MAJOR} 17
-				mknod /dev/${NAME}.axi0 c ${MAJOR} 19
-			else
-				mknod /dev/${NAME}.ev   c ${MAJOR}  6
-				mknod /dev/${NAME}.atd  c ${MAJOR} 16
-			fi
-			
-			build_hb ${MAJOR} ${NAME}
-			
-			case $(cat /dev/acq400.$ID.knobs/module_type) in			
-			40|41)							
-				mknod /dev/${NAME}.dac c  ${MAJOR} 7
-				mknod /dev/${NAME}.awg c  ${MAJOR} 9
-				mknod /dev/${NAME}.awgc c ${MAJOR} 10
-				mknod /dev/${NAME}.awgr c ${MAJOR} 14;;
-			60|64)
-				mknod /dev/${NAME}.awg c ${MAJOR} 8;;
-			61|62|6B)
-				mknod /dev/${NAME}.awg c  ${MAJOR} 9
-				mknod /dev/${NAME}.awgc c ${MAJOR} 10
-				mknod /dev/${NAME}.awgr c ${MAJOR} 14;;
-			2)
-				mknod /dev/${NAME}.sew1 c ${MAJOR} 	12
-				mknod /dev/${NAME}.sew2 c ${MAJOR} 	13
-			esac
-		fi
-	done
+            echo +++ build nodes site $ID           
+            mknod /dev/${NAME}          c ${MAJOR} 0
+            mknod /dev/${NAME}.c        c ${MAJOR} 1
+            mknod /dev/${NAME}.histo    c ${MAJOR} 2
+            mknod /dev/${NAME}.hb0      c ${MAJOR} 3
+            mknod /dev/${NAME}.cs       c ${MAJOR} 4
+            if [ $ID -eq 0 ]; then
+                mknod /dev/${NAME}.gpg  c ${MAJOR}  5
+                mknod /dev/${NAME}.dac c  ${MAJOR} 7
+                mknod /dev/${NAME}.rsv  c ${MAJOR} 11
+                mknod /dev/${NAME}.rsvd c ${MAJOR} 18
+                mknod /dev/${NAME}.bq   c ${MAJOR} 15   
+                mknod /dev/${NAME}.bqf  c ${MAJOR} 17
+                mknod /dev/${NAME}.axi0 c ${MAJOR} 19
+            else
+                mknod /dev/${NAME}.ev   c ${MAJOR}  6
+                mknod /dev/${NAME}.atd  c ${MAJOR} 16
+                mknod /dev/${NAME}.scnt c ${MAJOR} 39               
+            fi
+            mknod /dev/${NAME}.subr c ${MAJOR} 40
+            
+            build_hb ${MAJOR} ${NAME}
+            
+            case $(cat /dev/acq400.$ID.knobs/module_type) in            
+            40|41)                                          
+                mknod /dev/${NAME}.awg c  ${MAJOR} 9
+                mknod /dev/${NAME}.awgc c ${MAJOR} 10
+                mknod /dev/${NAME}.awgr c ${MAJOR} 14
+                mknod /dev/${NAME}.aoi  c ${MAJOR} 38;;
+            60|64)
+                mknod /dev/${NAME}.awg c ${MAJOR} 8;;
+            61|62|6B)
+                if [ -e /dev/acq400.$ID.knobs/gpg_enable ]; then
+                    mknod /dev/acq400.$ID.gpg c ${MAJOR} 5
+                    mknod /dev/acq400.$ID.gpg32 c ${MAJOR} 28
+                else
+                    mknod /dev/${NAME}.awg c  ${MAJOR} 9
+                    mknod /dev/${NAME}.awgc c ${MAJOR} 10
+                    mknod /dev/${NAME}.awgr c ${MAJOR} 14
+                fi;;
+            7B)
+                mknod /dev/acq400.$ID.gpg c ${MAJOR} 5;;
+            2)
+                mknod /dev/${NAME}.sew1 c ${MAJOR}  12
+                mknod /dev/${NAME}.sew2 c ${MAJOR}  13
+            esac
+        fi
+    done
 }
-# daemon /usr/local/bin/add_webpage_site acq400.${site} ${site}
+# daemon $ULB/add_webpage_site acq400.${site} ${site}
 
 export WEB_APPEND_JOB=/tmp/acq420-web-append.job
 
 web_append()
 {
-	if [ ! -e $WEB_APPEND_JOB ]; then
-		echo '#!/bin/sh' >$WEB_APPEND_JOB
-		echo '# created by acq420.init' >> $WEB_APPEND_JOB
-		chmod a+rx $WEB_APPEND_JOB
-	fi
-	echo "/usr/local/bin/add_webpage_site $1 $2" >> $WEB_APPEND_JOB
+    if [ ! -e $WEB_APPEND_JOB ]; then
+        echo '#!/bin/sh' >$WEB_APPEND_JOB
+        echo '# created by acq420.init' >> $WEB_APPEND_JOB
+        chmod a+rx $WEB_APPEND_JOB
+    fi
+    echo "$ULB/add_webpage_site $1 $2" >> $WEB_APPEND_JOB
 }
 
 
 build_etc_site() {
-	ek=/etc/acq400/${site}
-	mkdir -p ${ek}
-	dk=/dev/acq400.${site}.knobs
-	for src in ${dk}/*; do
-		case $(basename $src) in
-		driver|subsystem|power|uevent|dacspi|dacreset|RW32_debug)
-			;;
-		*)
-			ln -s ${src} ${ek};;
-		esac
-	done
+    site=$1
+    ek=/etc/acq400/${site}
+    
+#    PS1="build_etc_site $1 \>" sh
+     
+    mkdir -p ${ek}
+    dk=/dev/acq400.${site}.knobs
+    for src in ${dk}/*; do
+        case $(basename $src) in
+        driver*|subsystem|power|uevent|dacspi|dacreset|RW32_debug)
+            ;;
+        *)
+            ln -s ${src} ${ek};;
+        esac
+    done
 
 
-	[ -e ${SYSCONF}/site-${site}-peers ] && \
-		cp ${SYSCONF}/site-${site}-peers /etc/acq400/${site}/peers		
+    [ -e ${SYSCONF}/site-${site}-peers ] && \
+        cp ${SYSCONF}/site-${site}-peers /etc/acq400/${site}/peers      
 }
 
 
 set_max_min_khz() {
-	echo $2 >/etc/acq400/$1/MAX_KHZ
-	echo $3 >/etc/acq400/$1/MIN_KHZ
+    echo $2 >/etc/acq400/$1/MAX_KHZ
+    echo $3 >/etc/acq400/$1/MIN_KHZ
 }
+
+IS_ACQ427=0
 customize_acq420()
 {
-	source 	/dev/sites/$1/details
-	PN="${FRU_PART_NUM%% *}"
-	old_ifs=$IFS; IFS="-"
-	let ix=0
-	knobd=/dev/acq400.$1.knobs
-	set_max_min_khz $1 1000 10
+    source  /dev/sites/$1/details
+    PN="${FRU_PART_NUM%% *}"
+    old_ifs=$IFS; IFS="-"
+    let ix=0
+    knobd=/dev/acq400.$1.knobs
+    set_max_min_khz $1 1000 10
 
-	is_acq427=0
-	for field in $PN
-	do
-		case $ix in
-		0)			
-			case $field in
-			ACQ420FMC)	echo ACQ420FMC detected;;
-			ACQ425?LF)	echo $field detected;;
-			ACQ427ELF)	
-						is_acq427=1
-						echo ACQ427ELF detected NEW;;
-			*)
-				echo "ERROR: model $field not recognized";;
-			esac;;
-		1)
-			if [ $is_acq427 -ne 0 ]; then
-				case $field in
-				01) echo "AI=8";;					
-				03)	echo "AI=8 AO=4";;
-				02)	echo "AI=4 AO=4";;
-				*)
-					echo "unknown type code $field";;
-				esac  
-			else 
-				echo NCHAN=$field
-			fi;;				
-		2)
-			echo SPEED=$field			
-			case $field in
-			2000)
-				echo $field >/etc/acq400/$1/MAX_KHZ
-				CLKDIV=50
-				ADC_CONV=26;;
-			1000)
-				echo $field >/etc/acq400/$1/MAX_KHZ
-				CLKDIV=100
-				ADC_CONV=54;;
-			*)
-				CLKDIV=200
-				ADC_CONV=150;;
-			esac
-			echo "SPEED:$field set adc_conv_time:$ADC_CONV"
-			set.sys $knobd/adc_conv_time $ADC_CONV;;
-		3)
-			echo BITS=$field
-			case $field in
-			24|18)
-				set.sys $knobd/data32 1
-				set.sys $knobd/adc_18b 1
-				echo "set data32 $(get.sys $knobd/data32)"
-				echo "set adc_18b $(get.sys $knobd/adc_18b)"
-				if [ -e $knobd/adc_nobt ]; then
-					case $field in
-					24)
-						set.sys $knobd/adc_nobt 3;;
-					*)
-						set.sys $knobd/adc_nobt 1;;
-					esac
-				elif [ $BITS -eq 24 ]; then
-					echo WARNING: 24 bit mode NOT supported
-				fi;;
-			*)
-				set.sys $knobd/data32 0
-				set.sys $knobd/adc_18b 0;;
-			esac;;				
-		esac
-		let ix="$ix+1"
-	done
-	IFS=${old_ifs}
+    IS_ACQ427=0
+    for field in $PN
+    do
+        case $ix in
+        0)          
+            case $field in
+            ACQ420FMC)  echo ACQ420FMC detected;;
+            ACQ425?LF)  echo $field detected;;
+            ACQ427ELF)  
+                        IS_ACQ427=1
+                        echo ACQ427ELF detected NEW;;
+            *)
+                echo "ERROR: model $field not recognized";;
+            esac;;
+        1)
+            if [ $IS_ACQ427 -ne 0 ]; then
+                IS_ACQ427=$field
+                case $field in
+                01) echo "AI=8";;                   
+                03) echo "AI=8 AO=4";;
+                02) echo "AI=4 AO=4";;
+                *)
+                    echo "unknown type code $field";;
+                esac  
+            else 
+                echo NCHAN=$field
+            fi;;                
+        2)
+            echo SPEED=$field           
+            case $field in
+            2000)
+                echo $field >/etc/acq400/$1/MAX_KHZ
+                CLKDIV=50
+                ADC_CONV=26;;
+            1000)
+                echo $field >/etc/acq400/$1/MAX_KHZ
+                CLKDIV=100
+                ADC_CONV=54;;
+            *)
+                CLKDIV=200
+                ADC_CONV=150;;
+            esac
+            echo "SPEED:$field set adc_conv_time:$ADC_CONV"
+            set.sys $knobd/adc_conv_time $ADC_CONV;;
+        3)
+            echo BITS=$field
+            case $field in
+            24|18)
+                set.sys $knobd/data32 1
+                set.sys $knobd/adc_18b 1
+                echo "set data32 $(get.sys $knobd/data32)"
+                echo "set adc_18b $(get.sys $knobd/adc_18b)"
+                if [ -e $knobd/adc_nobt ]; then
+                    case $field in
+                    24)
+                        set.sys $knobd/adc_nobt 3;;
+                    *)
+                        set.sys $knobd/adc_nobt 1;;
+                    esac
+                elif [ $BITS -eq 24 ]; then
+                    echo WARNING: 24 bit mode NOT supported
+                fi;;
+            *)
+                set.sys $knobd/data32 0
+                set.sys $knobd/adc_18b 0;;
+            esac;;              
+        esac
+        let ix="$ix+1"
+    done
+    IFS=${old_ifs}
 }
 
 BOLO8_SITES=""
@@ -253,10 +281,11 @@ ACQ425_SITES=""
 ACQ427_SITES=""
 ACQ437_SITES=""
 ACQ400T_SITES=""
+ACQ465_SITES=""
 
 start_knob_services()
 {
-	/usr/local/init/acq400_knobs.init start
+    /usr/local/init/acq400_knobs.init start
 }
 
 create_gx() {
@@ -267,7 +296,7 @@ cat - >$1/gx <<EOF
 gx=\$(./gain1)
 for g in $chans
 do
-	gx="\$gx\$(./gain\$g)"
+    gx="\$gx\$(./gain\$g)"
 done
 echo \$gx
 EOF
@@ -275,379 +304,543 @@ chmod a+rx $1/gx
 }
 
 get_mtype() {
-	if [ -f /dev/sites/$1/details ]; then
-		source /dev/sites/$1/details
-		eval ${FRU_PART_NUM#* }
-		echo $M
-	fi	
+    if [ -f /dev/sites/$1/details ]; then
+        source /dev/sites/$1/details
+        eval ${FRU_PART_NUM#* }
+        echo $M
+    fi
 }
-build_knobs_device() {
-	dir=$1
-	site=$(cat $dir/site)
-	dk=/dev/acq400.${site}.knobs
-	ln -s $dir/ ${dk}
-	build_etc_site ${site}
-	
 
-	mtype=$(cat /$dir/module_type)
-	
-	echo build_knobs_device site:$site mtype:$mtype
-	
-	touch /dev/shm/AI.${site}.wf.fin
-	web_append acq400.${site} ${site}	
-	CLKDIV="noset"
-		
-	case $mtype in
-	7|A7)
-		if [ "x$ACQ427_SITES" != "x" ]; then
-			ACQ427_SITES="${ACQ427_SITES} "	
-		fi
-		ACQ427_SITES="${ACQ427_SITES}$site"
-		create_gx /etc/acq400/$site/ 8
-		customize_acq420 $site;;
-	5|A5)
-		if [ "x$ACQ425_SITES" != "x" ]; then
-			ACQ425_SITES="${ACQ425_SITES} "
-		fi		
-		ACQ425_SITES="${ACQ425_SITES}$site"
-		create_gx /etc/acq400/$site/ 16
-		customize_acq420 $site;;
-	6C)
-		customize_acq420 $site;;
-	1|A1)			
-		customize_acq420 $site
-		set.sys ${dk}/gains 0000
-		echo 'gain=gain[1234]' > /etc/acq400/$site/groups;;
-	FE|FD)
-		if [ "x$ACQ400T_SITES" != "x" ]; then
-			ACQ400T_SITES="${ACQ400T_SITES} "
-		fi
-		ACQ400T_SITES="${ACQ400T_SITES}$site";;		
-	FF)    
-		return;;
-	2|3|6)
-		case $mtype in
-		6)
-			create_gx /etc/acq400/$site/ 16
-			if [ "x$ACQ437_SITES" != "x" ]; then
-				ACQ437_SITES="${ACQ437_SITES} "
-			fi		
-			ACQ437_SITES="${ACQ437_SITES}$site";;
-		esac
-		echo WORKAROUND: clear FIFERR
-		echo 0 >/sys/module/acq420fmc/parameters/FIFERR
-		echo 4 >/etc/acq400/${site}/SAMPLE_SIZE
-		set_max_min_khz ${site} 128 4
-		CLKDIV=8;;
-	7|8)
-		# space deliberate
-		set_max_min_khz ${site} 80000 10000
-		ACQ480_SITES="${ACQ480_SITES} $site";;
-	9)
-		set_max_min_khz ${site} 200 10
-		ACQ423_SITES="${ACQ423_SITES} $site";;	
-	40|42|6A)	
-		case $mtype in
-		6A)
-			echo 1 >/dev/gpio/LED/FMC2_R
-			echo 1 >/dev/gpio/LED/FMC2_G
-			set_max_min_khz ${site} 250 10;;
-		*)
-			set_max_min_khz ${site} 1000 10;;
-		esac
-		echo "ao420_init ${site}" >>/tmp/acq420.init-postpowerup-action
-		if [ -e /etc/acq400/$site/dac_mux_master ]; then
-				ln -s /usr/local/bin/muxpattern /etc/acq400/$site/
-		fi
-		CLKDIV=250;;
-	41)	
-		ao424_init ${site}
-		set_max_min_khz ${site} 500 10	
-		CLKDIV=500;;
-	60|64)
-		if [ "x$BOLO8_SITES" != "x" ]; then
-			BOLO8_SITES="${BOLO8_SITES},"
-		fi
-		set_max_min_khz ${site} 2000 2000
-		BOLO8_SITES="${BOLO8_SITES}$site"
-		CLKDIV=100;; 
-	61|62|6B)
-		case $mtype in
-		6B)
-			set_max_min_khz ${site} 25000 10;;
-		*)
-			set_max_min_khz ${site} 1000 10;;
-		esac
-		ln -s /usr/local/bin/clocks_to_first_edge /etc/acq400/$site/;;
-	67|68|69)
-		return;;
-	*)
-		CLKDIV=200;;
-	esac
-	if [ "$CLKDIV" != "noset" ] && [ -e $dk/clkdiv ]; then
-		set.sys $dk/clkdiv $CLKDIV
-		rb=$(get.sys $dk/clkdiv)
-		echo "set clkdiv $CLKDIV get.sys $dk/clkdiv ${rb}"
-	fi
-	[ $site -eq 1 ] && echo 0 > /etc/acq400/$site/event_time
+get_nchan() {
+    if [ -f /dev/sites/$1/details ]; then
+        source /dev/sites/$1/details
+        eval ${FRU_PART_NUM#* }
+        echo $N
+    fi
+}
+
+
+fake_fmc2_leds() 
+{
+    echo 0 >/dev/gpio/LED/FMC2_R
+    echo 1 >/dev/gpio/LED/FMC2_G
+}
+
+make_acq494_spi_fields() {
+    ek=$1
+    for ch in 1 2 3 4; do       
+        mspec=$(printf "0x%02x" $((1<<($ch-1))))
+        cat - >$ek/gpx2_hit_ena_$ch <<EOF
+#!/bin/sh
+exec reg_rw 1 M=$mspec \$1    
+EOF
+    done
+    cat - >$ek/gpx2_channel_combine <<EOF
+#!/bin/sh
+exec reg_rw 1 M=0x30 \$1    
+EOF
+   cat - >$ek/gpx2_hi_res <<EOF
+#!/bin/sh
+exec reg_rw 1 M=0xc0 \$1    
+EOF
+    chmod a+rx $ek/gpx2_hit_ena* $ek/gpx2_channel_combine $ek/gpx2_hi_res
+}
+
+build_knobs_device() {
+    dir=$1
+    site=$(cat $dir/site)
+    dk=/dev/acq400.${site}.knobs
+    ek=/etc/acq400.${site}
+    ln -s $dir/ ${dk}
+    build_etc_site ${site}
+    
+
+    mtype=$(cat /$dir/module_type)
+    
+    echo build_knobs_device site:$site mtype:$mtype
+    
+    touch /dev/shm/AI.${site}.wf.fin
+    web_append acq400.${site} ${site}   
+    CLKDIV="noset"
+        
+    case $mtype in
+    7|6A)
+        fake_fmc2_leds;;
+    69|70)
+        fake_fmc2_leds
+        ln -s /usr/local/bin/trigger_at ${ek}
+        return;;    
+    67|68|6E)
+        fake_fmc2_leds
+        return;;
+    esac
+    
+    case $mtype in
+    7|A7)
+        if [ "x$ACQ427_SITES" != "x" ]; then
+            ACQ427_SITES="${ACQ427_SITES} " 
+        fi
+        ACQ427_SITES="${ACQ427_SITES}$site"
+        create_gx ${ek}/ 8
+        customize_acq420 $site;;
+    5|A5)
+        if [ "x$ACQ425_SITES" != "x" ]; then
+            ACQ425_SITES="${ACQ425_SITES} "
+        fi      
+        ACQ425_SITES="${ACQ425_SITES}$site"
+        create_gx ${ek}/ 16
+        customize_acq420 $site;;
+    6C)
+        customize_acq420 $site;;
+    1|A1)           
+        customize_acq420 $site
+        set.sys ${dk}/gains 0000
+        echo 'gain=gain[1234]' > ${ek}/groups;;
+    FE|FD)
+        if [ "x$ACQ400T_SITES" != "x" ]; then
+            ACQ400T_SITES="${ACQ400T_SITES} "
+        fi
+        ACQ400T_SITES="${ACQ400T_SITES}$site";;     
+    FF)    
+        return;;
+    2|3|6)
+        case $mtype in
+        6)
+            create_gx ${ek}/ 16
+            if [ "x$ACQ437_SITES" != "x" ]; then
+                ACQ437_SITES="${ACQ437_SITES} "
+            fi      
+            ACQ437_SITES="${ACQ437_SITES}$site";;
+        esac
+        echo WORKAROUND: clear FIFERR
+        echo 0 >/sys/module/acq420fmc/parameters/FIFERR
+        echo 4 >${ek}/SAMPLE_SIZE
+        set_max_min_khz ${site} 128 4
+        CLKDIV=8;;
+    8)
+        # space deliberate
+        set_max_min_khz ${site} 80000 10000
+        ACQ480_SITES="${ACQ480_SITES} $site";;
+    9)
+        set_max_min_khz ${site} 200 10
+        ACQ423_SITES="${ACQ423_SITES} $site";;  
+    A)
+        set_max_min_khz ${site} 1400 1
+        ACQ465_SITES="${ACQ465_SITES} $site";;
+    B)
+        set_max_min_khz ${site} 10000 10000
+        make_acq494_spi_fields $ek
+        ACQ494_SITES="${ACQ494_SITES} ${site}";; 
+    40|42|6A)   
+        case $mtype in
+        6A)
+            set_max_min_khz ${site} 250 10;;
+        *)
+            set_max_min_khz ${site} 1000 10;;
+        esac
+        echo "ao420_init ${site}" >>/tmp/acq420.init-postpowerup-action
+        if [ -e ${ek}/dac_mux_master ]; then
+                ln -s $ULB/muxpattern ${ek}/
+        fi
+        CLKDIV=250;;
+    41) 
+        ao424_init ${site}
+        set_max_min_khz ${site} 500 10  
+        CLKDIV=500;;
+    60|64)
+        if [ "x$BOLO8_SITES" != "x" ]; then
+            BOLO8_SITES="${BOLO8_SITES},"
+        fi
+        set_max_min_khz ${site} 2000 2000
+        echo "setting BOLO ${site} NCHAN 16 for MAIN/CUR ADC combo sample"
+        echo 16 > ${ek}/active_chan
+        echo 16 > ${ek}/NCHAN
+        BOLO8_SITES="${BOLO8_SITES}$site"
+        CLKDIV=100;; 
+    61|62|6B|7A|7B) 
+        case $mtype in
+        7A)
+        	;;
+        7B)
+        	num_pg=4;
+        	if [ ! -z $DIO482TD_PG5 ] && [ "$DIO482TD_PG5" != "no" ]; then
+        		num_pg=5;
+        	elif [ -e /mnt/local/sysconfig/epics.sh ]; then
+        		source /mnt/local/sysconfig/epics.sh
+        		if [ ! -z $DIO482TD_PG5 ] && [ "$DIO482TD_PG5" != "no" ]; then
+        			echo "DIO482TD_PG5 in /mnt/local/sysconfig/epics.sh deprecated, please move to /mnt/local/sysconfig/acq400.sh"
+        			num_pg=5
+        		fi
+        	fi
+        	echo $num_pg >${ek}/num_pg;;
+        6B)
+            source  /dev/sites/${site}/details
+			if [ "$(cat ${dk}/module_variant)" = "F" ]; then
+				if [ "$FRU_PART_NUM" != "${FRU_PART_NUM#*FBR}" ]; then
+					echo "FBR part detected in site ${site}: $FRU_PART_NUM"
+					echo 1 > ${dk}/active_low
+					num_pg=16
+				else
+					num_pg=32
+				fi
+				echo $num_pg >${ek}/num_pg
+			fi
+            ln -s $ULB/clocks_to_first_edge ${ek}/
+            set_max_min_khz ${site} 25000 10;;
+        *)
+            ln -s $ULB/clocks_to_first_edge ${ek}/
+            set_max_min_khz ${site} 1000 10;;
+        esac
+        if [ ! -z $DIO_ACTIVE_LOW_SITES ]; then
+            echo $DIO_ACTIVE_LOW_SITES | grep -q $site
+            if [ $? -eq 0 ]; then
+            	echo +++ setting active_low
+            	echo 1 > ${dk}/active_low
+            fi
+        fi
+        if [ ! -z $DIO_WDT ]; then
+            echo $DIO_WDT > ${dk}/wdt
+        fi
+        echo +++ setting dio_en
+        echo 1 > ${dk}/dio_en
+        if [ -e ${ek}/num_pg ]; then
+        	echo +++ setting PG outputs num_pg $num_pg
+			echo 1,1,1,1 > ${dk}/byte_is_output
+        fi;;
+    *)
+        CLKDIV=200;;
+    esac
+    if [ -e ${ek}/is_adc ] && [ "$(cat ${ek}/is_adc)" != "0" ];then
+        ln -s /usr/local/CARE/get_data_size ${ek}/ch_data_size
+    fi
+    if [ "$CLKDIV" != "noset" ] && [ -e $dk/clkdiv ]; then
+        set.sys $dk/clkdiv $CLKDIV
+        rb=$(get.sys $dk/clkdiv)
+        echo "set clkdiv $CLKDIV get.sys $dk/clkdiv ${rb}"
+    fi
+    [ $site -eq 1 ] && echo 0 > ${ek}/event_time
 }
 
 install_cal() {
-	site=$1
-	caldef=/dev/sites/${site}/caldef.xml
-	if [ ! -e ${caldef} ]; then
-		source 	/dev/sites/${site}/details
-		calcal=/mnt/local/cal/$FRU_SERIAL.xml	
-		if [ -e ${calcal} ]; then
-			echo "Calibration found site:$site ${calcal}"
-			cp ${calcal} ${caldef}
-		else			
-			PN="${FRU_PART_NUM%% *}"
-			TYP="${PN%%-*}"
-			defcal=/usr/local/cal/${TYP}-defcal.xml
-			if [ -e ${defcal} ]; then
-				cp ${defcal} ${caldef}
-				echo "Calibration default installed site:$site ${defcal}"
-			else
-				echo "WARNING: no calibration or default found for site:$site type:${TYP}"
-			fi
-		fi
-	fi	
+    site=$1
+    caldef=/dev/sites/${site}/caldef.xml
+    if [ ! -e ${caldef} ]; then
+        source  /dev/sites/${site}/details
+        calcal=/mnt/local/cal/$FRU_SERIAL.xml   
+        if [ -e ${calcal} ]; then
+            echo "Calibration found site:$site ${calcal}"
+            cp ${calcal} ${caldef}
+        else            
+            PN="${FRU_PART_NUM%% *}"
+            defcal=/usr/local/cal/${PN}-defcal.xml
+            echo Hello $defcal
+            if [ ! -e $defcal ]; then
+                TYP="${PN%%-*}"
+                defcal=/usr/local/cal/${TYP}-defcal.xml               
+            fi
+            if [ -e ${defcal} ]; then
+                cp ${defcal} ${caldef}
+                echo "Calibration default installed site:$site ${defcal}"
+            else
+                echo "WARNING: no calibration or default found for site:$site type:${TYP}"
+            fi
+        fi
+    fi  
 }
 
 build_site0() {
-	dk=/dev/acq400.0.knobs
-	ek=/etc/acq400/0/
-	echo "MOTHERBOARD" > $ek/module_role
-	ln -s $1 ${dk}
-	web_append acq400.0 0
+    dk=/dev/acq400.0.knobs
+    ek=/etc/acq400/0/
+    echo "MOTHERBOARD" > $ek/module_role
+    ln -s $1 ${dk}
+    web_append acq400.0 0
     fix_state
-	
-	ln -s ${dk}/aggregator ${dk}/distributor ${dk}/decimate ${dk}/zclk_sel ${ek}
-	ln -s /usr/local/bin/run0 /usr/local/bin/get.xdt ${ek}
-	ln -s /usr/local/bin/get.site /usr/local/bin/set.site ${ek}
-	ln -s /usr/local/bin/set.site ${ek}/SS
-	ln -s /usr/local/bin/fit_rtm_translen_to_buffer /usr/local/bin/rgm_flush ${ek}
-	ln -s /dev/acq400.0.knobs/bufferlen ${ek}
-	ln -s /usr/local/bin/streamtonowhered ${ek}
-	ln -s /usr/local/bin/set.sync_role ${ek}
-	ln -s /proc/driver/acq400/0/stats /proc/driver/acq400/0/Qstats ${ek}
-	ln -s /sys/module/acq420fmc/parameters/xo_distributor_sample_size ${ek}/dssb
-	ln -s /usr/local/CARE/est_buf_size.sh ${ek}/optimise_bufferlen_burst
-	
-	
-	lck=/sys/module/acq420fmc/parameters/TIM_CTRL_LOCK
-	[ -e $lck ] && ln -s $lck ${ek}
-	
-	for k in live_post live_pre live_mode; do
-		echo 0 > ${ek}/$k
-	done
-	
-	
-	[ "x$REBOOT_KNOB" = "xy" ] && ln -s /usr/local/bin/reboot ${ek}
-	
-	
-	for k in ${dk}/data_engine_? ${dk}/gpg_* ${dk}/fpctl* ${dk}/spad* \
-		${dk}/di4_? ${dk}/do4_? ${dk}/data32 ${dk}/bq* ${dk}/dist_s1 \
-		${dk}/sync_* ${dk}/evt_* ${dk}/sig_src_route* ${dk}/wr*; do
-		[ -e $k ] && ln -s $k /etc/acq400/0/
-	done
-	for knob in NCHAN data32 shot shot_complete; do
-		echo 0 > /etc/acq400/0/$knob
-	done
-	
-	echo "+++ build_site0 model $MODEL"
-	case $MODEL in
-	acq2?06*)
-		[ "x$ETH1_E1000X" = "xy" ] && /usr/local/CARE/load.acq2106_1000X
-		rm /etc/acq400/0/sync_out_cable_det
-		ln -s /dev/gpio/SYNC_CABLE_DET /etc/acq400/0/sync_out_cable_det
-		ls -l /etc/acq400/0/sync_out_cable_det
-		ln -s /usr/local/bin/load.si5326 /etc/acq400/0
-		ln -s /usr/local/bin/si5326_tune_phase /etc/acq400/0/
-	    if [ -e ${dk}/has_axi_dma_stack ] && [ $(cat ${dk}/has_axi_dma_stack) != "0" ]; then
-	       ln -s /usr/local/CARE/stack_480 /etc/acq400/0
-	    fi 
-	    ln -s /usr/local/CARE/LLC_instrument_latency ${ek}
-	esac
+    echo 1 > $ek/slowmon_fs
+    echo 1 > $ek/slowmon_fin
+    echo 0 > $ek/slowmon_us
+    echo 0 > $ek/slowmon_nacc
+    
+    ln -s ${dk}/aggregator ${dk}/distributor ${dk}/decimate ${dk}/zclk_sel \
+        ${dk}/soft_trigger ${dk}/bufferlen ${ek}
+        
+    [ -e ${dk}/counter_latch ] && ln -s ${dk}/counter_latch ${ek}
+
+    ln -s $ULB/get.site $ULB/set.site ${ek}
+    ln -s $ULB/set.site ${ek}/SS
+    ln -s $ULB/fit_rtm_translen_to_buffer $ULB/rgm_flush $ULB/awg_abort \
+        $ULB/run0 $ULB/play0 $ULB/get.xdt \
+        $ULB/streamtonowhered $ULB/set.sync_role \
+		$ULB/datals ${ULB}/cstate \
+	${ek}
+
+    ln -s /proc/driver/acq400/0/stats /proc/driver/acq400/0/Qstats ${ek}
+    ln -s /sys/module/acq420fmc/parameters/xo_distributor_sample_size ${ek}/dssb
+    ln -s /usr/local/CARE/est_buf_size.sh ${ek}/optimise_bufferlen_burst
+    ln -s /usr/local/bin/channel_mapping ${ek}
+    echo $HAS_MGTDRAM > ${ek}/has_mgtdram
+    IS_TIGA=none
+    [ -e /dev/acq400.0.knobs/wr_ts_s1_count ] && IS_TIGA=1
+    echo $IS_TIGA > ${ek}/is_tiga
+    
+    
+    lck=/sys/module/acq420fmc/parameters/TIM_CTRL_LOCK
+    [ -e $lck ] && ln -s $lck ${ek}
+    
+    for k in live_post live_pre live_mode; do
+        echo 0 > ${ek}/$k
+    done
+    
+    
+    [ "x$REBOOT_KNOB" = "xy" ] && ln -s $ULB/reboot ${ek}
+    
+    
+    for k in ${dk}/data_engine_? ${dk}/gpg_* ${dk}/fpctl* ${dk}/spad* \
+        ${dk}/di4_? ${dk}/do4_? ${dk}/data32 ${dk}/bq* ${dk}/dist_s1 \
+        ${dk}/sync_* ${dk}/evt_* ${dk}/sig_src_route* ${dk}/wr* ${dk}/rt_status; do
+        [ -e $k ] && ln -s $k ${ek}
+    done
+    for knob in NCHAN data32 shot shot_complete; do
+        echo 0 > /etc/acq400/0/$knob
+    done
+    ln -s /usr/local/CARE/get_data_size ${ek}/raw_data_size
+    
+    echo "+++ build_site0 model $MODEL"
+    case $MODEL in
+    acq2?06*)
+        [ "x$ETH1_E1000X" = "xy" ] && /usr/local/CARE/load.acq2106_1000X
+        rm /etc/acq400/0/sync_out_cable_det
+        ln -s /dev/gpio/SYNC_CABLE_DET /etc/acq400/0/sync_out_cable_det
+        ls -l /etc/acq400/0/sync_out_cable_det
+        ln -s $ULB/load.si5326 /etc/acq400/0
+        ln -s $ULB/si5326_tune_phase /etc/acq400/0/
+        if [ -e ${dk}/has_axi_dma_stack ] && [ $(cat ${dk}/has_axi_dma_stack) != "0" ]; then
+           ln -s /usr/local/CARE/stack_480 /etc/acq400/0
+        fi 
+        ln -s /usr/local/CARE/LLC_instrument_latency ${ek};;
+    z7io)
+        /usr/local/init/z7io_late_init;;
+    esac
 }
 
 build_mgt400_node() {
-	NAME=$1
-	MAJOR=$2			
+    NAME=$1
+    MAJOR=$2            
 
-	echo +++ build nodes $NAME			
-	mknod /dev/${NAME}.push_data_hg c ${MAJOR} 0
-	mknod /dev/${NAME}.push_desc_hg c ${MAJOR} 1
-	mknod /dev/${NAME}.pull_data_hg c ${MAJOR} 2
-	mknod /dev/${NAME}.pull_desc_hg c ${MAJOR} 3
-	mknod /dev/${NAME}.init_push_desc c ${MAJOR} 4
-	mknod /dev/${NAME}.init_pull_desc c ${MAJOR} 5
-	mknod /dev/${NAME}.push_desc c ${MAJOR} 6
-	mknod /dev/${NAME}.pull_desc c ${MAJOR} 7
+    echo +++ build nodes $NAME          
+    mknod /dev/${NAME}.push_data_hg c ${MAJOR} 0
+    mknod /dev/${NAME}.push_desc_hg c ${MAJOR} 1
+    mknod /dev/${NAME}.pull_data_hg c ${MAJOR} 2
+    mknod /dev/${NAME}.pull_desc_hg c ${MAJOR} 3
+    mknod /dev/${NAME}.init_push_desc c ${MAJOR} 4
+    mknod /dev/${NAME}.init_pull_desc c ${MAJOR} 5
+    mknod /dev/${NAME}.push_desc c ${MAJOR} 6
+    mknod /dev/${NAME}.pull_desc c ${MAJOR} 7
+    mknod /dev/${NAME}.push_status c ${MAJOR} 8
+    mknod /dev/${NAME}.pull_status c ${MAJOR} 9
 }
 build_mgt400() {
-	name=$(cat $1/name)
-	site=$(cat $1/site)
-	web_append ${name} ${site}
-	knobs=/dev/acq400.${site}.knobs
-	ln -s $1  $knobs
-	mkdir /etc/acq400/${site}
+    name=$(cat $1/name)
+    site=$(cat $1/site)
+    web_append ${name} ${site}
+    knobs=/dev/acq400.${site}.knobs
+    ln -s $1  $knobs
+    mkdir /etc/acq400/${site}
 
-	ln -s $knobs/* /etc/acq400/${site}
-	ch=$(cat /etc/acq400/${site}/name )
-	ch=${ch#*.}
-	
-	ln -s $knobs /dev/acq400.${ch}.knobs
-	ln -s /etc/acq400/${site} /etc/acq400/${ch}
-	
-	let snd="1${SN##CE4??}-10000"
-	snx=$(printf "%04x" $snd)
-        let mtyp=${dtsn#CE*}/10000
-        case $mtyp in
-        416)
+#    PS1="build_mgt400 612 $1 \>" sh
+
+    [ -e /etc/acq400/C/MODEL ] && ln -s /etc/acq400/C/* /etc/acq400/${site}   ;# MODEL MAN MTYPE
+    build_etc_site ${site}
+    
+#    PS1="build_mgt400 617 $1 \>" sh
+
+    ch=$(cat /etc/acq400/${site}/name )
+    ch=${ch#*.}
+    
+    ln -s $knobs /dev/acq400.${ch}.knobs
+    ln -s /etc/acq400/${site} /etc/acq400/${ch}
+    
+    if [ -e /dev/acq400.${site}.knobs/module_type ]; then
+        mt=$(cat /dev/acq400.${site}.knobs/module_type)
+        case ${mt} in
+        9[01234])
+            let snd="1${SN##CE4??}-10000"
+            snx=$(printf "%04x" $snd)
+            let mtyp=${dtsn#CE*}/10000
+            case $mtyp in
+            416)
                 echo set.sys $knobs/ident 0x21${name##*.}6${snx}
                 set.sys $knobs/ident 0x21${name##*.}6${snx}  ;;
-        *)
+            *)
                 set.sys $knobs/ident 0x${mtyp}${name##*.}${snx};;
+            esac
+            echo "aggregator sites=none off" >$knobs/aggregator;;
         esac
-
-	build_mgt400_node $(cat $knobs/name $knobs/dev)
+        build_mgt400_node $(cat $knobs/name $knobs/dev)
+    fi
 }
 
 build_knobs() {
-	spd=/sys/bus/platform/devices
-	dir=$spd/40000000.acq2006sc
-	if [ -e ${dir} ]; then
-		build_site0 ${dir}
-	fi
-	for dir in $spd/*acq4?0fmc $spd/*acq400pmod; do
-		if [ -e ${dir}/site ]; then
-			install_cal $(cat ${dir}/site)
-			build_knobs_device ${dir}
-		fi
-	done
-	
-	if [ "x${ACQ423_SITES}" != "x" ]; then
-		/usr/local/bin/acq423.init ${ACQ423_SITES}
-		# use /mnt/local/acq420_custom
-		#		BLEN=4194304
-		#		NBUF=128
-	fi
-	if [ "x${ACQ425_SITES}" != "x" ]; then
-		/usr/local/bin/acq425.init ${ACQ425_SITES}
-		# use /mnt/local/acq420_custom
-		#		BLEN=4194304
-		#		NBUF=128
-	fi
-	if [ "x${ACQ427_SITES}" != "x" ]; then
-		/usr/local/bin/acq427.init ${ACQ427_SITES}
-		# use /mnt/local/acq420_custom
-		#		BLEN=4194304
-		#		NBUF=128
-	fi
-
-	if [ "x${ACQ437_SITES}" != "x" ]; then
-		/usr/local/bin/acq437.init ${ACQ437_SITES}
-		# use /mnt/local/acq420_custom
-		#		BLEN=4194304
-		#		NBUF=128
-	fi	
-	if [ "x${ACQ480_SITES}" != "x" ]; then		
-		case $MODEL in
-		acq1*)
-			bs=$(get_bus_speed)
-			if [ "$bs" = "111" ]; then
-				echo "ACQ1001 + ACQ480 : BUS SPEED $bs : OK"
-			else
-				echo "ERROR ACQ1001 + ACQ480 : BUS SPEED $bs check BOOT.bin"
-			fi;;
-		acq21*)
-			echo "ACQ2106 + ACQ480 : OK";;
-		*zc706*)
-			echo "ZC706 + ACQ480 : OK";;
-		kmcuz30)
-			echo "KMCUZ30 + ACQ480 : EXPERIMENTAL";;
-		*)
-			echo "ERROR: ACQ480 found, but not compatible with BASE $MODEL"
-			exit 1;;
-		esac
-		
-		for site in $ACQ480_SITES
-		do
-			grep -q 482 /etc/acq400/$site/MODEL
-			[ $? -eq 0 ] && set.sys /etc/acq400/$site/acq482_cmap 1
-		done
-		/usr/local/bin/acq480.init ${ACQ480_SITES}
-	else
-		case $MODEL in
-		acq1*)
-			bs=$(get_bus_speed)
-			if [ "$bs" = "111" ]; then
-				echo "WARNING ACQ1001 non ACQ480 : BUS SPEED $bs check BOOT.bin"
-			fi;;
-		esac
-	fi
-	if [ "x${ACQ400T_SITES}" != "x" ]; then
-		echo ACQ400T : "calling /usr/local/bin/acq400t.init ${ACQ400T_SITES}"
-		/usr/local/bin/acq400t.init ${ACQ400T_SITES}
-	fi
-	has_sfp=0
-	for dir in ${spd}/*mgt400; do
-		if [ -e ${dir}/site ]; then
-			build_mgt400 ${dir}
-		fi
+    spd=/sys/bus/platform/devices
+    dir=$spd/40000000.acq2006sc
+    if [ -e ${dir} ]; then
+        build_site0 ${dir}
+    fi
+    for dir in $spd/*acq4?0fmc $spd/*acq400pmod; do
+        if [ -e ${dir}/site ]; then
+            install_cal $(cat ${dir}/site)
+            build_knobs_device ${dir}
+        fi
+    done
+     
+    if [ "x${ACQ480_SITES}" != "x" ]; then      
+        case $MODEL in
+        acq1*)
+            bs=$(get_bus_speed)
+            if [ "$bs" = "111" ]; then
+                echo "ACQ1001 + ACQ480 : BUS SPEED $bs : OK"
+            else
+                echo "ERROR ACQ1001 + ACQ480 : BUS SPEED $bs check BOOT.bin"
+            fi;;
+        acq21*)
+            echo "ACQ2106 + ACQ480 : OK";;
+        *zc706*)
+            echo "ZC706 + ACQ480 : OK";;
+        kmcuz30)
+            echo "KMCUZ30 + ACQ480 : EXPERIMENTAL";;
+        *)
+            echo "ERROR: ACQ480 found, but not compatible with BASE $MODEL"
+            exit 1;;
+        esac
+        
+        for site in $ACQ480_SITES
+        do
+            acq48_model=$(cat /etc/acq400/$site/MODEL)
+            echo inspecting ACQ480_SITE $site $acq48_model
+            echo $acq48_model | grep -q 482
+            if [ $? -eq 0 ]; then               
+                set.sys /etc/acq400/$site/acq482_cmap 1
+                #echo /etc/acq400/$site/acq482_cmap set $(cat /etc/acq400/$site/acq482_cmap)
+            else            
+                echo $acq48_model | grep -q 481
+                if [ $? -eq 0 ]; then
+                    export ACQ480_FIXED_TERM=1
+                    export ACQ480_MODPARAMS="claim_0x20=0 claim_0x22=0"
+                    break
+                fi
+            fi
         done
+        $ULB/acq480.init ${ACQ480_SITES}
+    else
+        case $MODEL in
+        acq1*)
+            bs=$(get_bus_speed)
+            if [ "$bs" = "111" ]; then
+                echo "WARNING ACQ1001 non ACQ480 : BUS SPEED $bs check BOOT.bin"
+            fi;;
+        esac
+    fi
+    if [ "x${ACQ423_SITES}" != "x" ]; then
+        $ULB/acq423.init ${ACQ423_SITES}
+        # use /mnt/local/acq420_custom
+        #       BLEN=4194304
+        #       NBUF=128
+    fi
+    if [ "x${ACQ425_SITES}" != "x" ]; then
+        $ULB/acq425.init ${ACQ425_SITES}
+        # use /mnt/local/acq420_custom
+        #       BLEN=4194304
+        #       NBUF=128
+    elif [ "x${ACQ427_SITES}" != "x" ]; then
+        $ULB/acq427.init ${ACQ427_SITES}
+        for a427s in ${ACQ427_SITES}; do
+            if [ $a427s -eq 1 ]; then
+                if [ "$IS_ACQ427" = "01" ]; then
+                    echo "model 01, no DAC"
+                else 
+                    echo "link dac_range from ACQ427.1 to AO420.2"
+                    for dac in 1 2 3 4; do
+                        rm -f /etc/acq400/2/dac_range_0${dac}
+                        ln -s /dev/acq425/1/DAC_${dac}_RANGE /etc/acq400/2/dac_range_0${dac}
+                    done
+                    echo 1 > /dev/acq400.2.knobs/dac_range_REF
+                fi
+            fi
+        done
+        # use /mnt/local/acq420_custom
+        #       BLEN=4194304
+        #       NBUF=128
+    elif [ "x${ACQ437_SITES}" != "x" ]; then
+        $ULB/acq437.init ${ACQ437_SITES}
+        # use /mnt/local/acq420_custom
+        #       BLEN=4194304
+        #       NBUF=128
+    elif [ "x${ACQ465_SITES}" != "x" ]; then
+        for site in $ACQ465_SITES; do
+            web_append acq465.$site nomon
+        done        
+        $ULB/acq465.init ${ACQ465_SITES}
+    elif [ "x${ACQ494_SITES}" != "x" ]; then
+        [ -z $ACQ494_STUB ] && nice $ULB/acq494.init ${ACQ494_SITES} &
+    elif [ "x${ACQ400T_SITES}" != "x" ]; then
+        echo ACQ400T : "calling $ULB/acq400t.init ${ACQ400T_SITES}"
+        $ULB/acq400t.init ${ACQ400T_SITES}
+    fi
+    has_sfp=0
+    for dir in ${spd}/*mgt400; do
+        if [ -e ${dir}/site ]; then
+            build_mgt400 ${dir}
+        fi
+    done
 }
 
 create_set_fanspeed() {
-cat - >/usr/local/bin/set.fanspeed <<EOF
+cat - >$ULB/set.fanspeed <<EOF
 #!/bin/sh
 # set fanspeed acq1001 style
 FSPERCENT=\${1:-10}
 set.sys /dev/acq400.0.knobs/fan_percent \$FSPERCENT
 EOF
-chmod a+rx /usr/local/bin/set.fanspeed
-echo /usr/local/bin/set.fanspeed created
+chmod a+rx $ULB/set.fanspeed
+echo $ULB/set.fanspeed created
 }
 
 
 set_fans() {
-	if [ ! -x /usr/local/bin/set.fanspeed ]; then
-		if [ -e /dev/acq400.0.knobs/fan_percent ]; then
-			create_set_fanspeed
-		fi	
-	fi
-	if [ -x /usr/local/bin/set.fanspeed ]; then
-		echo /usr/local/bin/set.fanspeed $1
-		/usr/local/bin/set.fanspeed $1
-	fi
+    if [ ! -x $ULB/set.fanspeed ]; then
+        if [ -e /dev/acq400.0.knobs/fan_percent ]; then
+            create_set_fanspeed
+        fi  
+    fi
+    if [ -x $ULB/set.fanspeed ]; then
+        echo $ULB/set.fanspeed $1
+        $ULB/set.fanspeed $1
+    fi
 }
 
 
 if [ "x$FANSPEED" = "x" ]; then
-	case $MODEL in
-	acq21*)
-		FANSPEED=75;;
-	*)
-		FANSPEED=10;;
-	esac
+    case $MODEL in
+    acq21*)
+        FANSPEED=100;;
+    *)
+        FANSPEED=10;;
+    esac
 fi
 
 
 ######## Execution Starts Here 
 
 if [ ! -e /etc/sites ]; then
-	echo "ERROR FPGA not loaded exit now"
-	exit 1	
+    echo "ERROR FPGA not loaded exit now"
+    exit 1  
 fi
 
 lsmod | grep -q acq4.0FMC
 notloaded=$?
 
 if [ $notloaded -eq 0 ]; then
-	echo "module has been loaded already quitting.."	
-	exit 1
+    echo "module has been loaded already quitting.."    
+    exit 1
 fi
 
 MODLIB=/lib/modules/$(uname -r)
@@ -655,86 +848,91 @@ MODLIB=/lib/modules/$(uname -r)
 /sbin/insmod ${MODLIB}/dmaengine314.ko
 
 if [ -x /mnt/local/init.pl330.ko ]; then
-	/mnt/local/init.pl330.ko
+    /mnt/local/init.pl330.ko
 else
-	if [ -f /mnt/local/pl330.ko ]; then
-		MOD=/mnt/local/pl330.ko
-	else
-		MOD=${MODLIB}/pl330.ko
-	fi
-	/sbin/insmod $MOD
+    if [ -f /mnt/local/pl330.ko ]; then
+        MOD=/mnt/local/pl330.ko
+    else
+        MOD=${MODLIB}/pl330.ko
+    fi
+    /sbin/insmod $MOD
 fi
 
 if [ -f /mnt/local/acq420fmc.ko ]; then
-	MOD=/mnt/local/acq420fmc.ko
-	echo "WARNING using override driver $MOD"
+    MOD=/mnt/local/acq420fmc.ko
+    echo "WARNING using override driver $MOD"
 elif [ -f ${MODLIB}/acq420fmc.ko ]; then
-	MOD=${MODLIB}/acq420fmc.ko
+    MOD=${MODLIB}/acq420fmc.ko
 else
-	echo "ERROR, module acq420fmc.ko not found" 
-		exit 1
+    echo "ERROR, module acq420fmc.ko not found" 
+        exit 1
 fi
 
 
 
-#	mount -t debugfs none /sys/kernel/debug/
+#   mount -t debugfs none /sys/kernel/debug/
 echo "for debug:"
 echo "echo file acq400_drv.c +p" \> /sys/kernel/debug/dynamic_debug/control
 echo "echo file acq400_sysfs.c +p" \> /sys/kernel/debug/dynamic_debug/control
 
 if [ ! -e /etc/sites ]; then
-	echo "ERROR: /etc/sites does not exist. FPGA not loaded, quit"
-	exit 1
+    echo "ERROR: /etc/sites does not exist. FPGA not loaded, quit"
+    exit 1
 fi
 source /etc/sites
 good_sites=${good_sites%*,C}
 if [ "x$good_sites" != "x" ]; then
-	GS="good_sites=$good_sites"
+    GS="good_sites=$good_sites"
 fi
 
 if [ -f /mnt/local/acq420_custom ]; then
-	echo "WARNING: using overrides from /mnt/local/acq420_custom"
-	source /mnt/local/acq420_custom
+    echo "WARNING: using overrides from /mnt/local/acq420_custom"
+    source /mnt/local/acq420_custom
 else
-	DRVR_CUSTOM=""
-fi	
+    DRVR_CUSTOM=""
+fi  
 
 acq2106_sn=${dtsn#CE416}
 if [ "$acq2106_sn" != "$dtsn" ]; then
-	while [ "${acq2106_sn#0*}" != "${acq2106_sn}" ]; do
-		acq2106_sn="${acq2106_sn#0*}";
-	done
-	let snx=$acq2106_sn
-	if [ $snx -ge 20 ]; then
-		DRVR_CUSTOM="$DRVR_CUSTOM is_acq2106B=1"
-	fi
-fi		
+    while [ "${acq2106_sn#0*}" != "${acq2106_sn}" ]; do
+        acq2106_sn="${acq2106_sn#0*}";
+    done
+    let snx=$acq2106_sn
+    if [ $snx -ge 20 ]; then
+        DRVR_CUSTOM="$DRVR_CUSTOM is_acq2106B=1"
+    fi
+fi  
 
 has_acq48x=0
 vsites=
 
 for s in $(echo $good_sites | tr , \  ); do
-	case $(get_mtype $s) in
-	08)
-		echo "+++ has_acq48x"
-		
-		has_acq48x=1;;
-	6D)
-		vs=$(($s+100))
-		echo "+++ has acq436 in site $s, create virtual site $vs"		
-		cp -a /dev/sites/$s /dev/sites/$vs
-		vsites="${vsites},$vs";;
-	esac
+    case $(get_mtype $s) in
+    08)
+        echo "+++ has_acq48x"
+        
+        has_acq48x=1;;
+    41)
+        if [ $(get_nchan $s) = 16 ]; then
+            echo "+++ AO424-16 detected in site $s";
+            DRVR_CUSTOM="$DRVR_CUSTOM ao424_16=1"
+        fi;;
+    6D)
+        vs=$(($s+100))
+        echo "+++ has acq436 in site $s, create virtual site $vs"       
+        cp -a /dev/sites/$s /dev/sites/$vs
+        vsites="${vsites},$vs";;
+    esac
 done
 
-if [ $has_acq48x -ne 0 ]; then	
+if [ $has_acq48x -ne 0 ]; then  
 # larger buffers for ACQ480
-	if [ "x$ACQ480_CUSTOM_BUF" != "xy" ]; then
-		BLEN=0x400000
-		NBUF=128
-	else
-		echo ACQ480 using user preselect buffers $BLEN $NBUF
-	fi
+    if [ "x$ACQ480_CUSTOM_BUF" != "xy" ]; then
+        BLEN=0x400000
+        NBUF=128
+    else
+        echo ACQ480 using user preselect buffers $BLEN $NBUF
+    fi
 fi
 source /usr/local/CARE/choose_vap
 
@@ -743,88 +941,116 @@ GS="${GS}${vsites}"
 echo "vg_sites=${good_sites}${vsites}" >>/etc/sites
 
 echo insmod $MOD bufferlen=$BLEN nbuffers=$NBUF $GS $DRVR_CUSTOM
-sleep .2 	
+sleep .2    
 insmod $MOD bufferlen=$BLEN nbuffers=$NBUF $GS $DRVR_CUSTOM
 
+HAS_HUDP=n
 
 load_mgt() {
-	MGTMOD=/usr/local/lib/modules/mgt400.ko
-	if [ -e /mnt/local/mgt400.ko ]; then
-		MGTMOD=/mnt/local/mgt400.ko
-		echo "using override module $MGTMOD"
-	fi
-	/sbin/insmod $MGTMOD MODEL=$1
+    MGTMOD=/usr/local/lib/modules/mgt400.ko
+    if [ -e /mnt/local/mgt400.ko ]; then
+        MGTMOD=/mnt/local/mgt400.ko
+        echo "using override module $MGTMOD"
+    fi
+    /sbin/insmod $MGTMOD MODEL=$1 $MGT400_PRAMS
+    COMMS4=$(grep filename /tmp/fpga_status | awk '{ print $5 } ' | awk -F _ '{ print $9 }')
+    case $COMMS4 in
+    909*)
+        /usr/local/CARE/load.acq2106_quadcomms;;
+    *)
+        grep -q UDP /tmp/fpga_status
+        if [ $? -eq 0 ]; then
+            /usr/local/CARE/load.acq2106_hudp
+            HAS_HUDP=y
+        fi;;
+    esac
 }
 
 if [ -e /etc/acq400/C/MTYPE ]; then
-	if [ "x$WHITE_RABBIT" = "x1" ]; then
-		echo +++ WHITE_RABBIT: skipping mgt device driver load..
-		echo +++ init MGT482
-		web_append sfp none
-	else
-		load_mgt
-		cmt=$(cat /etc/acq400/C/MTYPE)
-		case $cmt in
-		90)
-			echo +++ init MGT482
-			web_append sfp none;;
-		95)
-			/usr/local/init/mgtdram8.init
-        	[ $FANSPEED -lt 60 ] && FANSPEED=60
-			echo "set.site 0 distributor comms=2" \
-					>>/tmp/acq420.init-postpowerup-action
-			(sleep 7; nice mgtd_monitor_dsp1) &
-			echo +++ init MGT-DRAM;;
-		*)
-			if [ "x$cmd" = "x" ]; then
-				echo "WARNING: site C no MTYPE needs FRU\?"
-			else
-				echo "WARNING: site C unsupported MTYPE $cmt"
-			fi;;
-		esac
-	fi
+# WHITE_RABBIT=-1: disable, if 0 or 1, attempt to use it.
+    WHITE_RABBIT=${WHITE_RABBIT:-0}
+    if [ $WHITE_RABBIT -ge 0 ]; then
+    	WHITE_RABBIT=0
+    	grep filename /tmp/fpga_status | egrep -q -e WHR -e WR
+    	[ $? -eq 0 ] && WHITE_RABBIT=1
+    fi
+    
+    grep filename /tmp/fpga_status | grep -q _9[05][0-9][0-9]
+    if [ $? -eq 0 ]; then
+        load_mgt
+        cmt=$(cat /etc/acq400/C/MTYPE)
+        case $cmt in
+        90)
+            echo +++ init MGT482
+            web_append sfp none;;
+        95)
+            /usr/local/init/mgtdram8.init
+            [ $FANSPEED -lt 60 ] && FANSPEED=60
+            echo "set.site 0 distributor comms=2" \
+                    >>/tmp/acq420.init-postpowerup-action
+            (sleep 7; nice mgtd_monitor_dsp1) &
+            HAS_MGTDRAM=14
+            echo +++ init MGT-DRAM;;
+        *)
+            if [ "x$cmd" = "x" ]; then
+                echo "WARNING: site C no MTYPE needs FRU\?"
+            else
+                echo "WARNING: site C unsupported MTYPE $cmt"
+            fi ;;
+        esac
+    elif [ "x$WHITE_RABBIT" = "x1" ]; then
+        echo +++ WHITE_RABBIT: skipping mgt device driver load..
+        echo +++ init MGT482
+        web_append sfp none
+    fi
+else
+    case $MODEL in
+    kmcu*)
+        load_mgt $MODEL;;
+    esac
 fi
-case $MODEL in
-kmcu*)
-	load_mgt $MODEL;;
-esac
 
 build_knobs
 set_fans $FANSPEED
 grep acq400\.[0-9] /proc/devices | build_nodes
 
-# finalize the name please.
-grep filename /tmp/fpga_status | egrep -q -e WHR -e WR  && /usr/local/init/wr.init
+[ "x$WHITE_RABBIT" = "x1" ]  && /usr/local/init/wr.init
 
 if [ "x${EBREAK}" = "xyes" ]; then
-	echo acq420.init: BREAK to emergency shell ^D when done
-	PS1="${PS1%>*} EBREAK ${PS1#*>}" /bin/sh
+    echo acq420.init: BREAK to emergency shell ^D when done
+    PS1="${PS1%>*} EBREAK ${PS1#*>}" /bin/sh
 fi
 
 AXI_COUNT=0
 if [ -e  /dev/acq400.0.knobs/has_axi_dma ]; then
-	AXI_COUNT=$(cat /dev/acq400.0.knobs/has_axi_dma)
-	AXIMOD=${MODLIB}/xilinx_axidma.ko
-	if [ -e /mnt/local/xilinx_axidma.ko ]; then
-		AXIMOD=/mnt/local/xilinx_axidma.ko
-		echo "using override module $AXIMOD"
-	fi
-	if [ $AXI_COUNT -ge 1 ]; then	 
-		/sbin/insmod $AXIMOD maxdev=$AXI_COUNT
-		echo $AXI_COUNT > /dev/acq400.0.knobs/has_axi_dma
-		for file in $DROOT/acq400_axi_dma/adma?
-		do
-			fn=$(basename $file)
-			bn=${fn#adma*}
-			web_append  $file $bn
-		done
-		echo "STREAM_OPTS=--null-copy" >> /etc/sysconfig/acq400_streamd.conf
-		cp /usr/local/CARE/streamtonowhere.480 /usr/local/bin/streamtonowhere
-	fi
+    AXI_COUNT=$(cat /dev/acq400.0.knobs/has_axi_dma)
+    AXIMOD=${MODLIB}/xilinx_axidma.ko
+    if [ -e /mnt/local/xilinx_axidma.ko ]; then
+        AXIMOD=/mnt/local/xilinx_axidma.ko
+        echo "using override module $AXIMOD"
+    fi
+    if [ $AXI_COUNT -ge 1 ]; then    
+        /sbin/insmod $AXIMOD maxdev=$AXI_COUNT
+        echo $AXI_COUNT > /dev/acq400.0.knobs/has_axi_dma
+        for file in $DROOT/acq400_axi_dma/adma?
+        do
+            fn=$(basename $file)
+            bn=${fn#adma*}
+            web_append  $file $bn
+        done
+
+        if [ "x$ACQ480_SITES" != "x" ]; then
+            cp /usr/local/CARE/streamtonowhere.480 $ULB/streamtonowhere 
+            SO="STREAM_OPTS=--null-copy"
+        else
+            SO="STREAM_OPTS=--fill-scale"
+        fi
+        echo $SO >> /etc/sysconfig/acq400_streamd.conf
+    fi
 fi
 if [ $AXI_COUNT -eq 0 ]; then
-	[ ! -z "$STREAM_OPTS" ] && \
-		echo "STREAM_OPTS=\"$STREAM_OPTS\"" >> /etc/sysconfig/acq400_streamd.conf		
+    [ ! -z "$STREAM_OPTS" ] && \
+        echo "STREAM_OPTS=\"$STREAM_OPTS\"" >> /etc/sysconfig/acq400_streamd.conf       
 fi
 
 
@@ -835,101 +1061,74 @@ set.sys /sys/module/acq420fmc/parameters/cache_sites_mask $CACHE_SITES_MASK
 echo ++ Enable analog power..
 
 set.sys /dev/gpio/15VA_EN 1
-		
+        
 if [ -e /dev/acq400.0.knobs/celf_power_en ]; then
-	set.sys /dev/acq400.0.knobs/celf_power_en 1	
+    set.sys /dev/acq400.0.knobs/celf_power_en 1 
 fi
 
 
 if [ -e /mnt/local/power ]; then
-	cp /mnt/local/power /etc/sysconfig/power
+    cp /mnt/local/power /etc/sysconfig/power
 else
-	cat - >/etc/sysconfig/power <<EOF
-	VAP=$VAP
-	VAN=-$VAP
+    cat - >/etc/sysconfig/power <<EOF
+    VAP=$VAP
+    VAN=-$VAP
 EOF
 fi
 
 if [ "x${ACQ480_SITES}" != "x" ]; then
-	for site in $ACQ480_SITES
-	do
-		web_append acq480.$site nomon
-		if [ $AXI_COUNT -gt 1 ]; then
-			case $MODEL in
-				acq1001)
-					/usr/local/CARE/acq480_init_two_lane $site;;
-				acq21*)
-					;; # could be two lane, but that's a special case.
-			esac
-		fi
-	done
-	echo 1 > /etc/acq400/0/acq480_force_training
+    for site in $ACQ480_SITES
+    do
+        web_append acq480.$site nomon
+        if [ "x$ACQ480_4CH_TWO_LANE" = "xy" ]; then
+            /usr/local/CARE/acq480_init_two_lane $site
+        elif [ $AXI_COUNT -gt 1 ]; then
+            case $MODEL in
+                acq1014|acq1001)
+                    /usr/local/CARE/acq480_init_two_lane $site;;
+            esac
+        fi
+    done
+    echo 1 > /etc/acq400/0/acq480_force_training
 fi
 
+[ "$HAS_HUDP" = "y" ] && /usr/local/init/hudp.init
+
 if [ "x${BOLO8_SITES}" != "x" ]; then
-	echo +++ Enable Bolo AFTER Analog power up..
-	/usr/local/bin/bolo8.init ${BOLO8_SITES}
+    echo +++ Enable Bolo AFTER Analog power up..
+    /usr/local/init/bolo8.init ${BOLO8_SITES}
 fi
 
 
 [ -e /mnt/local/sysconfig/acq400_streamd.conf ] && \
-	cp /mnt/local/sysconfig/acq400_streamd* /etc/sysconfig/
-	
-[ "x$(/usr/local/CARE/get-fpga-extra)" = "x9802" ] &&
-	/usr/local/init/anatrg.init 14
+    cp /mnt/local/sysconfig/acq400_streamd* /etc/sysconfig/
+
+case $(/usr/local/CARE/get-fpga-extra) in
+9802)
+    /usr/local/init/anatrg.init 14;;
+9804)
+    /usr/local/init/fir-subrate-append.init 14;;
+9801)
+    /usr/local/init/ddc.init 14;;
+esac
+
 start_knob_services
 
-ls -l /etc/acq400/0/sync_out_cable_det
-
 [ -e /tmp/acq420.init-postpowerup-action ] && 
-	source /tmp/acq420.init-postpowerup-action
+    source /tmp/acq420.init-postpowerup-action
 
 nice daemon $WEB_APPEND_JOB
 
 (grep -h numeric /usr/share/doc/acq*help* >/usr/share/doc/numerics)
 
-cat - >> /etc/services <<EOF
-acq400_stream	4210/tcp 
-acq400_stream1	4211/tcp 
-acq400_stream2	4212/tcp 
-acq400_stream3	4213/tcp 
-acq400_stream4	4214/tcp 
-acq400_stream5	4215/tcp 
-acq400_stream6	4216/tcp 
-acq400_site0	4220/tcp
-acq400_site1	4221/tcp
-acq400_site2	4222/tcp
-acq400_site3	4223/tcp
-acq400_site4	4224/tcp
-acq400_site5	4225/tcp
-acq400_site6	4226/tcp
-acq400_site12	4232/tcp
-acq400_site13	4233/tcp
-acq400_site14	4234/tcp
-acq400_site15	4235/tcp
-acq400_site16	4236/tcp
-acq400_awg	4236/tcp
-acq400_bq	4237/tcp
-acq400_ev	4238/tcp
-acq400_intmon	4239/tcp
-
-acq400_seg_load 4250/tcp
-acq400_seg_show	4251/tcp
-
-acq400_bos	4240/tcp	# deprecated
-acq400_crb	4241/tcp	# cat raw buffers prefer bigcat
-acq400_bigcat   4242/tcp	# download all capture data 
-acq400_sum	4270/tcp	# check it works
-
-wrtd_tx		4280/tcp
-wrtd_rx		4281/tcp
-
-acq400_slowmon	53666/tcp	# check me
-EOF
+cat /usr/share/doc/services >> /etc/services
 sort_services
 
 mkfifo /dev/shm/sumstreamclient
 killall -q inetd
 cat /usr/local/init/inetd.conf >>/etc/inetd.conf
 inetd /etc/inetd.conf
+
+echo "0 0 0 0 0" > /dev/shm/state
+
 

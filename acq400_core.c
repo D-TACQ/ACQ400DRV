@@ -27,7 +27,6 @@
 #include <linux/sched/rt.h>
 
 #include "acq400.h"
-#include "bolo.h"
 #include "hbm.h"
 #include "acq400_debugfs.h"
 #include "acq400_lists.h"
@@ -45,22 +44,113 @@ int axi_dma_agg32 = 0;
 module_param(axi_dma_agg32, int, 0644);
 MODULE_PARM_DESC(histo_poll_ms, "transitional for AGG32 gaining AXI DMA");
 
+int trap_dump_stack = 3;
+module_param(trap_dump_stack, int, 0644);
+
+int enable_adc_ctrl_trap = 0;
+module_param(enable_adc_ctrl_trap, int, 0644);
+
+int _enable_adc_ctrl_trap = 0;
+
+int aggregator_enabled = 0;
+
+int enable_write_trap = 0;
+module_param(enable_write_trap, int, 0644);
+
+int aggsta_skip_ok = 1;
+module_param(aggsta_skip_ok, int, 0644);
+
+#define ADC_ENAX  (ADC_CTRL_ADC_EN|ADC_CTRL_FIFO_EN)
+#define ADC_RSTX  (ADC_CTRL_ADC_RST|ADC_CTRL_FIFO_RST)
+
+#define AGG_TRAP 	0
+#define ADC_CTRL_TRAP 	0
+#define DAC_TRAP 	0
+#define ACQ482_CMAP_TRAP 0
+
+
 void acq400wr32(struct acq400_dev *adev, int offset, u32 value)
 {
-	if (adev->RW32_debug){
+	int trap = 0;
+#if AGG_TRAP
+
+	int agg_trap = adev->of_prams.site==0 && offset==AGGREGATOR && (value&(AGG_SITES_MASK<<AGGREGATOR_MSHIFT))==0;
+	int trap = adc_ctrl_trap||agg_trap;
+
+	if (agg_trap){
+		u32 agg = acq400rd32(adev, offset);
+		if ((agg&(AGG_SITES_MASK<<AGGREGATOR_MSHIFT))==0){
+			// it's OK to clear sites because they are already clear ..
+			dev_info(DEVP(adev), "acq400wr32() avert agg trap was:%08x set:%08x already clear", agg, value);
+			trap = 0;
+		}
+		dev_err(DEVP(adev), "acq400wr32()  trap clearing sites: was %08x set:%08x", agg, value);
+	}
+#endif
+#if ADC_CTRL_TRAP
+	int adc_ctrl_trap = _enable_adc_ctrl_trap && aggregator_enabled && offset==ADC_CTRL;
+
+
+	if (adc_ctrl_trap){
+		switch(adev->of_prams.site){
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+			trap = ((value&ADC_ENAX)!=ADC_ENAX||(value&ADC_RSTX)!=0);
+		break;
+		}
+	}
+#endif
+#if DAC_TRAP
+#warning "DAC_TRAP ENABLED"
+	if (enable_write_trap){
+		switch(adev->of_prams.site){
+		case 0:
+			trap = offset == DATA_ENGINE_1; break;
+		case 1:
+			trap = offset == DAC_CTRL; break;
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		break;
+		}
+	}
+#endif
+#if ACQ482_CMAP_TRAP
+	if (offset == ADC_CTRL && adev->of_prams.site>=1 && adev->of_prams.site<=6){
+		u32 old = acq400rd32(adev, offset)&ADC_CTRL_482_CMAP;
+		u32 new = value&ADC_CTRL_482_CMAP;
+		trap = old && !new;
+	}
+#endif
+	if (adev->RW32_debug || trap){
 		dev_info(DEVP(adev), "acq400wr32 %p [0x%02x] = %08x\n",
 				adev->dev_virtaddr + offset, offset, value);
+		if (trap && trap_dump_stack){
+			dump_stack();
+			trap_dump_stack--;
+		}
 	}else{
 		dev_dbg(DEVP(adev), "acq400wr32 %p [0x%02x] = %08x\n",
 				adev->dev_virtaddr + offset, offset, value);
 	}
-
-	iowrite32(value, adev->dev_virtaddr + offset);
+	if (dev_rc_write(&adev->ctrl_reg_cache, offset, value)){
+		iowrite32(value, adev->dev_virtaddr + offset);
+	}
 }
 
-u32 acq400rd32(struct acq400_dev *adev, int offset)
+u32 _acq400rd32(struct acq400_dev *adev, int offset, int nocache)
 {
-	u32 rc = ioread32(adev->dev_virtaddr + offset);
+	u32 rc;
+
+	if (nocache || dev_rc_read(&adev->ctrl_reg_cache, offset, &rc)){
+		rc = ioread32(adev->dev_virtaddr + offset);
+	}
 	if (adev->RW32_debug > 1){
 		dev_info(DEVP(adev), "acq400rd32 %p [0x%02x] = %08x\n",
 			adev->dev_virtaddr + offset, offset, rc);
@@ -69,6 +159,16 @@ u32 acq400rd32(struct acq400_dev *adev, int offset)
 			adev->dev_virtaddr + offset, offset, rc);
 	}
 	return rc;
+}
+
+u32 acq400rd32(struct acq400_dev *adev, int offset)
+{
+	return _acq400rd32(adev, offset, 0);
+}
+
+u32 acq400rd32_nocache(struct acq400_dev *adev, int offset)
+{
+	return _acq400rd32(adev, offset, 1);
 }
 
 
@@ -120,6 +220,16 @@ void set_spadN(struct acq400_dev* adev, int n, u32 value)
 u32 get_spadN(struct acq400_dev* adev, int n)
 {
 	return acq400rd32(adev, SPADN(n));
+}
+
+void set_XOspadN(struct acq400_dev* adev, int n, u32 value)
+{
+	acq400wr32(adev, XO_SPADN(n), value);
+
+}
+u32 get_XOspadN(struct acq400_dev* adev, int n)
+{
+	return acq400rd32(adev, XO_SPADN(n));
 }
 
 static bool filter_true(struct dma_chan *chan, void *param)
@@ -252,6 +362,21 @@ void acq2106_distributor_reset_enable(struct acq400_dev *adev)
 void acq2106_aggregator_reset(struct acq400_dev *adev)
 {
 	u32 agg = acq400rd32(adev, AGGREGATOR);
+
+	/* extreme sandtrap @@REMOVEME PLEASE! */
+	if ((agg&(AGG_SITES_MASK<<AGGREGATOR_MSHIFT))==0){
+		u32 agg2 = acq400rd32(adev, AGGREGATOR);
+		u32 setmask = acq400_convert_aggregator_set_to_register_mask(adev);
+
+		dev_warn(DEVP(adev), "acq2106_aggregator_reset()zero aggregator spotted first read:%08x second:%08x demand:%08x",
+				agg, agg2, setmask);
+
+		if ((agg2&(AGG_SITES_MASK<<AGGREGATOR_MSHIFT)) != setmask){
+			dev_warn(DEVP(adev), "acq2106_aggregator_reset() emergency combover");
+			agg2 |= setmask;
+		}
+		agg = agg2;
+	}
 	acq400wr32(adev, AGGREGATOR, agg &= ~(AGG_FIFO_RESET|AGG_ENABLE));
 	acq400wr32(adev, AGGREGATOR, agg | AGG_FIFO_RESET);
 	acq400wr32(adev, AGGREGATOR, agg);
@@ -276,6 +401,13 @@ int acq400_get_AXI_DMA_len(struct acq400_dev *adev)
 {
 	u32 blocks = acq400rd32(adev, AXI_DMA_ENGINE_DATA) + 1;
 	return blocks*AXI_DMA_BLOCK;
+}
+
+void sc_data_engine_disable(unsigned dex)
+{
+	struct acq400_dev *adev = acq400_devices[0];
+	u32 DEX = acq400rd32(adev, dex);
+	acq400wr32(adev, dex, DEX &= ~(DE_ENABLE));
 }
 void sc_data_engine_reset_enable(unsigned dex)
 {
@@ -314,11 +446,13 @@ void acq2006_aggregator_enable(struct acq400_dev *adev)
 	}
  agg99:
 	acq400wr32(adev, AGGREGATOR, agg | AGG_ENABLE);
+	aggregator_enabled = 1;
 }
 void acq2006_aggregator_disable(struct acq400_dev *adev)
 {
 	u32 agg = acq400rd32(adev, AGGREGATOR);
 	acq400wr32(adev, AGGREGATOR, agg & ~AGG_ENABLE);
+	aggregator_enabled = 0;
 }
 
 void acq400_enable_trg_if_master(struct acq400_dev *adev)
@@ -386,35 +520,77 @@ int fifo_monitor(void* data)
 	struct acq400_dev *devs[MAXDEVICES+1];
 	struct acq400_dev *adev = (struct acq400_dev *)data;
 	struct acq400_sc_dev* sc_dev = container_of(adev, struct acq400_sc_dev, adev);
+	struct acq400_dev *m1;		/* first module in agg set aka master */
 	int idev = 0;
 	int cursor;
 	int i1 = 0;		/* randomize start time */
+	int conv_active_detected = 0;
+	char message_from_active[2][132];
+	int aggsta_skip_reported = 0;
+
+	message_from_active[0][0] = '\0';
+	message_from_active[1][0] = '\0';
 
 	acq400_trigger_ns = 0;
 
 	devs[idev++] = adev;
 	adev->get_fifo_samples = aggregator_get_fifo_samples;
 	for (cursor = 0; cursor < MAXDEVICES; ++cursor){
-		struct acq400_dev* slave = sc_dev->aggregator_set[cursor];
-		if (slave){
-			devs[idev++] = slave;
-			slave->get_fifo_samples = acq420_get_fifo_samples;
+		struct acq400_dev* module = sc_dev->aggregator_set[cursor];
+		if (module){
+			devs[idev++] = module;
+			module->get_fifo_samples = acq420_get_fifo_samples;
 		}
 	}
 	histo_clear_all(devs, idev);
+	m1 = devs[idev>1?1:0];
+
+	dev_info(DEVP(adev), "fifo_monitor() 01 idev:%d adev->site_no %s", idev, adev->site_no);
 
 	while(!kthread_should_stop()) {
-		if (acq420_convActive(devs[idev>1?1:0])){
+		unsigned aggsta, m1_cr, m1_sr;
+		m1_cr = acq400rd32(m1, ADC_CTRL);
+		m1_sr = acq400rd32(m1, ADC_FIFO_STA);
+		aggsta = acq400rd32(adev, AGGSTA);
+
+		if (!m1->sod_mode && !aggsta_skip_reported && (aggsta&AGGSTA_FIFO_ANYSKIP) != 0 && (aggsta&AGGSTA_FIFO_EMPTY) == 0){
+			sc_dev->adev.rt.status = -10;
+			snprintf(sc_dev->status_message, MAX_RT_STATUS_MESSAGE, "%s loss of data detected: AGGSTA:%08x AXI wakeups:%d",
+					__FUNCTION__, aggsta, sc_dev->adev.rt.axi64_wakeups);
+			dev_warn(DEVP(adev), sc_dev->status_message);
+			if (aggsta_skip_ok){
+				;
+			}else if (adev->task_active && !IS_ERR_OR_NULL(adev->w_task)){
+				adev->rt.please_stop = 1;
+			}else{
+				dev_err(DEVP(adev), "%s unable to stop work adev: s:%d ta:%d", __FUNCTION__, adev->of_prams.site, adev->task_active);
+			}
+			aggsta_skip_reported = 1;
+		}
+		//if (acq420_convActive(m1)){
+		if ((m1_sr&ADC_FIFO_STA_ACTIVE) != 0){
+			if (enable_adc_ctrl_trap) _enable_adc_ctrl_trap = 1;
 			if (acq400_trigger_ns == 0){
 				acq400_trigger_ns = ktime_get_real_ns();
 			}
 			histo_add_all(devs, idev, i1);
-			msleep(histo_poll_ms);
+			conv_active_detected = 1;
+			snprintf(message_from_active[0], 132, "conv_active good after %d ms aggsta %08x adc_cr:%08x adc_fsta:%08x",
+					(unsigned)(ktime_get_real_ns()-acq400_trigger_ns)/1000000, aggsta, m1_cr, m1_sr);
 		}else{
-			yield();
+			if (conv_active_detected == 0){
+				;
+			}else if (conv_active_detected++ == 1){
+				snprintf(message_from_active[1], 132, "conv_active lost after %d ms aggsta %08x adc_cr:%08x adc_fsta:%08x",
+							(unsigned)(ktime_get_real_ns()-acq400_trigger_ns)/1000000, aggsta, m1_cr, m1_sr);
+			}else if (conv_active_detected > 3){
+				dev_warn(DEVP(adev), message_from_active[0]);
+				dev_warn(DEVP(adev), message_from_active[1]);
+			}
 		}
+		msleep(histo_poll_ms);
 	}
-
+	if (enable_adc_ctrl_trap) _enable_adc_ctrl_trap = 0;
 	acq400_trigger_ns = 0;
 
 	return 0;

@@ -1,0 +1,28 @@
+# route-WR-FP : White Rabbit Clock routing for monitoring
+# comment out if not required
+
+[ -e /mnt/local/sysconfig/acq400.sh ] && source /mnt/local/sysconfig/acq400.sh
+echo ... $0
+# Route the Si5326 to SYNC_OUT for external monitor
+if [ "x$ACQ400_WR_MBCLK_RP" = "xy" ]; then
+	set.site 0 SIG:SYNC_OUT:CLK CLK
+	set.site 0 SIG:SYNC_OUT:CLK:DX d2
+fi
+# Route the WR01?M to front panel
+if [ "x$ACQ400_WR_MBCLK_FP" = "xy" ] ; then
+	set.site 0 SIG:SRC:SYNC:1 MBCLK
+	set.site 0 SIG:FP:SYNC=SYNC1
+fi
+# all processsing uses SYNC:0 cooked PPS
+set.site 0 SIG:SRC:SYNC:0 WRPPS
+# route PPS to AUX1 .. either raw (default) or cooked LOCALCLOCK (very short)
+if [ "x$ACQ400_WR_PPSRAW_FP" != "xy" ] ; then
+	set.site 0 SIG:SRC:SYNC:1 WRPPS
+	set.site 0 SIG:FP:SYNC SYNC1
+else
+	set.site 0 SIG:FP:SYNC SYNC0
+fi
+# Route WRTT to front panel
+# AUX2 is EVT0 is TRG is WRTT
+set.site 0 SIG:SRC:TRG:0 WRTT0
+set.site 0 SIG:FP:GPIO=EVT0

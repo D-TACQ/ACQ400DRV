@@ -136,4 +136,7 @@ void bolo8_init_defaults(struct acq400_dev* adev)
 	b8_dev->bolo8.awg_buffer_max = 4096;
 	b8_dev->bolo8.awg_buffer_cursor = 0;
 
+	adev->clk_ctr_reg = B8_CLK_CTR/sizeof(int);
+	adev->sample_ctr_reg = B8_ADC_SAMPLE_CNT/sizeof(int);
+
 }

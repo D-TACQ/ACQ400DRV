@@ -95,6 +95,7 @@ extern int acq200_debug;
 
 #ifndef FN
 #define FN __FUNCTION__
+#define PFN __PRETTY_FUNCTION__
 #endif
 
 #include <sys/syslog.h>

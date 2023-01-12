@@ -1,0 +1,24 @@
+#!/bin/sh
+source /etc/profile
+
+show() {
+	echo -----------------------------------------------------------------------------------------
+        echo diagsdump:file $1
+
+}
+showcat() {
+	show $1
+        cat $1
+}
+
+echo $(hostname) $(date)
+showcat /mnt/VERSION
+showcat /tmp/fpga_status
+show dmesg; dmesg
+show logread; logread
+for file in /dev/shm/*.xml; do
+showcat $file
+done
+show /var/log/epics.log; nbcat /var/log/epics.log
+
+

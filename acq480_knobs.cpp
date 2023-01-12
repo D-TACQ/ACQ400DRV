@@ -15,6 +15,8 @@
 #include <libgen.h>
 #include <unistd.h>
 
+#include <algorithm>    // std::sort
+
 
 using namespace std;
 
@@ -29,7 +31,7 @@ class Acq480FMC {
 
 	int site;
 
-	vector<Command*> commands;
+	static vector<Command*> commands;
 	FILE* fp;
 
 	static bool is_acq482(int _site) {
@@ -534,34 +536,47 @@ public:
 		}
 	}
 };
+
+struct CompareCommands {
+	bool operator() (Command* a, Command *b) {
+		return strcmp(a->cmd, b->cmd) < 0;
+	}
+} compareCommands;
+
+
 void Acq480FMC::init_commands()
 {
-	commands.push_back(new SetInvertCommand);
-	commands.push_back(new SetLFNSCommand);
-	commands.push_back(new SetAverageSelectCommand);
-	commands.push_back(new SetDataRateCommand);
-	commands.push_back(new SetHiPassFilterCommand);
-	commands.push_back(new SetFilterCoefficientsCommand);
-	commands.push_back(new SetDecimationFilterCommand);
-	commands.push_back(new SetGainCommand);
-	commands.push_back(new GetGainCommand);
-	commands.push_back(new SetLvdsTestPatRamp);
-	commands.push_back(new SetLvdsTestPatDeskew);
-	commands.push_back(new SetPatDeskew);
-	commands.push_back(new SetPatSync);
-	commands.push_back(new SetDataPattern);
-	commands.push_back(new SetTwoWireMode);
-	commands.push_back(new SetClkHardSync);
-	commands.push_back(new MappingCommand);
-	commands.push_back(new PllCommand);
-	commands.push_back(new SetReg);
-	commands.push_back(new DumpCommand);
-	commands.push_back(new FlushCommand);
-	commands.push_back(new ReadAllCommand);
-	commands.push_back(new ResetCommand);
-	commands.push_back(new HelpCommand);
-	commands.push_back(new MakeLinksCommand);
+	std::sort(commands.begin(), commands.end(), compareCommands);
 }
+
+vector<Command*> Acq480FMC::commands = {
+	new SetInvertCommand,
+	new SetLFNSCommand,
+	new SetAverageSelectCommand,
+	new SetDataRateCommand,
+	new SetHiPassFilterCommand,
+	new SetFilterCoefficientsCommand,
+	new SetDecimationFilterCommand,
+	new SetGainCommand,
+	new GetGainCommand,
+	new SetLvdsTestPatRamp,
+	new SetLvdsTestPatDeskew,
+	new SetPatDeskew,
+	new SetPatSync,
+	new SetDataPattern,
+	new SetTwoWireMode,
+	new SetClkHardSync,
+	new MappingCommand,
+	new PllCommand,
+	new SetReg,
+	new DumpCommand,
+	new FlushCommand,
+	new ReadAllCommand,
+	new ResetCommand,
+	new HelpCommand,
+	new MakeLinksCommand
+};
+
 
 int  Acq480FMC::operator() (int argc, char* argv[])
 {

@@ -37,7 +37,7 @@ int dio432_always_immediate;
 module_param(dio432_always_immediate, int, 0644);
 MODULE_PARM_DESC(dio432_always_immediate, "ONLY allow DIO immediate mode.");
 
-void _acq400wr32(struct acq400_dev *adev, int offset, u32 value)
+static void _acq400wr32(struct acq400_dev *adev, int offset, u32 value)
 {
 	if (adev->RW32_debug){
 		dev_info(DEVP(adev), "acq400wr32 %p [0x%02x] = %08x\n",
@@ -50,7 +50,7 @@ void _acq400wr32(struct acq400_dev *adev, int offset, u32 value)
 	iowrite32(value, adev->dev_virtaddr + offset);
 }
 
-u32 _acq400rd32(struct acq400_dev *adev, int offset)
+static u32 _acq400rd32(struct acq400_dev *adev, int offset)
 {
 	u32 rc = ioread32(adev->dev_virtaddr + offset);
 	if (adev->RW32_debug > 1){
@@ -65,17 +65,23 @@ u32 _acq400rd32(struct acq400_dev *adev, int offset)
 
 void dio432_set_direction(struct acq400_dev *adev, unsigned byte_is_output)
 {
-	_acq400wr32(adev, DIO432_DIO_CPLD_CTRL, byte_is_output);
-	_acq400wr32(adev, DIO432_DIO_CPLD_CTRL,
+	if (!IS_DIO482FMC(adev)){
+		_acq400wr32(adev, DIO432_DIO_CPLD_CTRL, byte_is_output);
+		_acq400wr32(adev, DIO432_DIO_CPLD_CTRL,
 				DIO432_CPLD_CTRL_COMMAND_WRITE|byte_is_output);
 
 	/* @@todo doxygen indicates poll for complete, but SR example sets it
 	 * following the SR example
 	 */
-	_acq400wr32(adev, DIO432_DIO_CPLD_CTRL,
+		_acq400wr32(adev, DIO432_DIO_CPLD_CTRL,
 			DIO432_CPLD_CTRL_COMMAND_COMPLETE|
 			DIO432_CPLD_CTRL_COMMAND_WRITE|byte_is_output);
+	}
 	_acq400wr32(adev, DIO432_DIO_CPLD_CTRL, byte_is_output);
+}
+u32 dio432_get_direction(struct acq400_dev *adev)
+{
+	return _acq400rd32(adev, DIO432_DIO_CPLD_CTRL);
 }
 
 void dio432_init(struct acq400_dev *adev, int immediate)
@@ -90,12 +96,12 @@ void dio432_init(struct acq400_dev *adev, int immediate)
 
 	syscon &= ~DIO432_CTRL_DIO_EN;
 
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon);
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon |= DIO432_CTRL_MODULE_EN);
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon | DIO432_CTRL_RST);
+	_acq400wr32(adev, DIO432_CTRL, syscon);
+	_acq400wr32(adev, DIO432_CTRL, syscon |= DIO432_CTRL_MODULE_EN);
+	_acq400wr32(adev, DIO432_CTRL, syscon | DIO432_CTRL_RST);
 
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon);
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon |= DIO432_CTRL_FIFO_EN);
+	_acq400wr32(adev, DIO432_CTRL, syscon);
+	_acq400wr32(adev, DIO432_CTRL, syscon |= DIO432_CTRL_FIFO_EN);
 	dio432_set_direction(adev, xo_dev->dio432.byte_is_output);
 
 	_acq400wr32(adev, DIO432_DI_FIFO_STATUS, DIO432_FIFSTA_CLR);
@@ -104,7 +110,7 @@ void dio432_init(struct acq400_dev *adev, int immediate)
 		_acq400wr32(adev, DIO432_DIO_ICR, 1);
 	}
 	if (immediate){
-		_acq400wr32(adev, DIO432_DIO_CTRL, syscon|DIO432_CTRL_DIO_EN);
+		_acq400wr32(adev, DIO432_CTRL, syscon|DIO432_CTRL_DIO_EN);
 	}
 }
 
@@ -152,10 +158,10 @@ void dio432_init_clocked(struct acq400_dev* adev)
 }
 void dio432_disable(struct acq400_dev* adev)
 {
-	u32 syscon = _acq400rd32(adev, DIO432_DIO_CTRL);
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon &= ~DIO432_CTRL_DIO_EN);
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon |  DIO432_CTRL_FIFO_RST);
-	_acq400wr32(adev, DIO432_DIO_CTRL, syscon);
+	u32 syscon = _acq400rd32(adev, DIO432_CTRL);
+	_acq400wr32(adev, DIO432_CTRL, syscon &= ~DIO432_CTRL_DIO_EN);
+	_acq400wr32(adev, DIO432_CTRL, syscon |  DIO432_CTRL_FIFO_RST);
+	_acq400wr32(adev, DIO432_CTRL, syscon);
 
 	_acq400wr32(adev, DIO432_DI_FIFO_STATUS, DIO432_FIFSTA_CLR);
 	_acq400wr32(adev, DIO432_DO_FIFO_STATUS, DIO432_FIFSTA_CLR);

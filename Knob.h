@@ -16,6 +16,7 @@ public:
 	Knob(int site, const char* knob);
 	virtual ~Knob();
 
+	bool exists();
 	int get(unsigned *value);
 	int get(char *value);
 
@@ -26,6 +27,6 @@ public:
 	const char* operator() (void);
 };
 
-
+bool get_local_env(const char* fname, bool verbose = false);
 
 #endif /* KNOB_H_ */

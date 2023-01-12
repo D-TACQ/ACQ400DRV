@@ -25,8 +25,10 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                */
 /* ------------------------------------------------------------------------- */
 
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
+
 #include "acq400.h"
-#include "bolo.h"
 #include "hbm.h"
 #include "acq400_debugfs.h"
 #include "acq400_lists.h"
@@ -55,6 +57,13 @@ module_param(DUAL_AXI_SWITCH_CHAN, int, 0444);
 int AXI_TASKLET_CHANNEL_MASK = 0x1;
 module_param(AXI_TASKLET_CHANNEL_MASK, int, 0644);
 MODULE_PARM_DESC(AXI_TASKLET_CHANNEL_MASK, "channel enables downstream, 1 is enough");
+
+int AXI64_DMA_HIPRIORITY = 0x0;
+module_param(AXI64_DMA_HIPRIORITY, int, 0644);
+MODULE_PARM_DESC(AXI64_DMA_HIPRIORITY, "sets priority arb value (low is hi) 0: no set");
+
+int axi64_wimp_out;
+module_param(axi64_wimp_out, int, 0644);
 
 struct AxiDescrWrapper {
 	struct xilinx_dma_desc_hw* va;
@@ -168,10 +177,10 @@ static int acq400axi_proc_seq_show_descr(struct seq_file *s, void *v)
         struct AxiDescrWrapper * cursor = v;
 
 
-        seq_printf(s, "i:%08x,%03d, n:0x%08x,%03d b:%08x l:%08x g:%03d %c\n",
+        seq_printf(s, "i:%08x,%03d, n:0x%08x,%03d b:%08x l:%08x s:%08x g:%03d %c\n",
         		cursor->pa, pa2index(apool, acw->ichan, cursor->pa),
         		cursor->va->next_desc, pa2index(apool, acw->ichan, cursor->va->next_desc),
-        		cursor->va->buf_addr, cursor->va->control,
+        		cursor->va->buf_addr, cursor->va->control, cursor->va->status,
 			pa2buffer_index(adev, cursor->va->buf_addr),
 			apool->dump_pa==0? ' ':
 				cursor->va->buf_addr==apool->dump_pa? '-': '+');
@@ -204,6 +213,81 @@ static struct file_operations acq400_proc_ops_axi_descr = {
 	.read = seq_read,
         .llseek = seq_lseek,
         .release = seq_release
+};
+
+
+
+static int acq400axi_proc_seq_show_trace(struct seq_file *s, void *v)
+{
+	struct AxiChannelWrapper *acw = s->private;
+	struct acq400_dev *adev = acw->adev;
+	struct xilinx_dma_chan *xchan = to_xilinx_chan(adev->dma_chan[acw->ichan]);
+	unsigned cursor = (unsigned)v - 1;   /* cursor is +1 */
+
+	unsigned entry = xchan->dTrace.buffer[cursor];
+
+        seq_printf(s, "%3d,0x%08x,%2d,%d %s\n",
+        		cursor, entry&0xfffffff0, entry&0x0f,
+			cursor>=xchan->dTrace.cursor,
+			cursor==xchan->dTrace.cursor? "====": "");
+
+        return 0;
+}
+
+static void *acq400axi_proc_seq_trace_next(struct seq_file *s, void *v, loff_t *pos)
+{
+	unsigned cursor = (unsigned)(*pos)+1;		/* cursor is *pos +1 */
+
+	if (++(*pos) < MAXTRACE){
+		return (void*)(cursor+1);
+	}else{
+		return NULL;
+	}
+}
+
+
+static void *acq400axi_proc_seq_trace_start(struct seq_file *s, loff_t *pos)
+{
+	struct AxiChannelWrapper *acw = s->private;
+	struct acq400_dev *adev = acw->adev;
+	struct xilinx_dma_chan *xchan = to_xilinx_chan(adev->dma_chan[acw->ichan]);
+	unsigned cursor = (unsigned)(*pos);
+
+	if (*pos == 0 && xchan == 0){
+		seq_printf(s, "# AXI TRACE[%d] no go, xchan is NULL\n", acw->ichan);
+		return NULL;
+	}
+        if (*pos == 0) {
+        	seq_printf(s, "# AXI TRACE[%d] xchan:%s\n", acw->ichan, xchan->devname);
+        	seq_printf(s, "%3s,%10s,%2s,cursor\n", "ix", "descr", "sq");
+        }
+        if (xchan != 0 && *pos < MAXTRACE){
+        	return (void*)(cursor+1);		/* cursor is +1, 0 is NULL is EOF */
+        }
+
+        return NULL;
+}
+
+
+static int acq400_proc_open_axi_trace(struct inode *inode, struct file *file)
+{
+	static struct seq_operations acq400_proc_seq_ops_channel_mapping = {
+	        .start = acq400axi_proc_seq_trace_start,
+	        .next = acq400axi_proc_seq_trace_next,
+	        .stop = acq400_proc_seq_stop,
+	        .show = acq400axi_proc_seq_show_trace
+	};
+
+	seq_open(file, &acq400_proc_seq_ops_channel_mapping);
+	((struct seq_file*)file->private_data)->private = PDE_DATA(inode);
+	return 0;
+}
+static struct file_operations acq400_proc_ops_axi_trace = {
+	        .owner = THIS_MODULE,
+	        .open = acq400_proc_open_axi_trace,
+		.read = seq_read,
+	        .llseek = seq_lseek,
+	        .release = seq_release
 };
 
 static void *axi_seg_proc_seq_start(struct seq_file *s, loff_t *pos)
@@ -402,40 +486,46 @@ static void _finalize_descriptor_chain(struct acq400_dev *adev, int ichan, int n
 {
 	struct ACQ400_AXIPOOL* apool = GET_ACQ400_AXIPOOL(adev);
 	struct AxiDescrWrapper* base = apool->channelWrappers[ichan];
-	int ii;
+	struct AxiDescrWrapper * last = base+ndescriptors-1;
+	struct AxiDescrWrapper * cursor;
 
-	for (ii = 1; ii < ndescriptors; ++ii){
-		base[ii-1].va->next_desc = base[ii].pa;
+	for (cursor = base; cursor != last; ++cursor){
+		cursor->va->control = adev->bufferlen;
+		cursor->va->status = AXI_ONESHOT? 0x00000000: 0xd1ac0000;
+		cursor->va->next_desc = cursor[1].pa;
 	}
 
-	if (AXI_DEBUG_LOOPBACK_INDEX > 0){
+	cursor->va->control = adev->bufferlen;
+	cursor->va->status = AXI_ONESHOT? 0x00000000: 0xd1ac0000;
+	// tie off
+	if (AXI_ONESHOT){
+		cursor->va->next_desc = cursor->pa;
+	}else if (AXI_DEBUG_LOOPBACK_INDEX > 0){
 		dev_info(DEVP(adev), "AXI_DEBUG_LOOPBACK_INDEX %d", AXI_DEBUG_LOOPBACK_INDEX);
-		base[ndescriptors-1].va->next_desc = base[AXI_DEBUG_LOOPBACK_INDEX].pa;
+		cursor->va->next_desc = base[AXI_DEBUG_LOOPBACK_INDEX].pa;
 	}else{
-		base[ndescriptors-1].va->next_desc = base[0].pa;
+		cursor->va->next_desc = base[0].pa;
 	}
 	apool->active_descriptors = ndescriptors;
+	adev->axi64[ichan].ndesc = ndescriptors;
 }
+
 static void init_descriptor_cache_nonseg(struct acq400_dev *adev, int ichan, int ndescriptors, int new_pool)
 {
-	struct ACQ400_AXIPOOL* apool = GET_ACQ400_AXIPOOL(adev);
-	int ii;
-	struct AxiDescrWrapper * cursor = apool->channelWrappers[ichan];
-
 	dev_dbg(DEVP(adev), "init_descriptor_cache_nonseg() %d %d new_pool %d", ichan, ndescriptors, new_pool);
 	if (new_pool){
+		struct ACQ400_AXIPOOL* apool = GET_ACQ400_AXIPOOL(adev);
+		struct AxiDescrWrapper * cursor = apool->channelWrappers[ichan];
+
+		int ii;
 		for (ii = 0; ii < ndescriptors; ++ii, ++cursor){
 			cursor->va = dma_pool_alloc(apool->pool, GFP_KERNEL, &cursor->pa);
 			BUG_ON(cursor->va == 0);
 			memset(cursor->va, 0, sizeof(struct xilinx_dma_desc_hw));
 			cursor->va->buf_addr = adev->axi64[ichan].axi64_hb[ii]->pa;
-			cursor->va->control = adev->bufferlen;
 			dev_dbg(DEVP(adev), "init_descriptor_cache_nonseg() %d/%d", ii, ndescriptors);
 		}
 	}
-	dev_dbg(DEVP(adev), "init_descriptor_cache_nonseg ichan:%d ndesc:%d", ichan, ndescriptors);
-
-	adev->axi64[ichan].ndesc = ndescriptors;
 	_finalize_descriptor_chain(adev, ichan, ndescriptors);
 }
 
@@ -457,8 +547,7 @@ static void init_descriptor_cache_segmented(struct acq400_dev *adev, int ichan, 
 			int ib;
 			for (ib = 0; ib < segment->nblocks; ++ib, ++wrapper){
 				if (wrapper->va == 0){
-					wrapper->va =
-							dma_pool_alloc(apool->pool, GFP_KERNEL, &wrapper->pa);
+					wrapper->va = dma_pool_alloc(apool->pool, GFP_KERNEL, &wrapper->pa);
 				}
 				memset(wrapper->va, 0, sizeof(struct xilinx_dma_desc_hw));
 
@@ -493,7 +582,7 @@ int get_segmented_descriptor_total(struct acq400_dev *adev)
 	return ndesc;
 }
 
-static void _delete_pool(struct ACQ400_AXIPOOL* apool, int ichan)
+static void __delete_pool(struct ACQ400_AXIPOOL* apool, int ichan)
 {
 	struct AxiDescrWrapper * cursor = apool->channelWrappers[ichan];
 	int iw = 0;
@@ -502,12 +591,21 @@ static void _delete_pool(struct ACQ400_AXIPOOL* apool, int ichan)
 	}
 	kfree(apool->channelWrappers[ichan]);
 }
+
+static void _delete_pool(struct ACQ400_AXIPOOL* apool, int ichan)
+{
+	struct AxiDescrWrapper * cursor = apool->channelWrappers[ichan];
+	if (cursor != 0){
+		__delete_pool(apool, ichan);
+	}
+}
 static void delete_pool(struct ACQ400_AXIPOOL* apool)
 {
 	_delete_pool(apool, 0);
-	_delete_pool(apool, 1);			// @@todo what if no wrappers ichan==1 ?
+	_delete_pool(apool, 1);
 	apool->ndescriptors = 0;
 }
+
 static void init_descriptor_cache(struct acq400_dev *adev, unsigned cmask)
 {
 	struct ACQ400_AXIPOOL* apool = GET_ACQ400_AXIPOOL(adev);
@@ -562,6 +660,8 @@ void axi64_arm_dmac(struct xilinx_dma_chan *xchan, unsigned headpa, unsigned tai
 	unsigned halted, not_halted;
 	unsigned rs_check;
 
+	dev_dbg(xchan->dev, "axi64_arm_dmac()");
+
 	xilinx_dma_reset(xchan);
 	halted = dma_read(xchan, XILINX_DMA_STATUS_OFFSET);
 	dma_write(xchan, XILINX_DMA_CDESC_OFFSET, headpa);
@@ -588,7 +688,7 @@ void axi64_arm_dmac(struct xilinx_dma_chan *xchan, unsigned headpa, unsigned tai
 // put marker in reg to show we were there ...
 #define SHOTID(adev)	(((adev->stats.shot&0x00ff)<<8)|0xcafe0000)
 
-extern int wimp_out;
+extern int axi64_wimp_out;
 
 void acq400_dma_on_ioc(unsigned long arg)
 {
@@ -601,7 +701,7 @@ void acq400_dma_on_ioc(unsigned long arg)
 	*/
 	adev->rt.axi64_ints++;
 	wake_up_interruptible(&adev->DMA_READY);
-	dev_dbg(DEVP(adev), "acq400_dma_on_ioc() done pa:%08x\n", cursor_pa);
+	dev_dbg(DEVP(adev), "acq400_dma_on_ioc() chan:%d done pa:%08x\n", xchan->id, cursor_pa);
 }
 void _start_transfer(struct xilinx_dma_chan *chan)
 {
@@ -619,7 +719,8 @@ int _axi64_load_dmac(struct acq400_dev *adev, int ichan)
 	int itail = -1;
 
 	u32 tail_pa = AXI_ONESHOT? wrappers[itail = apool->ndescriptors-2].pa: SHOTID(adev);
-	u32 head_pa = AXI_ONESHOT>=1? wrappers[ihead = apool->ndescriptors-2-AXI_ONESHOT].pa: wrappers[0].pa;
+	//u32 head_pa = AXI_ONESHOT>=1? wrappers[ihead = apool->ndescriptors-2-AXI_ONESHOT].pa: wrappers[0].pa;
+	u32 head_pa = wrappers[0].pa;
 
 	if (AXI_ONESHOT >=1){
 		dev_info(DEVP(adev), "AXI_ONESHOT %d head %d tail %d", AXI_ONESHOT, ihead, itail);
@@ -634,7 +735,10 @@ int _axi64_load_dmac(struct acq400_dev *adev, int ichan)
 
 	dev_dbg(DEVP(adev), "_axi64_load_dmac() 50");
 
-	if (!wimp_out){
+	xchan->dTrace.cursor = 0;
+	memset(xchan->dTrace.buffer, 0, sizeof(xchan->dTrace.buffer));
+
+	if (!axi64_wimp_out){
 		acq400_set_AXI_DMA_len(adev, adev->bufferlen);
 		axi64_arm_dmac(xchan, head_pa, tail_pa, AXI_ONESHOT);
 	}
@@ -646,12 +750,14 @@ void __axi64_init_procfs(
 	struct acq400_dev *adev, struct proc_dir_entry *root, int ic)
 {
 	const char* fn = ic==0? "AXI.0": "AXI.1";
+	const char* fn2 = ic==0? "AXI.0.trace": "AXI.1.trace";
 	struct AxiChannelWrapper* acw =
 		kzalloc(sizeof(struct AxiChannelWrapper), GFP_KERNEL);
 	acw->adev = adev;
 	acw->ichan = ic;
 	dev_info(DEVP(adev), "__axi64_init_procfs() acw:%p", acw);
 	proc_create_data(fn, 0, root, &acq400_proc_ops_axi_descr, acw);
+	proc_create_data(fn2, 0, root, &acq400_proc_ops_axi_trace, acw);
 }
 void _axi64_init_procfs(struct acq400_dev *adev)
 {
@@ -666,6 +772,40 @@ void axi64_init_procfs(struct acq400_dev *adev)
 	_axi64_init_procfs(adev);
 }
 
+
+#define DDRC "xlnx,zynq-ddrc-a05"
+#define axi_priority_wr_port2 0x210
+#define axi_priority_wr_port3 0x214
+
+void _set_axi64_priority(struct acq400_dev *adev, unsigned reg, unsigned value)
+{
+	struct regmap *syscon = syscon_regmap_lookup_by_compatible(DDRC);
+	unsigned readv;
+
+	if (IS_ERR(syscon)) {
+		printk("ERROR: %s unable to get regmap for %s\n", __FUNCTION__, DDRC);
+		return;
+	}
+
+	if (regmap_read(syscon, reg, &readv) >= 0){
+		dev_info(DEVP(adev), "%s %s %x ini: %08x", __FUNCTION__, DDRC, reg, readv);
+	}else{
+		dev_err(DEVP(adev), "%s %x read fail", __FUNCTION__, reg);
+	}
+	if (value && regmap_write(syscon, reg, 0x00080000|value) >= 0){
+		regmap_read(syscon, reg, &readv);
+		dev_info(DEVP(adev), "%s %s %x new: %08x", __FUNCTION__, DDRC, reg, readv);
+	}else{
+		dev_err(DEVP(adev), "%s %x write fail", __FUNCTION__, reg);
+	}
+}
+void set_axi64_priority(struct acq400_dev *adev)
+{
+	dev_info(DEVP(adev), "set axi64 high priority %08x\n", AXI64_DMA_HIPRIORITY);
+	_set_axi64_priority(adev, axi_priority_wr_port2, AXI64_DMA_HIPRIORITY);
+	_set_axi64_priority(adev, axi_priority_wr_port3, AXI64_DMA_HIPRIORITY);
+}
+
 int axi64_init_dmac(struct acq400_dev *adev)
 {
 	struct ACQ400_AXIPOOL* apool = kzalloc(ACQ400_AXIPOOL_SZ, GFP_KERNEL);
@@ -678,10 +818,15 @@ int axi64_init_dmac(struct acq400_dev *adev)
 	BUG_ON(apool->pool == 0);
 	adev->axi_private = apool;
 
+	if (AXI64_DMA_HIPRIORITY){
+		set_axi64_priority(adev);
+	}
 	axi64_init_procfs(adev);
 	dev_dbg(DEVP(adev), "axi64_init_dmac() 99");
 	return 0;
 }
+
+
 
 int axi64_load_dmac(struct acq400_dev *adev, unsigned cmask)
 {
@@ -690,6 +835,10 @@ int axi64_load_dmac(struct acq400_dev *adev, unsigned cmask)
 
 	dev_dbg(DEVP(adev), "axi64_load_dmac() 01");
 
+	if (adev->dma_chan[0] == 0){
+		dev_err(DEVP(adev), "%s NO AXI DMA AVAILABLE", __FUNCTION__);
+		return -1;
+	}
 	if (adev->axi_private == 0){
 		axi64_init_dmac(adev);
 	}
@@ -697,6 +846,7 @@ int axi64_load_dmac(struct acq400_dev *adev, unsigned cmask)
 	init_descriptor_cache(adev, cmask);
 
 	dev_dbg(DEVP(adev), "axi64_load_dmac() 03");
+	adev->rt.axi64_ints = 0;
 	for (ichan = 0; cmask != 0; cmask >>=1, ++ichan){
 		if ((cmask&1) != 0){
 			rc = _axi64_load_dmac(adev, ichan);
@@ -784,7 +934,7 @@ int axi64_claim_dmac_channels(struct acq400_dev *adev)
 	dma_cap_mask_t mask;
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
-	adev->dma_chan[0] = dma_request_channel(mask, filter_axi, adev);
+	adev->dma_chan0 = adev->dma_chan[0] = dma_request_channel(mask, filter_axi, adev);
 	adev->dma_chan[1] = dma_request_channel(mask, filter_axi, adev);
 	if (adev->dma_chan[0] && adev->dma_chan[1]){
 		if (DUAL_AXI_SWITCH_CHAN){

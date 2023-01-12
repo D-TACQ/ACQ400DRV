@@ -169,7 +169,7 @@ if { $::argc > 0 } {
 	close $FINETD
 	
 	if { [info exists ::env(ACQ480_MODPARAMS)] } {
-		set ACQ480_MODPARAMS ::env(ACQ480_MODPARAMS)
+		set ACQ480_MODPARAMS $::env(ACQ480_MODPARAMS)
 	} else {
 		set ACQ480_MODPARAMS ""
 	}

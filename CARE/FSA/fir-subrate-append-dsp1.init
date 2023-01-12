@@ -1,0 +1,41 @@
+#!/bin/sh
+# custom_qds.init
+
+S14=/etc/acq400/14
+cat /usr/local/CARE/FSA/fsa-dsp-regdef >/dev/dsp1/.create
+
+mkdir -p ${S14}/
+echo 1 > ${S14}/data32
+
+sed -ie 's/$/,14/' /etc/sites
+sed -ie 's/$/,14=FSA/' /etc/acq400/0/SITELIST 
+
+nchan=0
+for site in 1 2; do
+	if [ -e /etc/acq400/$site/MODEL ] && [ "$(cat /etc/acq400/$site/MODEL)" = "ACQ435ELF" ]; then
+# assume 32 channels with /32, we have nchan=1 per 32ch in site. Assume all AI sites in aggregator	
+		nchan=$((nchan+1))	
+	fi
+done
+echo $nchan > ${S14}/NCHAN
+echo $nchan > ${S14}/active_chan
+echo FSA > ${S14}/module_name
+
+ln -s /dev/dsp1/* ${S14}/
+
+nice /usr/local/CARE/monitor_s14 &
+
+
+# MODULE ENABLE
+echo 1 > ${S14}/FSA_CSR.MOD_EN
+echo 1 > ${S14}/FSA_CSR.FSA_EN
+
+echo "DSP sites 14, 15 active on 4224, 4225"
+/usr/local/init/acq400_knobs.init start
+
+cat >/etc/inetd.dsp.conf - <<EOF
+4252 stream tcp nowait root cat cat /dev/dsp1.event
+4253 stream tcp nowait root cat cat /dev/dsp2.event
+EOF
+
+inetd /etc/inetd.dsp.conf

@@ -26,6 +26,9 @@
 
 #include "acq400.h"
 #include "mgt400.h"
+#include "mgt400_sysfs.h"
+#include "acq400_sysfs.h"
+
 
 static ssize_t show_module_type(
 	struct device * dev,
@@ -413,6 +416,33 @@ static ssize_t store_auto_dma(
 
 static DEVICE_ATTR(auto_dma, S_IRUGO|S_IWUSR, show_auto_dma, store_auto_dma);
 
+static ssize_t store_kill_comms(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+
+	unsigned enable;
+
+	if (sscanf(buf, "%u", &enable) > 0){
+		struct mgt400_dev *mdev = mgt400_devices[dev->id];
+		u32 zdma_cr = mgt400rd32(mdev, ZDMA_CR);
+		zdma_cr |= ZDMA_CR_KILL_COMMS;
+		mgt400wr32(mdev, ZDMA_CR, zdma_cr);
+		zdma_cr &= ~ZDMA_CR_KILL_COMMS;
+		mgt400wr32(mdev, ZDMA_CR, zdma_cr);
+	}else{
+		count = -1;
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR(kill_comms, S_IRUGO|S_IWUSR, 0, store_kill_comms);
+
+
+
 #define AGG_SEL	"aggregator="
 
 static ssize_t show_agg_reg(
@@ -425,6 +455,7 @@ static ssize_t show_agg_reg(
 	struct mgt400_dev *mdev = mgt400_devices[dev->id];
 	u32 regval = mgt400rd32(mdev, offset);
 	char mod_group[80];
+	char spad_buf[8];
 	int site;
 
 	for (site = 1, mod_group[0] = '\0'; site <= 6; ++site){
@@ -442,8 +473,9 @@ static ssize_t show_agg_reg(
 		sprintf(mod_group, "sites=none");
 	}
 
-	return sprintf(buf, "reg=0x%08x %s DATA_MOVER_EN=%s\n",
-			regval, mod_group, regval&DATA_MOVER_EN? "on": "off");
+	show_spad(dev, attr, spad_buf);
+	return sprintf(buf, "reg=0x%08x %s DATA_MOVER_EN=%s spad=%s",
+			regval, mod_group, regval&DATA_MOVER_EN? "on": "off", spad_buf);
 }
 
 extern int good_sites[];
@@ -476,51 +508,73 @@ static ssize_t store_agg_reg(
 	const unsigned mshift)
 {
 	struct mgt400_dev *mdev = mgt400_devices[dev->id];
-	char* match;
-	int pass = 0;
 	unsigned regval = mgt400rd32(mdev, offset);
+	char* lbuf = kmalloc(strlen(buf)+1, GFP_KERNEL);
+	char* crsr = lbuf;
+	int pass = 0;
+	char* tok;
+
+	strcpy(lbuf, buf);
 
 	dev_dbg(DEVP(mdev), "store_agg_reg \"%s\"", buf);
 
-	if ((match = strstr(buf, "sites=")) != 0){
-		char* cursor = match+strlen("sites=");
-		int site;
+	while((tok = strsep(&crsr, " ")) != NULL){
+		char* match;
 
-		regval &= ~(AGG_SITES_MASK << mshift);
+		if ((match = strstr(tok, "sites=")) != 0){
+			int site;
+			char* cursor = match+strlen("sites=");
 
-		if (strncmp(cursor, "none", 4) != 0){
-			for (; *cursor && *cursor != ' '; ++cursor){
-				switch(*cursor){
-				case ',':
-				case ' ':	continue;
-				case '\n':  	break;
-				default:
-					site = get_site(*cursor);
-					if (site > 0){
-						regval |= AGG_MOD_EN(site, mshift);
-						break;
-					}else{
-						dev_err(dev, "bad site designator: %c", *cursor);
-						return -1;
+			regval &= ~(AGG_SITES_MASK << mshift);
+
+			if (strncmp(cursor, "none", 4) != 0){
+				for (; *cursor && *cursor != ' '; ++cursor){
+					switch(*cursor){
+					case ',':
+					case ' ':	continue;
+					case '\n':  	break;
+					default:
+						site = get_site(*cursor);
+						if (site > 0){
+							regval |= AGG_MOD_EN(site, mshift);
+							break;
+						}else{
+							dev_err(dev, "bad site designator: %c", *cursor);
+							count = -1;
+							goto store99;
+						}
 					}
 				}
 			}
+
+			pass = 1;
+		}else if ((match = strstr(tok, "on")) != 0){
+			dev_dbg(DEVP(mdev), "%d store_agg_reg %08x \"%s\"", __LINE__, regval, buf);
+			regval |= DATA_MOVER_EN;
+			pass = 1;
+		}else if ((match = strstr(tok, "off")) != 0){
+			dev_dbg(DEVP(mdev), "%d store_agg_reg %08x \"%s\"", __LINE__, regval, buf);
+			regval &= ~DATA_MOVER_EN;
+			pass = 1;
+		}else if ((match = strstr(tok, "spad=")) != 0){
+			if ((match+strlen("spad="))[0] == '1'){
+				regval |= AGG_SPAD_EN;
+			}else{
+				regval &= ~AGG_SPAD_EN;
+			}
+			pass = 1;
 		}
-		pass = 1;
-	}
-	if ((match = strstr(buf, "on")) != 0){
-		regval |= DATA_MOVER_EN;
-		pass = 1;
-	}else if ((match = strstr(buf, "off")) != 0){
-		regval &= ~DATA_MOVER_EN;
-		pass = 1;
 	}
 
 	if (!pass && sscanf(buf, "%x", &regval) != 1){
-		return -1;
+		count = -1;
+		goto store99;
 	}
-
+	dev_dbg(DEVP(mdev), "%d store_agg_reg %08x \"%s\"", __LINE__, regval, buf);
 	mgt400wr32(mdev, offset, regval);
+
+store99:
+	kfree(lbuf);
 	return count;
 }
 
@@ -574,10 +628,72 @@ static ssize_t store_ident(
 static DEVICE_ATTR(ident, S_IRUGO|S_IWUSR, show_ident, store_ident);
 
 
+static ssize_t show_pull_status(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	return sprintf(buf, "%d\n", mdev->dma_enable_status[ID_PULL].status);
+}
+static DEVICE_ATTR(pull_status, S_IRUGO, show_pull_status, 0);
+
+static ssize_t show_push_status(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	return sprintf(buf, "%d\n", mdev->dma_enable_status[ID_PUSH].status);
+}
+static DEVICE_ATTR(push_status, S_IRUGO, show_push_status, 0);
+
+static ssize_t show_decim(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	u32 zdma_cr = mgt400rd32(mdev, ZDMA_CR);
+	return sprintf(buf, "%u\n", ((zdma_cr>>AGG_DECIM_SHL)&AGG_DECIM_MASK)+1);
+}
+
+static ssize_t store_decim(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	unsigned decimate;
+
+	if (sscanf(buf, "%u", &decimate) == 1 && decimate){
+		struct mgt400_dev *mdev = mgt400_devices[dev->id];
+		u32 zdma_cr = mgt400rd32(mdev, ZDMA_CR);
+		zdma_cr &= ~(AGG_DECIM_MASK<<AGG_DECIM_SHL);
+
+		if (--decimate > AGG_DECIM_MASK) decimate = AGG_DECIM_MASK;
+		zdma_cr |= (decimate&AGG_DECIM_MASK) << AGG_DECIM_SHL;
+		mgt400wr32(mdev, ZDMA_CR, zdma_cr);
+
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+static DEVICE_ATTR(decimate, S_IRUGO|S_IWUSR, show_decim, store_decim);
+
 static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_module_type.attr,
 	&dev_attr_module_name.attr,
 	&dev_attr_enable.attr,
+	&dev_attr_name.attr,
+	&dev_attr_site.attr,
+	&dev_attr_dev.attr,
+	NULL
+};
+
+static const struct attribute *sysfs_aurora_attrs[] = {
 	&dev_attr_aurora_enable.attr,
 	&dev_attr_aurora_lane_up.attr,
 	&dev_attr_aurora_errors.attr,
@@ -586,9 +702,6 @@ static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_alat_avg.attr,
 	&dev_attr_alat_min_max.attr,
 	&dev_attr_heartbeat.attr,
-	&dev_attr_name.attr,
-	&dev_attr_site.attr,
-	&dev_attr_dev.attr,
 	&dev_attr_dma_stat_desc_pull.attr,
 	&dev_attr_dma_stat_desc_push.attr,
 	&dev_attr_dma_stat_data_pull.attr,
@@ -597,12 +710,16 @@ static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_pull_buffer_count.attr,
 	&dev_attr_push_buffer_count_lw.attr,
 	&dev_attr_pull_buffer_count_lw.attr,
+	&dev_attr_push_status.attr,
+	&dev_attr_pull_status.attr,
 	&dev_attr_clear_stats.attr,
 	&dev_attr_aggregator.attr,
 	&dev_attr_spad.attr,
 	&dev_attr_auto_dma.attr,
+	&dev_attr_kill_comms.attr,
 	&dev_attr_ident.attr,
 	&dev_attr_RW32_debug.attr,
+	&dev_attr_decimate.attr,
 	NULL
 };
 
@@ -635,6 +752,293 @@ static const struct attribute *sysfs_mgtdram_attrs[] = {
 	&dev_attr_fpga_rev.attr,
 	NULL
 };
+
+#define MAC_TOP3 0x002154
+
+static ssize_t show_coloned_hex(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	u32 mac_bot4 = mgt400rd32(mdev, HUDP_MAC);
+	u8 hexb[6];
+
+	hexb[0] = (MAC_TOP3>>16) & 0xff;
+	hexb[1] = (MAC_TOP3>>8)  & 0xff;
+	hexb[2] = (MAC_TOP3)     & 0xff;
+	hexb[3] = (mac_bot4>>16) & 0xff;
+	hexb[4] = (mac_bot4>>8)  & 0xff;
+	hexb[5] = (mac_bot4)     & 0xff;
+
+	return sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
+			hexb[0], hexb[1], hexb[2], hexb[3], hexb[4], hexb[5]);
+}
+
+static ssize_t store_coloned_hex(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	u32 hexb[6];
+
+	if (sscanf(buf, "%02x:%02x:%02x:%02x:%02x:%02x",
+			hexb+0, hexb+1, hexb+2, hexb+3, hexb+4, hexb+5) == 6 ){
+		struct mgt400_dev *mdev = mgt400_devices[dev->id];
+		u32 mac32 = 0;
+		int ii;
+		int lsl = 24;
+		for (ii = 2; ii < 6; ++ii, lsl-= 8){
+			mac32 |= hexb[ii] << lsl;
+		}
+		mgt400wr32(mdev, HUDP_MAC, mac32);
+
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+static DEVICE_ATTR(mac, S_IRUGO|S_IWUSR, show_coloned_hex, store_coloned_hex);
+
+static ssize_t show_dotted_quad(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	const int REG)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	u32 ipaddr = mgt400rd32(mdev, REG);
+	u8 decb[4];
+
+	decb[0] = (ipaddr>>24) & 0xff;
+	decb[1] = (ipaddr>>16) & 0xff;
+	decb[2] = (ipaddr>>8)  & 0xff;
+	decb[3] = (ipaddr)     & 0xff;
+
+	return sprintf(buf, "%d.%d.%d.%d\n",
+			decb[0], decb[1], decb[2], decb[3]);
+}
+
+static ssize_t store_dotted_quad(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count,
+	const int REG)
+{
+	u32 decb[4];
+
+	if (sscanf(buf, "%d.%d.%d.%d", decb+0, decb+1, decb+2, decb+3) == 4 ){
+		struct mgt400_dev *mdev = mgt400_devices[dev->id];
+		u32 ipaddr = 0;
+		int ii;
+		int lsl = 24;
+		for (ii = 0; ii < 4; ++ii, lsl-= 8){
+			ipaddr |= decb[ii] << lsl;
+		}
+		mgt400wr32(mdev, REG, ipaddr);
+
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+#define MAKE_DOTTED_QUAD(NAME, REG) 				\
+static ssize_t show_dotted_quad##NAME(				\
+	struct device * dev,					\
+	struct device_attribute *attr,				\
+	char * buf)						\
+{								\
+	return show_dotted_quad(dev, attr, buf, REG);		\
+}								\
+								\
+static ssize_t store_dotted_quad##NAME(				\
+	struct device * dev,					\
+	struct device_attribute *attr,				\
+	const char * buf,					\
+	size_t count)						\
+{								\
+	return store_dotted_quad(dev, attr, buf, count, REG);	\
+}								\
+static DEVICE_ATTR(NAME, S_IRUGO|S_IWUSR, show_dotted_quad##NAME, store_dotted_quad##NAME)
+
+
+
+MAKE_DOTTED_QUAD(ip, HUDP_IP_ADDR);
+MAKE_DOTTED_QUAD(gw, HUDP_GW_ADDR);
+MAKE_DOTTED_QUAD(netmask, HUDP_NETMASK);
+MAKE_DOTTED_QUAD(dst_ip, HUDP_DEST_ADDR);
+MAKE_DOTTED_QUAD(rx_src_ip, HUDP_RX_SRC_ADDR);
+
+
+
+
+MAKE_DNUM(src_port, HUDP_SRC_PORT,  0xffff);
+MAKE_DNUM(dst_port, HUDP_DEST_PORT, 0xffff);
+MAKE_DNUM(rx_port,  HUDP_RX_PORT,   0xffff);
+MAKE_DNUM(tx_pkt_ns, 	HUDP_TX_PKT_SZ, 0x7800);
+MAKE_DNUM(tx_sample_sz, HUDP_TX_PKT_SZ, 0x03ff);
+
+
+#define TX_SPP_MSK 0x7800
+#define TX_SPP_SHL 11
+
+static ssize_t show_tx_spp(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	u32 tx_spp = (mgt400rd32(mdev, HUDP_TX_PKT_SZ)&TX_SPP_MSK) >> TX_SPP_SHL;
+	return sprintf(buf, "%u\n", tx_spp+1);
+}
+
+static ssize_t store_tx_spp(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	unsigned tx_spp;
+
+	if (sscanf(buf, "%u", &tx_spp) == 1){
+		struct mgt400_dev *mdev = mgt400_devices[dev->id];
+		u32 pkt_sz = mgt400rd32(mdev, HUDP_TX_PKT_SZ);
+		pkt_sz &= ~TX_SPP_MSK;
+
+		if (tx_spp > 0) tx_spp -= 1;   // hw guys count from zero, but defend against entry 0
+
+		pkt_sz |= ((tx_spp<<TX_SPP_SHL)&TX_SPP_MSK);
+
+		mgt400wr32(mdev, HUDP_TX_PKT_SZ, pkt_sz);
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+static DEVICE_ATTR(tx_spp, S_IRUGO|S_IWUSR, show_tx_spp, store_tx_spp);
+
+
+static ssize_t show_hudp_decim(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	u32 hudp_con = mgt400rd32(mdev, HUDP_CON);
+	return sprintf(buf, "%u\n", ((hudp_con>>AGG_DECIM_SHL)&AGG_DECIM_MASK)+1);
+}
+
+static ssize_t store_hudp_decim(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	unsigned decimate;
+
+	if (sscanf(buf, "%u", &decimate) == 1 && decimate){
+		struct mgt400_dev *mdev = mgt400_devices[dev->id];
+		u32 hudp_con = mgt400rd32(mdev, ZDMA_CR);
+		hudp_con &= ~(AGG_DECIM_MASK<<AGG_DECIM_SHL);
+
+		if (--decimate > AGG_DECIM_MASK) decimate = AGG_DECIM_MASK;
+		hudp_con |= (decimate&AGG_DECIM_MASK) << AGG_DECIM_SHL;
+		mgt400wr32(mdev, HUDP_CON, hudp_con);
+
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+static DEVICE_ATTR(hudp_decim, S_IRUGO|S_IWUSR, show_hudp_decim, store_hudp_decim);
+
+MAKE_DNUM(tx_pkt_count, HUDP_TX_PKT_COUNT, 0xffffffff);
+MAKE_DNUM(rx_pkt_count, HUDP_RX_PKT_COUNT, 0xffffffff);
+MAKE_DNUM(rx_pkt_len,   HUDP_RX_PKT_LEN,   0x000003ff);
+
+MAKE_BITS(ctrl, 	HUDP_CON, 0, 0xffffffff);
+MAKE_BITS(tx_ctrl, 	HUDP_CON, MAKE_BITS_FROM_MASK, 0x0000000f);
+MAKE_BITS(rx_en,        HUDP_CON, MAKE_BITS_FROM_MASK, (1<<(4+8)));
+MAKE_BITS(rx_reset, 	HUDP_CON, MAKE_BITS_FROM_MASK, (1<<(3+8)));
+
+MAKE_BITS(udp_data_src, HUDP_CON, MAKE_BITS_FROM_MASK, (1<<5));
+MAKE_BITS(tx_en,        HUDP_CON, MAKE_BITS_FROM_MASK, (1<<4));
+MAKE_BITS(tx_reset, 	HUDP_CON, MAKE_BITS_FROM_MASK, (1<<3));
+
+MAKE_BITS(disco_en, 	HUDP_DISCO_COUNT, MAKE_BITS_FROM_MASK, HUDP_DISCO_EN);
+MAKE_DNUM(disco_idx, 	HUDP_DISCO_COUNT, HUDP_DISCO_INDEX);
+MAKE_DNUM(disco_count, 	HUDP_DISCO_COUNT, HUDP_DISCO_COUNT_COUNT);
+MAKE_BITS(hudp_status,       HUDP_STATUS, MAKE_BITS_FROM_MASK, 0xffffffff);
+
+MAKE_DNUM(tx_calc_pkt_sz, HUDP_CALC_PKT_SZ, 0xffffffff);
+MAKE_DNUM(slice_len,      UDP_SLICE, 0x0000ff00);
+MAKE_DNUM(slice_off,      UDP_SLICE, 0x000000ff);
+
+
+#define LOWBYTE(reg, shl)  (((reg)>>(shl))&0x00ff)
+
+static ssize_t show_arp_mac_resp(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct mgt400_dev *mdev = mgt400_devices[dev->id];
+	u32 upper = mgt400rd32(mdev, ARP_RESP_MAC_UPPER);
+	u32 lower = mgt400rd32(mdev, ARP_RESP_MAC_LOWER);
+
+	return sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
+			LOWBYTE(upper,  8),  LOWBYTE(upper,  0),
+			LOWBYTE(lower, 24),  LOWBYTE(lower, 16),
+			LOWBYTE(lower,  8),  LOWBYTE(lower,  0) );
+}
+
+static DEVICE_ATTR(arp_mac_resp, S_IRUGO, show_arp_mac_resp, 0);
+
+static const struct attribute *sysfs_hudp_attrs[] = {
+	&dev_attr_mac.attr,
+	&dev_attr_ip.attr,
+	&dev_attr_gw.attr,
+	&dev_attr_netmask.attr,
+	&dev_attr_dst_ip.attr,
+	&dev_attr_src_port.attr,
+	&dev_attr_dst_port.attr,
+	&dev_attr_rx_port.attr,
+	&dev_attr_rx_src_ip.attr,
+	&dev_attr_tx_pkt_ns.attr,
+	&dev_attr_tx_spp.attr,
+	&dev_attr_tx_sample_sz.attr,
+	&dev_attr_tx_calc_pkt_sz.attr,
+	&dev_attr_ctrl.attr,
+	&dev_attr_tx_reset.attr,
+	&dev_attr_rx_reset.attr,
+	&dev_attr_hudp_decim.attr,
+	&dev_attr_tx_en.attr,
+	&dev_attr_rx_en.attr,
+	&dev_attr_tx_ctrl.attr,
+	&dev_attr_udp_data_src.attr,
+
+	&dev_attr_tx_pkt_count.attr,
+	&dev_attr_rx_pkt_count.attr,
+	&dev_attr_rx_pkt_len.attr,
+
+	&dev_attr_disco_en.attr,
+	&dev_attr_disco_idx.attr,
+	&dev_attr_disco_count.attr,
+
+	&dev_attr_clear_stats.attr,
+	&dev_attr_hudp_status.attr,
+
+	&dev_attr_arp_mac_resp.attr,
+	&dev_attr_slice_len.attr,
+	&dev_attr_slice_off.attr,
+	NULL
+};
 void mgt400_createSysfs(struct device *dev)
 {
 	struct mgt400_dev *mdev = mgt400_devices[dev->id];
@@ -642,9 +1046,20 @@ void mgt400_createSysfs(struct device *dev)
 	dev_info(dev, "mgt400_createSysfs()");
 	if (sysfs_create_files(&dev->kobj, sysfs_base_attrs)){
 		dev_err(dev, "failed to create sysfs");
-	}else if (IS_MGT_DRAM(mdev)){
-		if (sysfs_create_files(&dev->kobj, sysfs_mgtdram_attrs)){
-			dev_err(dev, "failed to create sysfs2");
+		return;
+	}
+	if (IS_MGT_HUDP(mdev)){
+		dev_info(dev, "MGT_HUDP");
+		if (sysfs_create_files(&dev->kobj, sysfs_hudp_attrs)){
+			dev_err(dev, "failed to create sysfs_hudp_attrs");
+		}
+	}else{
+		if (sysfs_create_files(&dev->kobj, sysfs_aurora_attrs)){
+			dev_err(dev, "failed to create sysfs");
+		}else if (IS_MGT_DRAM(mdev)){
+			if (sysfs_create_files(&dev->kobj, sysfs_mgtdram_attrs)){
+				dev_err(dev, "failed to create sysfs_mgtdram_attrs");
+			}
 		}
 	}
 }

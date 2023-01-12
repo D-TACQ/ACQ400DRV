@@ -64,13 +64,21 @@
 #include "local.h"		/* chomp() hopefully, not a lot of other garbage */
 #include "knobs.h"
 
+#include "Env.h"
 #include "File.h"
+
+#include "tcp_server.h"
 
 
 using namespace std;
 
 /* copy from driver .. */
 enum AO_playloop_oneshot { AO_continuous, AO_oneshot, AO_oneshot_rearm };
+
+#define G_LOAD_THRESHOLD_DEFAULT 2
+#define G_PAD_NONE 0
+#define G_PAD_LAST 1
+#define G_PAD_ZERO 2
 
 namespace G {
 	unsigned sample_size = sizeof(unsigned);	// bytes per sample
@@ -87,11 +95,18 @@ namespace G {
 	int minbufs = 4;
 	int max_samples;
 	int TO = 1;					// Timeout, seconds
-	int load_threshold = 2;
-	unsigned load_bufferlen;			// Set bufferlen for load
+	int load_threshold = G_LOAD_THRESHOLD_DEFAULT;
 	unsigned play_bufferlen;			// Change bufferlen on play
+	unsigned initval = 0;				// M_INIT, set all mem this value
+
+	int pad = 1;					// 0: no pad, 1: pad last, 2: pad 0
+
+	char* port = 0;				// 0 no server (inetd), else make a server
+	char* host = 0;
 };
 
+using namespace std;
+#include "acq-util.h"
 #include "Buffer.h"
 
 struct poptOption opt_table[] = {
@@ -114,58 +129,29 @@ struct poptOption opt_table[] = {
 			"minimum buffers : 4 is safe with large buffers, 2 possible for small shots"
 	},
 	{
+	  "pad", 'n',  POPT_ARG_INT, &G::pad, 0,
+	  	  	 "when set, pad to end of buffer"
+	},
+	{
+	  "port", 'p', POPT_ARG_STRING, &G::port, 0, "server port 0: no tcp server (using inetd)"
+	},
+	{
+	  "host", 'H', POPT_ARG_STRING, &G::host, 0, "server host 0: allow any host"
+	},
+	{
 	  "verbose", 'v', POPT_ARG_INT, &G::verbose, 0, "debug"
 	},
 	POPT_AUTOHELP
 	POPT_TABLEEND
 };
 
-enum RUN_MODE { M_FILL, M_LOAD, M_DUMP };
-
-char *getRoot(int devnum)
-{
-	char *_root = new char [128];
-	struct stat sb;
-
-	sprintf(_root, "/dev/acq420.%d", devnum);
-	if (stat(_root, &sb) == 0){
-		return _root;
-	}
-
-	sprintf(_root, "/dev/acq400.%d", devnum);
-	if (stat(_root, &sb) == 0){
-		return _root;
-	}
-
-	fprintf(stderr, "ERROR: /dev/acq4x0.%d NOT FOUND\n", devnum);
-	exit(1);
-}
-
-int Buffer::create(const char* root, int _buffer_len)
-{
-	char* fname = new char[128];
-	sprintf(fname, "%s.hb/%03d", root, Buffer::last_buf);
-
-	the_buffers.push_back(new MapBuffer(fname, _buffer_len));
-	return 0;
-}
-
-int G_nsamples;
+enum RUN_MODE { M_NONE, M_FILL, M_LOAD, M_DUMP, M_INIT };
 
 void set_playloop_length(int nsamples)
 {
 	char cmd[128];
-	if (G::play_bufferlen){
-		unsigned ll = G::load_bufferlen;
-		unsigned pl = G::play_bufferlen;
-		while ((pl&0x1) == 0){
-			ll >>= 1; pl >>= 1;
-		}
-		nsamples = nsamples * pl / ll;
-		setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::play_bufferlen);
-	}
-	sprintf(cmd, "set.site %d playloop_length %d %d",
-			G::play_site, G_nsamples = nsamples, G::mode);
+	setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::play_bufferlen? G::play_bufferlen: Buffer::bufferlen);
+	sprintf(cmd, "set.site %d playloop_length %d %d", G::play_site, nsamples, G::mode);
 	system(cmd);
 
 	if (nsamples == 0){
@@ -192,10 +178,21 @@ int pad(int nsamples, int pad_samples)
 	char* end = base + nsamples*G::sample_size;
 	char* last = end - G::sample_size;
 
-	while(pad_samples--){
-		memcpy(end, last, G::sample_size);
-		end += G::sample_size;
-		nsamples++;
+	nsamples += pad_samples;
+
+	if (G::pad){
+		if (G::pad == G_PAD_ZERO){
+			last = new char[G::sample_size];
+			memset(last, 0, G::sample_size);
+		}
+		pad_samples += G::play_bufferlen/G::sample_size;	// fill an extra buffer
+		while(pad_samples--){
+			memcpy(end, last, G::sample_size);
+			end += G::sample_size;
+		}
+		if (G::pad == G_PAD_ZERO){
+			delete [] last;
+		}
 	}
 	return nsamples;
 }
@@ -213,34 +210,36 @@ int _load_pad(int nsamples)
 	if (G::verbose){\
 		fprintf(stderr, "%d playbuffs %d residue %d padsam %d\n", __LINE__, playbuffs, residue, padsam);\
 	}
-	int playbuffs = (nsamples*G::sample_size)/Buffer::bufferlen;
-	int residue = (nsamples*G::sample_size)%Buffer::bufferlen;
+	int playbuffs = (nsamples*G::sample_size)/G::play_bufferlen;
+	int residue = (nsamples*G::sample_size)%G::play_bufferlen;
 	int padsam = 0;
 
 	if (G::verbose){
 		fprintf(stderr, "nsamples:%d G::sample_size:%d BL:%d\n",
-				nsamples, G::sample_size, Buffer::bufferlen);
+				nsamples, G::sample_size, G::play_bufferlen);
 		fprintf(stderr, "nsamples:0x%x G::sample_size:0x%x BL:0x%x\n",
-						nsamples, G::sample_size, Buffer::bufferlen);
+						nsamples, G::sample_size, G::play_bufferlen);
 	}
 	MARK;
 	if (residue){
-		padsam = (Buffer::bufferlen - residue)/G::sample_size;
+		padsam = (G::play_bufferlen - residue)/G::sample_size;
 		playbuffs += 1;		/* partly into a buffer, round up */
 		MARK;
 	}
 	if (playbuffs&1){
 		/* PRI DMA MUST ping+pong, expand to even # buffers */
 		playbuffs += 1;
-		padsam += Buffer::bufferlen/G::sample_size;
+		padsam += G::play_bufferlen/G::sample_size;
 		MARK;
 	}
 	if (G::minbufs == 4 && playbuffs == 2){
 		playbuffs += 2;
-		padsam += 2 * Buffer::bufferlen/G::sample_size;
+		padsam += 2 * G::play_bufferlen/G::sample_size;
 	}
 
 	if (padsam){
+
+		MARK;
 		nsamples = pad(nsamples, padsam);
 	}
 	if (G::verbose) fprintf(stderr, "return nsamples %d\n", nsamples);
@@ -355,7 +354,7 @@ int _fread(void* buffer, size_t size, size_t nelems, FILE *fp)
 		}
 	}
 	nelems = (bp - bp0)/size;
-	syslog(LOG_DEBUG, "_fread returns %d\n", nelems);
+	syslog(LOG_DEBUG, "_fread bp0:%p returns %d * %d = %08x\n", bp0, nelems, size, bp-bp0);
 	return nelems;
 }
 int _load() {
@@ -371,12 +370,43 @@ int _load() {
 	return _load_pad(nsamples);
 }
 
+int _load_by_buffer() {
+	int spb = G::play_bufferlen/G::sample_size;
+	unsigned nsamples = 0;
+	unsigned buf;
+	for (buf = 0; buf < Buffer::nbuffers; ++buf){
+		unsigned nread = _fread(Buffer::the_buffers[buf]->getBase(),
+						G::sample_size, spb, G::fp_in);
+		if (nread > 0){
+			nsamples += nread;
+		}else{
+			if (ferror(G::fp_in)){
+				syslog(LOG_DEBUG, "bb fread ERROR exit");
+				exit(1);
+			}
+			fprintf(stderr, "load_pad buffers:%u nsamples:%u\n", buf+1, nsamples);
+			return _load_pad(nsamples);
+		}
+	}
+	syslog(LOG_DEBUG, "bb hit the buffers, going with buffers=%u samples=%u", buf, nsamples);
+	return _load_pad(nsamples);
+}
+
+
 int fill() {
-	_load();
-	printf("DONE %d\n", G_nsamples);
-	return 0;
+	int nsamples;
+	if (G::play_bufferlen != Buffer::bufferlen){
+		fprintf(stderr, "LOAD_BY_BUFFER: NEW\n");
+		syslog(LOG_DEBUG, "LOAD_BY_BUFFER: NEW\n");
+		nsamples = _load_by_buffer();
+	}else{
+		nsamples = _load();
+	}
+	printf("DONE %d\n", nsamples);
+	return nsamples;
 }
 int load() {
+	fprintf(stderr, "LOAD NEW\n");
 	openlog("bb", LOG_PID, LOG_USER);
 	set_playloop_length(0);
 
@@ -385,11 +415,26 @@ int load() {
 	if (G::concurrent){
 		_load_concurrent();
 	}else{
-		set_playloop_length(_load());
+		set_playloop_length(fill());
 	}
 
 	return 0;
 }
+
+int init() {
+	for (Buffer* buffer : Buffer::the_buffers){
+		fprintf(stderr, "Buffer %d len:%d\n", buffer->ib(), buffer->bufferlen);
+		unsigned* cursor = (unsigned*)buffer->getBase();
+		unsigned* end = (unsigned*)buffer->getEnd();
+		unsigned value = G::initval;
+
+		while(cursor != end){
+			*cursor++ = value;
+		}
+	}
+	return 0;
+}
+
 int dump() {
 	unsigned nsamples;
 	getKnob(G::play_site, "playloop_length", &nsamples);
@@ -418,54 +463,33 @@ unsigned getSpecificBufferlen(int ibuf)
 	return bl;
 }
 #define MODPRAMS "/sys/module/acq420fmc/parameters/"
-#define DFB	 MODPRAMS "distributor_first_buffer"
+#define DFB	 "/dev/acq400.0.knobs/first_distributor_buffer"
 #define BUFLEN	 MODPRAMS "bufferlen"
 #define NBUF	 MODPRAMS "nbuffers"
+
+#define PAGESZ	 4096
+#define PAGEM    (PAGESZ-1)
+
+void set_dist_awg(unsigned dist_s1)
+{
+	char cmd[80];
+	snprintf(cmd, 80, "/etc/acq400/%u/AWG:DIST AWG", dist_s1);
+	system(cmd);
+}
+
 RUN_MODE ui(int argc, const char** argv)
 {
 	poptContext opt_context =
 			poptGetContext(argv[0], argc, argv, opt_table, 0);
-	const char* evar;
+	G::verbose 		= Env::getenv("VERBOSE", 0);
+	G::load_threshold 	= Env::getenv("BB_LOAD_THRESHOLD", G_LOAD_THRESHOLD_DEFAULT);
+	G::pad			= Env::getenv("BB_PAD",  G_PAD_LAST);
 
-	if ((evar = getenv("VERBOSE"))){
-		G::verbose = atoi(evar);
-	}
-	if ((evar = getenv("BB_LOAD_THRESHOLD"))){
-		G::load_threshold = atoi(evar);
-	}
 	getKnob(-1, NBUF,  &Buffer::nbuffers);
 	getKnob(-1, DFB, 	&G::buffer0);
 	getKnob(-1, BUFLEN, &Buffer::bufferlen);
 	getKnob(-1, "/etc/acq400/0/dist_bufferlen_play", &G::play_bufferlen);
-	getKnob(-1, "/etc/acq400/0/dist_bufferlen_load", &G::load_bufferlen);
 
-	if (G::load_bufferlen){
-		setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", G::load_bufferlen);
-	}
-	if (G::buffer0 != 0){
-		Buffer::bufferlen = getSpecificBufferlen(G::buffer0);
-	}
-
-	Buffer::nbuffers -= G::buffer0;
-
-	unsigned dist_s1;
-	getKnob(0, "dist_s1", &dist_s1);
-	if (dist_s1){
-		unsigned playloop_maxlen;
-		G::play_site = dist_s1;
-		getKnob(0, "/etc/acq400/0/dssb", &G::sample_size);
-		//fprintf(stderr, "s1:%d size:%d\n", dist_s1, G::sample_size);
-		getKnob(dist_s1, "playloop_maxlen", &playloop_maxlen);
-		if (playloop_maxlen){
-			unsigned playloop_maxbytes = playloop_maxlen*G::sample_size;
-			if (playloop_maxbytes < Buffer::nbuffers*Buffer::bufferlen){
-				G::max_samples = playloop_maxlen;
-			}
-		}
-	}
-	if (G::max_samples == 0){
-		G::max_samples = Buffer::nbuffers*Buffer::bufferlen/G::sample_size;
-	}
 	int rc;
 
 	while ( (rc = poptGetNextOpt( opt_context )) >= 0 ){
@@ -476,14 +500,76 @@ RUN_MODE ui(int argc, const char** argv)
 	}
 
 	const char* mode = poptGetArg(opt_context);
+	RUN_MODE rm = M_NONE;
+
+	fprintf(stderr, "%s: bl:%d\n", __FUNCTION__, Buffer::bufferlen);
+
+	if (G::play_bufferlen > Buffer::bufferlen){
+		fprintf(stderr, "ERROR play %d > buffer %d\n", G::play_bufferlen, Buffer::bufferlen);
+		exit(1);
+	}else if (G::play_bufferlen == 0){
+		G::play_bufferlen = Buffer::bufferlen;
+	}
+
 	if (mode != 0){
 		if (strcmp(mode, "load") == 0){
-			return M_LOAD;
+			rm = M_LOAD;
 		}else if (strcmp(mode, "fill") == 0){
-			return M_FILL;
+			rm = M_FILL;
+		}else if (strcmp(mode, "init") == 0){
+			const char* initval = poptGetArg(opt_context);
+			G::initval = initval? strtoul(initval, 0, 0): 0;
+			rm = M_INIT;
+		}else if (strcmp(mode, "dump") == 0){
+			Buffer::bufferlen = G::play_bufferlen;
+			return M_DUMP;
+		}else{
+			fprintf(stderr, "ERROR bad pram \%s\"\n", mode);
+			return rm;
+		}
+	}else{
+		return rm;
+	}
+
+	setKnob(-1, "/dev/acq400.0.knobs/dist_bufferlen", Buffer::bufferlen);
+
+	fprintf(stderr, "%s: bl:%d play:%d\n", __FUNCTION__, Buffer::bufferlen, G::play_bufferlen);
+
+	Buffer::nbuffers -= G::buffer0;
+
+	unsigned dist_s1 = 0;
+	getKnob(0, "/etc/acq400/0/play0_ready", &dist_s1);
+
+	if (dist_s1){
+		set_dist_awg(dist_s1);
+		unsigned playloop_maxlen;
+		G::play_site = dist_s1;
+
+		getKnob(0, "/etc/acq400/0/dssb", &G::sample_size);
+		//fprintf(stderr, "s1:%d size:%d\n", dist_s1, G::sample_size);
+		getKnob(dist_s1, "playloop_maxlen", &playloop_maxlen);
+
+
+		if (playloop_maxlen){
+			unsigned playloop_maxbytes = playloop_maxlen*G::sample_size;
+			if (playloop_maxbytes < Buffer::nbuffers*Buffer::bufferlen){
+				G::max_samples = playloop_maxlen;
+			}
 		}
 	}
-	return M_DUMP;
+	if (G::max_samples == 0){
+		G::max_samples = Buffer::nbuffers*Buffer::bufferlen/G::sample_size;
+	}
+	return rm;
+}
+
+
+int load_interpreter(FILE* fin, FILE* fout)
+{
+	close(0); dup(fileno(fin));
+	close(1); dup(fileno(fout));
+	close(2); dup(fileno(fout));
+	return load();
 }
 
 int main(int argc, const char** argv)
@@ -492,9 +578,18 @@ int main(int argc, const char** argv)
 	BufferManager bm(getRoot(G::devnum), G::buffer0);
 	switch(rm){
 	case M_FILL:
-		return fill();
+		return fill() > 0? 0: -1;
 	case M_LOAD:
-		return load();
+		if (G::port){
+			return tcp_server(G::host, G::port, load_interpreter);
+		}else{
+			return load();
+		}
+	case M_INIT:
+		init();
+	case M_NONE:
+		fprintf(stderr, "bb --help for info\n");
+		return 0;
 	default:
 		return dump();
 	}

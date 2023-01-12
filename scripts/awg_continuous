@@ -1,0 +1,17 @@
+#!/bin/sh
+
+[ -e $1 ] || (echo "USAGE awg_continuous FILE"; exit 1)
+
+
+pkill bb_stream
+
+if [ "x$VERBOSE" != "x" ]; then
+	ARGS=-v1
+fi
+bb_stream $ARGS -f $1
+
+# nfg:
+# while [ 1 ]; do cat $1; done | bb_stream $ARGS
+
+
+

@@ -50,6 +50,10 @@ int th_max = 99;
 module_param(th_max, int, 0644);
 MODULE_PARM_DESC(th_max, "max interrupt threshold");
 
+int axi64_icount = 0;
+module_param(axi64_icount, int, 0644);
+MODULE_PARM_DESC(icount, "combined interrupt count, reset at start");
+
 #if defined(CONFIG_XILINX_DMATEST) || defined(CONFIG_XILINX_DMATEST_MODULE)
 # define TEST_DMA_WITH_LOOPBACK
 #endif
@@ -479,26 +483,23 @@ static irqreturn_t dma_intr_handler(int irq, void *data)
 	struct xilinx_dma_chan *chan = data;
 	int update_cookie = 0;
 	int to_transfer = 0;
-	u32 stat, reg;
-
-	reg = dma_read(chan, XILINX_DMA_CONTROL_OFFSET);
-#if 0
-	/* Disable intr */
-	dma_write(chan, XILINX_DMA_CONTROL_OFFSET,
-		  reg & ~XILINX_DMA_XR_IRQ_ALL_MASK);
-#endif
-	stat = dma_read(chan, XILINX_DMA_STATUS_OFFSET);
-	dev_dbg(chan->dev, "dma_intr_handler() stat:%08x", stat);
+	u32 ctrl = dma_read(chan, XILINX_DMA_CONTROL_OFFSET);
+	u32 stat = dma_read(chan, XILINX_DMA_STATUS_OFFSET);
+	u32 cdesc = dma_read(chan, XILINX_DMA_CDESC_OFFSET);
 
 	if (!(stat & XILINX_DMA_XR_IRQ_ALL_MASK))
 		return IRQ_NONE;
 
 	/* Ack the interrupts */
-	dma_write(chan, XILINX_DMA_STATUS_OFFSET,
-		  XILINX_DMA_XR_IRQ_ALL_MASK);
-
+	dma_write(chan, XILINX_DMA_STATUS_OFFSET, XILINX_DMA_XR_IRQ_ALL_MASK);
 	/* Check for only the interrupts which are enabled */
-	stat &= (reg & XILINX_DMA_XR_IRQ_ALL_MASK);
+	stat &= (ctrl & XILINX_DMA_XR_IRQ_ALL_MASK);
+
+	axi64_icount = (axi64_icount+1)&0xf;
+	chan->dTrace.buffer[chan->dTrace.cursor] = cdesc|axi64_icount;
+	chan->dTrace.cursor = (chan->dTrace.cursor+1)&(MAXTRACE-1);
+
+	dev_dbg(chan->dev, "dma_intr_handler() stat:%08x curr:%08x", stat, cdesc);
 
 	if (stat & XILINX_DMA_XR_IRQ_ERROR_MASK) {
 		dev_err(chan->dev,
@@ -909,13 +910,11 @@ static int xilinx_dma_chan_probe(struct xilinx_dma_device *xdev,
 	struct xilinx_dma_chan *chan;
 	int err;
 	u32 device_id, value, width = 0;
-	char *devname;
 
 	/* alloc channel */
-	chan = devm_kzalloc(xdev->dev, 2*sizeof(*chan), GFP_KERNEL);
+	chan = devm_kzalloc(xdev->dev, sizeof(struct xilinx_dma_chan), GFP_KERNEL);
 	if (!chan)
 		return -ENOMEM;
-	devname = (char*)&chan[1];
 
 	chan->feature = feature;
 	chan->max_len = XILINX_DMA_MAX_TRANS_LEN;
@@ -941,6 +940,7 @@ static int xilinx_dma_chan_probe(struct xilinx_dma_device *xdev,
 		dev_err(xdev->dev, "unable to read device id property");
 		return err;
 	}
+	chan->id = device_id;
 
 	chan->has_sg = (xdev->feature & XILINX_DMA_FTR_HAS_SG) >>
 		       XILINX_DMA_FTR_HAS_SG_SHIFT;
@@ -958,7 +958,6 @@ static int xilinx_dma_chan_probe(struct xilinx_dma_device *xdev,
 	if (chan->direction == DMA_DEV_TO_MEM) {
 		dev_info(xdev->dev, "axi-dma-s2mm-channel offset regs _%08x", XILINX_DMA_RX_CHANNEL_OFFSET);
 		chan->regs = (xdev->regs + XILINX_DMA_RX_CHANNEL_OFFSET);
-		chan->id = 1;
 	}
 
 	/*
@@ -973,9 +972,7 @@ static int xilinx_dma_chan_probe(struct xilinx_dma_device *xdev,
 		xdev->common.copy_align = fls(width - 1);
 
 	chan->dev = xdev->dev;
-	xdev->chan[chan->id] = chan;		/* id==1 is INBOUND ? */
-
-	chan->id = device_id;			/* PGMWASHERE .. unique id for debugfs, really */
+	xdev->chan[chan->id] = chan;
 
 	/* Initialize the channel */
 	err = dma_reset(chan);
@@ -992,9 +989,9 @@ static int xilinx_dma_chan_probe(struct xilinx_dma_device *xdev,
 
 	/* find the IRQ line, if it exists in the device tree */
 	chan->irq = irq_of_parse_and_map(node, 0);
-	snprintf(devname, sizeof(*chan), "axi-dma%d", device_id);
+	snprintf(chan->devname, sizeof(chan->devname), "axi-dma%d", device_id);
 	err = devm_request_irq(xdev->dev, chan->irq, dma_intr_handler,
-			       IRQF_SHARED, devname, chan);
+			       IRQF_SHARED, chan->devname, chan);
 	if (err) {
 		dev_err(xdev->dev, "unable to request IRQ\n");
 		return err;

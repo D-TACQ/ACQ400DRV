@@ -1,0 +1,1 @@
+while [ 1 ]; do /usr/local/CARE/analyse-slab ' ' > /mnt/local/slab-$(date +%y%m%d%H%M).log;sleep 60; done

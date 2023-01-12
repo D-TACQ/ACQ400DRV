@@ -40,6 +40,7 @@ public:
 		     perror("socket");
 		     exit(1);
 		   }
+
 		   bzero((char *)&addr, sizeof(addr));
 		   addr.sin_family = AF_INET;
 		   addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -47,6 +48,17 @@ public:
 		   addrlen = sizeof(addr);
 		   if (getenv("MultiCastVerbose")){
 			   verbose = atoi(getenv("MultiCastVerbose"));
+		   }
+		   if (multicast_if){
+			   struct in_addr localInterface;
+			   localInterface.s_addr = inet_addr(multicast_if);
+
+			   if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) < 0) {
+				   perror("ERROR setting local interface");
+				   exit(1);
+			   }else{
+				   fprintf(stderr, "MultiCastImpl set IP_MULTICAST_IF %s\n", multicast_if);
+			   }
 		   }
 	}
 	virtual int sendto(const void* message, int len) {
@@ -56,6 +68,7 @@ public:
 		return -1;
 	}
 };
+const char* MultiCast::multicast_if;
 
 class MultiCastSender : public MultiCastImpl {
 
@@ -86,7 +99,11 @@ public:
 			exit(1);
 		}
 		mreq.imr_multiaddr.s_addr = inet_addr(group);
-		mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+		if (multicast_if != 0){
+			mreq.imr_interface.s_addr = inet_addr(multicast_if);
+		}else{
+			mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+		}
 		if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
 				&mreq, sizeof(mreq)) < 0) {
 			perror("setsockopt mreq");

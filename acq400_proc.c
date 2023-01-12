@@ -66,6 +66,45 @@ static int acq400_proc_seq_show_channel_mapping(struct seq_file *s, void *v)
         return 0;
 }
 
+
+static int acq400_proc_seq_show_xxx_reg_cache(struct seq_file *s, void *v, struct RegCache* rc)
+{
+	seq_printf(s, "id:%d va:%p data:%p max_reg:%d\n", rc->id, rc->va, rc->data, rc->max_reg);
+	if (rc->max_reg){
+		int ii;
+
+		for (ii = 0; ii < REG_CACHE_MAP_REGS; ++ii){
+			seq_printf(s, "reg [%d] %08x\n", ii, rc->map[ii]);
+		}
+		for (ii = 0; ii < rc->max_reg; ++ii){
+			char delim = ((ii&7)==7 || ii+1==rc->max_reg)? '\n': ' ';
+			unsigned xx;
+
+			if (ii%8 == 0){
+				seq_printf(s, "[%04x] ", ii*sizeof(int));
+			}
+			if (dev_rc_read(rc, ii*sizeof(int), &xx)){
+				seq_printf(s, "%8s%c", "", delim);
+			}else{
+				seq_printf(s, "%08x%c", xx, delim);
+			}
+		}
+	}
+	return 0;
+}
+static int acq400_proc_seq_show_clk_reg_cache(struct seq_file *s, void *v)
+{
+	struct acq400_dev *adev = v;
+	return acq400_proc_seq_show_xxx_reg_cache(s, v, &adev->clk_reg_cache);
+}
+
+static int acq400_proc_seq_show_ctrl_reg_cache(struct seq_file *s, void *v)
+{
+	struct acq400_dev *adev = v;
+	return acq400_proc_seq_show_xxx_reg_cache(s, v, &adev->ctrl_reg_cache);
+}
+
+
 static int acq400_proc_seq_show_qstats(struct seq_file *s, void *v)
 {
         struct acq400_dev *adev = v;
@@ -136,7 +175,7 @@ static int intDevFromProcFile(struct file* file, struct seq_operations *seq_ops)
 	}
 	return 0;
 }
-static int acq400_proc_open_channel_mappingc(struct inode *inode, struct file *file)
+static int acq400_proc_open_channel_mapping(struct inode *inode, struct file *file)
 {
 	static struct seq_operations acq400_proc_seq_ops_channel_mapping = {
 	        .start = acq400_proc_seq_single_start,
@@ -146,6 +185,30 @@ static int acq400_proc_open_channel_mappingc(struct inode *inode, struct file *f
 	};
 
 	return intDevFromProcFile(file, &acq400_proc_seq_ops_channel_mapping);
+}
+
+static int acq400_proc_open_ctrl_reg_cache(struct inode *inode, struct file *file)
+{
+	static struct seq_operations seq_ops = {
+	        .start = acq400_proc_seq_single_start,
+	        .next = acq400_proc_seq_single_next,
+	        .stop = acq400_proc_seq_stop,
+	        .show = acq400_proc_seq_show_ctrl_reg_cache
+	};
+
+	return intDevFromProcFile(file, &seq_ops);
+}
+
+static int acq400_proc_open_clk_reg_cache(struct inode *inode, struct file *file)
+{
+	static struct seq_operations seq_ops = {
+	        .start = acq400_proc_seq_single_start,
+	        .next = acq400_proc_seq_single_next,
+	        .stop = acq400_proc_seq_stop,
+	        .show = acq400_proc_seq_show_clk_reg_cache
+	};
+
+	return intDevFromProcFile(file, &seq_ops);
 }
 
 static int acq400_proc_open_qstats(struct inode *inode, struct file *file)
@@ -289,9 +352,25 @@ DEF_PROC_OPSQ(STASH);
 DEF_PROC_OPSQ(GRESV);
 
 
-static struct file_operations acq400_proc_ops_channel_mappingc = {
+static struct file_operations acq400_proc_ops_channel_mapping = {
         .owner = THIS_MODULE,
-        .open = acq400_proc_open_channel_mappingc,
+        .open = acq400_proc_open_channel_mapping,
+        .read = seq_read,
+        .llseek = seq_lseek,
+        .release = seq_release
+};
+
+static struct file_operations acq400_proc_ops_clk_reg_cache = {
+        .owner = THIS_MODULE,
+        .open = acq400_proc_open_clk_reg_cache,
+        .read = seq_read,
+        .llseek = seq_lseek,
+        .release = seq_release
+};
+
+static struct file_operations acq400_proc_ops_ctrl_reg_cache = {
+        .owner = THIS_MODULE,
+        .open = acq400_proc_open_ctrl_reg_cache,
         .read = seq_read,
         .llseek = seq_lseek,
         .release = seq_release
@@ -330,7 +409,9 @@ void acq400_init_proc(struct acq400_dev* acq400_dev)
 {
 	acq400_dev->proc_entry = proc_mkdir(acq400_dev->site_no, acq400_proc_root);
 
-	proc_create("channel_mapping", 0, acq400_dev->proc_entry, &acq400_proc_ops_channel_mappingc);
+	proc_create("channel_mapping", 0, acq400_dev->proc_entry, &acq400_proc_ops_channel_mapping);
+	proc_create("clk_reg_cache", 0, acq400_dev->proc_entry, &acq400_proc_ops_clk_reg_cache);
+	proc_create("ctrl_reg_cache", 0, acq400_dev->proc_entry, &acq400_proc_ops_ctrl_reg_cache);
 	proc_create("buffers", 0, acq400_dev->proc_entry, &acq400_proc_ops_buffers);
 	proc_create("EMPTIES", 0, acq400_dev->proc_entry, &acq400_proc_ops_EMPTIES);
 	proc_create("INFLIGHT", 0, acq400_dev->proc_entry, &acq400_proc_ops_INFLIGHT);

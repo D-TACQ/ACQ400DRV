@@ -200,11 +200,13 @@ static ssize_t store_odd_channels(
 static DEVICE_ATTR(odd_channels,
 		S_IRUGO|S_IWUSR, show_odd_channels, store_odd_channels);
 
+MAKE_BITS(clk_from_sync, ADC_CTRL, MAKE_BITS_FROM_MASK, ADC_CTRL_423_CLK_FROM_SYNC);
 MAKE_BITS(d37_mode,  ACQ423_BANK, MAKE_BITS_FROM_MASK, ACQ423_BANK_D37_MODE);
 
 const struct attribute *acq423_attrs[] = {
 	&dev_attr_odd_channels.attr,
 	&dev_attr_d37_mode.attr,
+	&dev_attr_clk_from_sync.attr,
 	&dev_attr_gain1.attr,
 	&dev_attr_gain2.attr,
 	&dev_attr_gain3.attr,

@@ -1,0 +1,49 @@
+<?xml version="1.0" ?>
+<ACQ>
+  <AcqCalibration>
+    <Info>
+      <CalDate>20210416_111522 FAKE</CalDate>
+      <Carrier>acq2106_269</Carrier>
+      <Model>ACQ435ELF</Model>
+      <SerialNum>E43510221</SerialNum>
+      <Temperature>32.0</Temperature>
+      <SampleRate>40000000 kHz</SampleRate>
+      <FirmwareRev>acq400-381-20210415170500</FirmwareRev>
+      <FPGAInfo>ACQ2106_02_ff_02_ff_02_ff_9011_WR</FPGAInfo>
+	  <ELFX>ACQ435ELFX-SC32</ELFX>
+    </Info>
+    <Data AICHAN="32" SW="hi_res_mode,gain%d" code_max="8388607" code_min="-8388608" ranges="G0=1,G1=10,G2=100,G3=1000">
+      <Range name="HI_RES_5V" sw="1,0"  gain="1">
+        <Nominal eoff="0" eslo="5.96046447754e-07" max="5" min="-5" roff="0"/>
+      </Range>
+      <Range name="HI_RES_0V5" sw="1,1" gain="10">
+        <Nominal eoff="0" eslo="5.96046447754e-08" max="0.5" min="-0.5" roff="0"/>
+      </Range>
+      <Range name="HI_RES_0V05" sw="1,2" gain="100">
+        <Nominal eoff="0" eslo="5.96046447754e-09" max="0.05" min="-0.05" roff="0"/>
+      </Range>
+      <Range name="HI_RES_0V005" sw="1,3"  gain="1000">
+        <Nominal eoff="0" eslo="5.96046447754e-10" max="0.005" min="-0.005" roff="0"/>
+      </Range>
+      <Range name="HI_SPEED_5V" sw="0,0" gain="1">
+        <Nominal eoff="0" eslo="5.96046447754e-07" max="5" min="-5" roff="0"/>
+      </Range>
+      <Range name="HI_SPEED_0V5" sw="0,1"  gain="10">
+        <Nominal eoff="0" eslo="5.96046447754e-08" max="0.5" min="-0.5" roff="0"/>
+      </Range>
+      <Range name="HI_SPEED_0V05" sw="0,2" gain="100">
+        <Nominal eoff="0" eslo="5.96046447754e-09" max="0.05" min="-0.05" roff="0"/>
+      </Range>
+      <Range name="HI_SPEED_0V005" sw="0,3" gain="1000">
+        <Nominal eoff="0" eslo="5.96046447754e-10" max="0.005" min="-0.005" roff="0"/>
+      </Range>
+    </Data>
+  </AcqCalibration>
+  <ModelSpec>
+    <ChannelBlockMask>
+      <BlockWidth>8</BlockWidth>
+      <BlockSet>1111,1110,1100,1000,0100,0010,0001</BlockSet>
+      <MaxDeviceRate>1000000 S/sec</MaxDeviceRate>
+    </ChannelBlockMask>
+  </ModelSpec>
+</ACQ>

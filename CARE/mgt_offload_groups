@@ -116,6 +116,12 @@ proc set_mgt_buscomms {en} {
 	close $fp
 }
 
+proc force_dma0_only {en} {
+	set fp [open /dev/acq400.0.knobs/force_dma0_only w]
+	puts $fp $en
+	close $fp	
+}
+
 proc sigint_handler {} {
 	set_mgt_buscomms 0
 	puts "cleared buscomms"
@@ -279,11 +285,13 @@ proc get_irq { irq } {
 
 #exec /mnt/local/debugson
 #exec /mnt/local/markall
+force_dma0_only 1
 set c0 [ get_irq axi-dma0 ]
 foreach arg $::argv {
 	lassign [split $arg '-'] first last
 	upload_range $first $last
 }
+force_dma0_only 0
 set c1 [ get_irq axi-dma0 ]
 #exec /mnt/local/debugson -p
 set buffs [expr $last - $first + 1]

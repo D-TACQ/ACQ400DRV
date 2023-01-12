@@ -83,7 +83,7 @@ namespace G {
 	int verbose = 0;
 	int devnum = 0;
 	unsigned buffer_data_bytes;
-	unsigned buffer_sample_size;
+	unsigned sample_size_bytes;
 	unsigned max_samples = SAMPLE_FOREVER;
 	const char* rhost = 0;
 	const char* rport = 0;

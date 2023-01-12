@@ -1,0 +1,26 @@
+#!/bin/sh
+# Switch all Red LEDs ON
+
+if [ "x$1" = "x" ]; then
+	LEDS=/dev/gpio/LED/*R
+else
+	LEDS="$*"
+fi
+
+echo FIRST, disable the IOC
+#echo "acq4xx-epics-console, ^T ^X"
+echo /usr/local/epics/scripts/toggle_ioc
+
+#Switch all leds OFF
+
+for led in $LEDS
+do
+	echo 0 > $led
+done
+
+#Switch all leds ON
+for led in $LEDS
+do
+    echo 1 > $led
+done
+

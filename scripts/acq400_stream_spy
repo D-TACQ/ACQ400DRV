@@ -1,0 +1,2 @@
+#!/bin/sh
+exec acq400_stream --spy 1 2>/dev/null

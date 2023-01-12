@@ -44,6 +44,7 @@ What does acq400_knobs do?.
 #include <dirent.h>
 #include <errno.h>
 #include <fnmatch.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +61,9 @@ What does acq400_knobs do?.
 #include "popt.h"
 
 #include "tcp_server.h"
+#include "Env.h"
+
+#include "acq-util.h"
 
 const char* pattern = "";
 
@@ -73,7 +77,7 @@ char* port = 0;
 
 int site;
 
-int verbose = 0;
+int verbose = getenv_default("VERBOSE");
 
 #define MAXOUTBUF	16384
 
@@ -314,18 +318,43 @@ public:
 class KnobX : public Knob {
 	int runcmd(const char* cmd, char* buf, int maxbuf);
 	char attr[4];
+	const int site;
 protected:
 	virtual int _set(char* buf, int maxbuf, const char* args) {
 		if (!isValid(buf, maxbuf, args)){
 			return -1;
 		}
-		char cmd[128];
-		snprintf(cmd, 128, "%s %s", name, args);
-		return runcmd(cmd, buf, maxbuf);
+		int maxlen = strlen(name) + strlen(args) + 1;
+		if (maxlen < 128){
+			char cmd[128];
+			VPRINTF("%s SITE:%s cmd:%s\n", __FUNCTION__, getenv("SITE"), cmd);
+			snprintf(cmd, 128, "%s %s", name, args);
+			return runcmd(cmd, buf, maxbuf);
+		}else{
+			char* cmd = new char[max(4096, maxlen)];
+			snprintf(cmd, maxlen, "%s %s", name, args);
+			int rc = runcmd(cmd, buf, maxbuf);
+			delete [] cmd;
+			return rc;
+		}
 
 	}
+	static int get_site(const char* _name) {
+		char _nn[128];
+		strncpy(_nn, _name, 128);
+		char* ss = basename(dirname(_nn));
+		if (strlen(ss) > 0 && strlen(ss) <= 2){
+			for (char* pc = ss; *pc; ++pc){
+				if (!isalnum(*pc)){
+					return 0;
+				}
+			}
+			return atoi(ss);
+		}
+		return 0;
+	}
 public:
-	KnobX(const char* _name) : Knob(_name) {
+	KnobX(const char* _name) : Knob(_name), site(get_site(_name)) {
 		struct stat sb;
 		int ic = 0; attr[ic] = '\0';
 		if (stat(name, &sb) != -1){
@@ -337,6 +366,8 @@ public:
 				fprintf(stderr, "ERROR: KnobX \"%s\" is not executable\n", _name);
 			}
 			attr[ic] = '\0';
+
+			VPRINTF("%s %s\n", __FUNCTION__, name);
 		}else{
 			fprintf(stderr, "ERROR: KnobX \"%s\" does not exist\n", _name);
 		}
@@ -354,15 +385,24 @@ public:
 };
 
 int KnobX::runcmd(const char* cmd, char* buf, int maxbuf){
+	char cmd2[128];
+	if (site){
+		snprintf(cmd2, 128, "SITE=%d %s", site, cmd);
+		cmd = cmd2;
+		VPRINTF("%s cmd %s\n", __FUNCTION__, cmd);
+	}
 	Pipe knob(cmd, "r");
 	if (knob.fp == NULL) {
 		return -snprintf(buf, maxbuf,
 				"ERROR: failed to open \"%s\"\n", name);
 	}
 	char* cursor = buf;
-	for (; (cursor = fgets(cursor, maxbuf-(cursor-buf), knob.fp)) != NULL;
-		cursor += strlen(cursor)){
-		;
+	for (; (cursor = fgets(cursor, maxbuf-(cursor-buf), knob.fp)) != NULL; ){
+		int ll = strlen(cursor);
+		if (ll == 1 && *cursor == '\n'){
+			continue;
+		}
+		cursor += ll;
 	}
 
 	return cursor-buf;
@@ -439,8 +479,8 @@ public:
 		vector<string>* peer_names = new vector<string>();
 
 		if (hasPeers(knob)){
-			VPRINTF("fillPeerNames() %d\n", peer_names->size());
 			fillPeerNames(peer_names, knob);
+			VPRINTF("fillPeerNames() %s %d\n", knob.c_str(), peer_names->size());
 		}
 		return peer_names;
 	}
@@ -706,15 +746,7 @@ public:
 class Help2: public Help {
 protected:
 	virtual int query(Knob* knob, char* buf, int buflen){
-		char cmd[128];
-		char reply[128];
-		sprintf(cmd, "grep -m1 ^%s %s/acq400_help* | cut -f2 -",
-					knob->getName(), HROOT);
-		Pipe grep(cmd, "r");
-		if (fgets(reply, 128, grep.fp)){
-			snprintf(buf, buflen, "%-20s : %s\n\t%s",
-				knob->getName(), knob->getAttr(), reply);
-		}
+		snprintf(buf, buflen, "help2 is deprecated, please contact D-TACQ for a copy of your device specific command reference\n");
 		return 1;
 	}
 public:
@@ -834,9 +866,6 @@ void cli(int argc, const char** argv)
 			break;
 		}
 	}
-	if (getenv("VERBOSE")){
-		verbose = atoi(getenv("VERBOSE"));
-	}
 	VPRINTF("%s verbose set %d\n", VERID, verbose);
 
 	arg1 = poptGetArg(opt_context);
@@ -950,7 +979,27 @@ int interpreter(FILE* fin, FILE* fout)
 	return 0;
 }
 
+#define INET_ADDRSTRLEN 20
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+class ServerInfoVerbose: public ServerInfo {
+	const char* ip_addr(struct sockaddr_in& s_in){
+		static char buffer[INET_ADDRSTRLEN];
+		return inet_ntop( AF_INET, &s_in.sin_addr, buffer, sizeof( buffer ));
+	}
+	int port(struct sockaddr_in& s_in) {
+		return ntohs(s_in.sin_port);
+	}
+public:
+	virtual void onConnect(pid_t child, struct sockaddr_in& s_in) {
+		printf("onConnect %u %s %d\n", child, ip_addr(s_in), port(s_in));
+	}
+	virtual void onReap(pid_t child) {
+		printf("onReap    %u\n", child);
+	}
+};
 
 int main(int argc, const char* argv[])
 {
@@ -958,7 +1007,11 @@ int main(int argc, const char* argv[])
 	do_scan();
 	if (is_tcp_server){
 		printf("call tcp_server\n");
-		return tcp_server(host, port, interpreter);
+		ServerInfo* serverInfo = 0;
+		if (Env::getenv("ACQ400_KNOBS_VERBOSE", 0)){
+			serverInfo = new ServerInfoVerbose;
+		}
+		return tcp_server(host, port, interpreter, serverInfo);
 	}else{
 		return interpreter(stdin, stdout);
 	}

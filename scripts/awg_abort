@@ -1,0 +1,21 @@
+#!/bin/sh
+
+DO32=${1:-0}
+DIST=$(get.site 0 distributor)
+
+do32_knob=""
+
+for k in /dev/acq400.[123456].knobs/awg_abort; do
+	if [ -e $k ]; then
+		set.sys $k 1
+		set.sys $k 0
+		_do32_knob=$(dirname $k)/DO32
+		[ -e $_do32_knob ] && [ "x$do32_knob" = "x" ] && do32_knob=$_do32_knob
+	fi
+done
+
+if [ "$DO32" != "0" ] && [ "x$do32_knob" != "x" ]; then
+	set.sys /dev/acq400.0.knobs/distributor 0
+	set.sys $do32_knob $DO32
+	set.sys /dev/acq400.0.knobs/distributor $DIST
+fi

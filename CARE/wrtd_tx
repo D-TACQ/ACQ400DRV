@@ -2,25 +2,17 @@
 
 MAX_TX=${1:-1}
 ARGS=""
+SITE=${SITE:-11}
+WRSH=/dev/shm/wr${SITE}.sh
+eval $(sed -e 's/^/export /' ${WRSH})
 
 if [ "${MAX_TX#[0-9]*}" != "$MAX_TX" ]; then
     ARGS="--max_tx $MAX_TX"
     shift
+else
+	 WRTD_ID=$1   
 fi
 ARGS="$ARGS $@"
 
 
-TX_COUNT="${1:-1}"
-
-WRTD_DNS=50000000
-WRTD_NICE=-10
-WRTD_VERBOSE=0
-WRTD_TICKNS=50000
-WRTD_TX=1
-WRTD_RX=1
-
-[ -e /mnt/local/sysconfig/wr.sh ] && source /mnt/local/sysconfig/wr.sh
-
-/usr/local/bin/wrtd 2>&1  --tickns $WRTD_TICKNS --dns $WRTD_DNS -v $WRTD_VERBOSE $WRTD_ID $ARGS tx
-
-
+/usr/local/bin/wrtd 2>&1  $WRTD_OPTS  $ARGS tx

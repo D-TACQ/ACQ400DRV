@@ -1,0 +1,16 @@
+#!/bin/sh
+# fir-subrate-append : embeds FIR output in data stream.
+# known instances: data32, DEC32. 32AI adds one column
+
+SITE=${1:-1}
+
+echo +++ fir-subrate-append FSA $SITE
+
+if [ $SITE -eq 14 ]; then
+	/usr/local/CARE/acq400_dspfs.init
+	/usr/local/CARE/FSA/fir-subrate-append-dsp1.init
+	MAJOR=$(grep dsp1 /proc/devices | awk '{ print $1 }')
+	mknod /dev/acq400.14.dsp1 c $MAJOR 14
+fi
+
+echo +++ fir-subrate-append 99

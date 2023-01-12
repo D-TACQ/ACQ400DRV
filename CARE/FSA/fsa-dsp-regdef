@@ -1,0 +1,13 @@
+# fsa-dsp-regdef : FIR Subrate Append register definitions
+# NB: use spaces
+@MODULE_ID     		0x000 0xffffffff r %08x
+@MODULE_ID.MT  		0x000 0xff000000 r %02x
+@MODULE_ID.RV  		0x000 0x0000ffff r %d
+
+FSA_CSR				0x004 0xffffffff r %08x
+FSA_CSR.MOD_EN		0x004 0x00000001 rw %d
+FSA_CSR.FSA_RESET	0x004 0x00000008 rw %d
+FSA_CSR.FSA_EN		0x004 0x00000010 rw %d
+FSA_CSR.FSA_BYPASS	0x004 0x00000020 rw %d
+FSA_CSR.FIR_OP_SLC  0x004 0x00003f00 rw %x
+

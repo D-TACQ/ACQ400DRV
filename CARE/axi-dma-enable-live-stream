@@ -1,0 +1,2 @@
+echo >>/mnt/local/rc.user echo "STREAM_OPTS= >> /etc/sysconfig/acq400_streamd.conf"
+

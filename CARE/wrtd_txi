@@ -1,18 +1,22 @@
 #!/bin/sh
 # wrtd_txi message ... small integer :: send default
-export WRTD_DELTA_NS=50000000
-export WRTD_NICE=-10
-export WRTD_VERBOSE=0
-export WRTD_TICKNS=50000
 
-[ -e /mnt/local/sysconfig/wr.sh ] && source /mnt/local/sysconfig/wr.sh
+MAX_TX=${1:-1}
+ARGS=""
+SITE=${SITE:-11}
+WRSH=/dev/shm/wr${SITE}.sh
+eval $(sed -e 's/^/export /' ${WRSH})
 
-if [ "x$1" = "x" ] || [ "$1" = "0" ] || [ $1 -le 1000 ]; then
-	WRTD_ID=${WRTD_ID:-$(hostname)}
+if [ "${MAX_TX#[0-9]*}" != "$MAX_TX" ]; then
+    ARGS="--max_tx $MAX_TX"
 else
-	WRTD_ID=$1
+	 WRTD_ID=$MAX_TX 
+	 ARGS="--max_tx 1"  
 fi
+shift
+ARGS="$ARGS $@"
 
-/usr/local/bin/wrtd 2>&1 txi $WRTD_ID
+
+/usr/local/bin/wrtd 2>&1  $WRTD_OPTS  $ARGS txi $WRTD_ID
 
 

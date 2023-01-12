@@ -45,10 +45,10 @@ D1	[value] numeric=-32767,32767 awg DC offset AO01
 D2	[value] numeric=-32767,32767 awg DC offset AO02
 D3	[value] numeric=-32767,32767 awg DC offset AO03
 D4	[value]	numeric=-32767,32767 awg DC offset AO04
-G1	[value] numeric=0,32767 awg GAIN AO01
-G2	[value] numeric=0,32767 awg GAIN AO02
-G3	[value] numeric=0,32767 awg GAIN AO03
-G4	[value] numeric=0,32767 awg GAIN AO04
+G1	[value] numeric=0,32768 awg GAIN AO01
+G2	[value] numeric=0,32768 awg GAIN AO02
+G3	[value] numeric=0,32768 awg GAIN AO03
+G4	[value] numeric=0,32768 awg GAIN AO04
 dac_range_01	[0|1] range x1|x2 AO01
 dac_range_02	[0|1] range x1|x2 AO02
 dac_range_03	[0|1] range x1|x2 AO03

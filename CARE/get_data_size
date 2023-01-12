@@ -1,0 +1,12 @@
+#!/bin/sh
+
+SITE=${SITE:-0}
+
+case $SITE in
+0)
+    FN=/dev/acq400/data/raw/0;;
+*)
+    FN=/dev/acq400/data/$SITE/01;;
+esac
+
+stat -c%s $FN

@@ -1,0 +1,11 @@
+# ddc-dsp-regdef : Digital Down Converter reg defs
+# NB: use spaces
+@MODULE_ID     		0x000 0xffffffff r %08x
+@MODULE_ID.MT  		0x000 0xff000000 r %02x
+@MODULE_ID.RV  		0x000 0x0000ffff r %d
+
+DDC_CSR				0x004 0xffffffff r %08x
+DDC_CSR.MOD_EN		0x004 0x00000001 rw %d
+DDC_CSR.DDC_RESET	0x004 0x00000008 rw %d
+DDC_CSR.DDC_EN		0x004 0x00000010 rw %d
+

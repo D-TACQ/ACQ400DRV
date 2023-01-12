@@ -16,19 +16,30 @@ if [ -e $DCRST ]; then
 	set.sys $DCRST 0
 fi
 
-mgt_load load 0 ${1:-99}
+nb=${1:-99}
+nb=$(($nb+2))
+[ $nb -gt 2048 ] && nb=2048
+
+mgt_load load 0 $nb
 streamtonowhered start
 
 while [ 1 ]; do
 	STATUS=$(mgt_load)
-	echo $STATUS $(get.site 1 SIG:SAMPLE_COUNT:COUNT)
+	STATEMON="$(statemon nowait)"
+		read CSTATE PRE POST SCOUNT XX <<EOF
+$STATEMON	
+EOF
+	echo $STATUS $SCOUNT
+		
 	if [ "$STATUS" = "IDLE" ]; then
 		break
-	else
-		sleep 1
+	elif [ $SCOUNT -gt 0 ] && [ "$CSTATE" = "0" ]; then
+		break	
 	fi
+	sleep 0.2
 done
 
 streamtonowhered stop
+
 
 

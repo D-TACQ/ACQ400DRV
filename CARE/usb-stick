@@ -1,0 +1,23 @@
+#!/bin/sh
+
+case $1 in
+mount|start)
+	[ -e /usbstick ] || mkdir /usbstick
+	[ -e /dev/sda1 ] || echo 1 > /sys/bus/usb/devices/1-1.1/bConfigurationValue
+	timeout=10
+	while [ ! -e /dev/sda1 ]; do
+		sleep 1
+		timeout=$(($timeout-1))
+		if [ $timeout -le 0 ]; then
+			echo "ERROR: timed out waiting for USB disk"
+			exit 1
+		fi	
+	done
+	mount /dev/sda1 /usbstick;;
+umount|stop)
+	sync;sync;umount /usbstick;;
+*)
+	df /usbstick;;
+esac
+
+

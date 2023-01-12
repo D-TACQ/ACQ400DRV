@@ -79,7 +79,7 @@
 #include <sched.h>
 
 //#define BUFFER_IDENT 6
-#define VERID	"B1038"
+#define VERID	"B1043"
 
 #define NCHAN	4
 
@@ -90,21 +90,14 @@
 
 #include "local.h"		/* chomp() hopefully, not a lot of other garbage */
 #include "knobs.h"
+#include "acq-util.h"
+#include "ES.h"
 
 #define _PFN	__PRETTY_FUNCTION__
 
 #define STDOUT	1
 
 
-
-int getenv_default(const char* key, int def = 0){
-	const char* vs = getenv(key);
-	if (vs){
-		return atoi(vs);
-	}else{
-		return def;
-	}
-}
 
 using namespace std;
 int timespec_subtract (timespec *result, timespec *x, timespec *y) {
@@ -171,7 +164,7 @@ namespace G {
 	FILE* state_fp;
 	char* pre_demux_script;
 	int show_first_sample;
-	int es_diagnostic;
+	int es_diagnostic = getenv_default("ES_DIAGNOSTIC");
 	int report_es;
 	int nsites;
 	int the_sites[6];
@@ -187,15 +180,16 @@ namespace G {
 	int is_spy;				// spy task runs independently of main capture
 	int show_events;
 	bool double_up;				// channel data appears 2 in a row (ACQ480/4)
-	unsigned dualaxi;			// 0: none, 1=1 channel, 2= 2channels
+	unsigned naxi;				// 0: none, 1=1 channel, 2= 2channels
 	int stream_sob_sig;            		// insert start of buffer signature
 	unsigned find_event_mask = 0x1;		// 1: EV0, 2:EV1, 3:EV0|EV1
 	char* multi_event;			// multi-event definintion [pre,]post
+	int live_instance = 1;			// clear if live_instance NOT required
 };
 
 
 
-int verbose;
+int verbose = getenv_default("VERBOSE");
 unsigned nb_cat =1;	/* number of buffers to concatenate */
 
 
@@ -210,85 +204,7 @@ unsigned b2s(unsigned bytes) {
 	return bytes/sample_size();
 }
 
-bool ISACQ480() {
-	char mval[80];
-	if (getKnob(0, "/etc/acq400/1/MODEL", mval) >= 0){
-		return strstr(mval, "ACQ480") != NULL ||
-				strstr(mval, "ACQ482") != NULL;
-	}
-	return false;
-}
-class AbstractES {
-public:
-	virtual bool isES(unsigned *cursor) = 0;
-	static AbstractES* evX_instance();
-	static AbstractES* ev0_instance();
-	static AbstractES* ev1_instance();
-};
 
-template <int MASK, unsigned PAT, unsigned MATCHES>
-class ES : public AbstractES {
-	bool is_es_word(unsigned word) {
-		return (word&MASK) == PAT;
-	}
-public:
-	bool isES(unsigned *cursor){
-		bool is_es = false;
-		unsigned matches = MATCHES;
-		for (int ic = 0; matches != 0; ++ic, matches >>= 1){
-			if ((matches&0x1) != 0){
-				if (is_es_word(cursor[ic])){
-					is_es = true;
-				}else{
-					return false;
-				}
-			}
-		}
-		return is_es;
-	}
-};
-
-#define SOB_MAGIC	0xaa55fbff
-#define EVX_MAGIC       0xaa55f150
-#define EVX_MASK	0xfffffff0
-#define EV0_MAGIC       0xaa55f151
-#define EV1_MAGIC       0xaa55f152
-#define EV0_MASK	0xffffffff
-#define EV1_MASK	0xffffffff
-
-AbstractES* AbstractES::evX_instance() {
-	static AbstractES* _instance;
-	if (!_instance){
-		if (ISACQ480()){
-			_instance = new ES<EVX_MASK, EVX_MAGIC, 0x0a>;
-		}else{
-			_instance = new ES<EVX_MASK, EVX_MAGIC, 0x0f>;
-		}
-	}
-	return _instance;
-}
-AbstractES* AbstractES::ev0_instance() {
-	static AbstractES* _instance;
-	if (!_instance){
-		if (ISACQ480()){
-			_instance = new ES<EV0_MASK, EV0_MAGIC, 0x0a>;
-		}else{
-			_instance = new ES<EV0_MASK, EV0_MAGIC, 0x0f>;
-		}
-	}
-	return _instance;
-}
-AbstractES* AbstractES::ev1_instance() {
-	static AbstractES* _instance;
-	if (!_instance){
-		if (ISACQ480()){
-			_instance = new ES<EV1_MASK, EV1_MAGIC, 0x0a>;
-		}else{
-			_instance = new ES<EV1_MASK, EV1_MAGIC, 0x0f>;
-		}
-	}
-	return _instance;
-}
 
 static int createOutfile(const char* fname) {
 	int fd = open(fname,
@@ -317,20 +233,14 @@ class DemuxBufferCommon: public Buffer {
 
 public:
 	DemuxBufferCommon(Buffer* cpy): Buffer(cpy) {}
-
-	static int demuxBufferVerbose() {
-		char *vfs = getenv("DemuxBufferVerbose");
-		if (vfs){
-			 return atoi(vfs);
-		}else{
-			return 0;
-		}
-	};
-
+	static int demux_size;
 	static int verbose;
+	static int show_es;
 };
 
-int DemuxBufferCommon::verbose = DemuxBufferCommon::demuxBufferVerbose();
+int DemuxBufferCommon::demux_size = ::getenv_default("DemuxBufferSize");
+int DemuxBufferCommon::verbose = ::getenv_default("DemuxBufferVerbose");
+int DemuxBufferCommon::show_es = ::getenv_default("DemuxBufferShowES");
 
 template <class T, DemuxBufferType N>
 class DemuxBuffer: public DemuxBufferCommon {
@@ -451,10 +361,11 @@ private:
 public:
 
 	virtual int writeBuffer(int out_fd, int b_opts) {
+		int demux_len = demux_size? demux_size: buffer_len;
 		if ((b_opts&BO_START) != 0){
 			start();
 		}
-		demux((b_opts&BO_START),0, buffer_len);
+		demux((b_opts&BO_START),0, demux_len);
 		if ((b_opts&BO_FINISH) != 0){
 			for (unsigned ic = 0; ic < nchan; ++ic){
 				if (writeChan(ic)){
@@ -464,7 +375,7 @@ public:
 			}
 			finish();
 		}
-		return buffer_len;
+		return demux_len;
 	}
 	virtual int writeBuffer(int out_fd, int b_opts, int start_off, int len)
 	{
@@ -572,10 +483,10 @@ bool DemuxBuffer<T, N>::demux(bool start, int start_off, int len) {
 	/* run to the end of buffer. nsam could be rounded down,
 	 * so do not use it.
 	 */
-	if (verbose) fprintf(stderr, "can skip ES");
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
 
 	for (isam = startoff/nchan; true; ++isam, ichan = 0){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -634,10 +545,10 @@ bool DemuxBuffer<short, DB_REGULAR>::demux(bool start, int start_off, int len) {
 	/* run to the end of buffer. nsam could be rounded down,
 	 * so do not use it.
 	 */
-	if (verbose) fprintf(stderr, "can skip ES");
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
 
 	for (isam = startoff/nchan; true; ++isam, ichan = 0){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -690,10 +601,10 @@ bool DemuxBuffer<short, DB_DOUBLE>::demux(bool start, int start_off, int len) {
 	/* run to the end of buffer. nsam could be rounded down,
 	 * so do not use it.
 	 */
-	if (verbose) fprintf(stderr, "can skip ES");
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
 
 	for (isam = startoff/nchan; true; ++isam, ichan = 0){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -762,10 +673,11 @@ bool DemuxBuffer<short, DB_2D_REGULAR>::demux(bool start, int start_off, int len
 	/* run to the end of buffer. nsam could be rounded down,
 	 * so do not use it.
 	 */
-	if (verbose) fprintf(stderr, "%s can skip ES\n", _PFN);
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
+
 
 	for (unsigned isam = 0; true; ++isam){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -825,10 +737,10 @@ bool DemuxBuffer<short, DB_2D_DOUBLE>::demux(bool start, int start_off, int len)
 
 	unsigned ichan = 0;
 	/* run to the end of buffer. nsam could be rounded down so do not use it.  */
-	if (verbose) fprintf(stderr, "%s can skip ES\n", _PFN);
+	if (verbose) fprintf(stderr, "%s will %s skip ES\n", _PFN, show_es? "NOT":"");
 
 	for (isam = startoff/nchan; true; ++isam, ichan = 0){
-		while (evX.isES(reinterpret_cast<unsigned*>(src))){
+		if (! show_es) while (evX.isES(reinterpret_cast<unsigned*>(src))){
 			if (verbose) fprintf(stderr, "skip ES\n");
 			src += nchan;
 		}
@@ -936,6 +848,16 @@ class OversamplingMapBufferSingleSample: public _OversamplingMapBufferSingleSamp
 	const int asr1;
 	const int nsam;
 
+	bool checkit_ok(T* src, int isam) {
+		T checkit = src[isam*G::nchan+0] >> asr1;
+		for (unsigned ic = 1; ic < 4; ++ic){
+			T checkit2 = src[isam*G::nchan+ic] >> asr1;
+			if (checkit2 != checkit){
+				return true;
+			}
+		}
+		return false;
+	}
 public:
 	OversamplingMapBufferSingleSample(Buffer* cpy,
 			int _oversampling, int _asr) :
@@ -952,7 +874,6 @@ public:
 		T* src = reinterpret_cast<T*>(pdata);
 		int stride = nsam/over;
 
-
 		if (G::show_first_sample){
 			memset(sums, 0, G::nchan*sizeof(int));
 
@@ -966,19 +887,14 @@ public:
 		memset(sums, 0, G::nchan*sizeof(int));
 
 		for (int isam = 0; isam < nsam; isam += stride){
-			/* runs of samples are bad - could be ES, could be strange 0x0000 .. either way, REJECT */
-			T checkit = src[isam*G::nchan+0] >> asr1;
-			bool checkit_ok = false;
-			for (unsigned ic = 1; ic < 4; ++ic){
-				T checkit2 = src[isam*G::nchan+ic] >> asr1;
-				if (checkit2 != checkit){
-					checkit_ok = true;
-					break;
+			if (checkiten){
+				/* runs of samples are bad - could be ES, could be strange 0x0000 .. either way, REJECT */
+				if (!checkit_ok(src, isam) && !checkit_ok(src, ++isam)){
+					if (verbose){
+						fprintf(stderr, "checkit_ok reject\n");
+					}
+					return 0;
 				}
-			}
-			if (!checkit_ok){
-				fprintf(stderr, "checkit_ok reject\n");
-				return 0;
 			}
 			for (unsigned ic = 0; ic < G::nchan; ++ic){
 				sums[ic] += src[isam*G::nchan+ic] >> asr1;
@@ -1231,7 +1147,7 @@ class DemuxBufferCloner: public BufferCloner {
 	{
 		switch(G::wordsize){
 		case sizeof(short):
-			if (G::dualaxi==2){
+			if (G::naxi==2){
 				if(G::double_up){
 					if (verbose) fprintf(stderr, "createDemuxBuffer DB_2D_DOUBLE\n");
 					return new DemuxBuffer<short, DB_2D_DOUBLE>(cpy, G::mask);
@@ -1273,23 +1189,47 @@ enum STATE {
 #define NSinMS	1000000
 #define MSinS	1000
 
-long diffmsec(struct timespec* t0, struct timespec *t1){
-	long msec;
 
-	if (t1->tv_nsec > t0->tv_nsec){
-		msec = (t1->tv_nsec - t0->tv_nsec)/NSinMS;
-		msec += (t1->tv_sec - t0->tv_sec)*MSinS;
-	}else{
-		msec  = (NSinMS + t1->tv_nsec - t0->tv_nsec)/NSinMS;
-		msec += (t1->tv_sec - t0->tv_sec - 1)*MSinS;
-	}
-	return msec;
+static inline void timespec_diff(struct timespec *a, struct timespec *b,
+    struct timespec *result) {
+    result->tv_sec  = a->tv_sec  - b->tv_sec;
+    result->tv_nsec = a->tv_nsec - b->tv_nsec;
+    if (result->tv_nsec < 0) {
+        --result->tv_sec;
+        result->tv_nsec += 1000000000L;
+    }
+}
+static long diffmsec(struct timespec* t0, struct timespec* t1){
+	struct timespec result;
+	timespec_diff(t1, t0, &result);
+
+	return result.tv_sec * 1000 + result.tv_nsec/1000000;
 }
 
 #define MIN_REPORT_INTERVAL_MS	200
 
 
 #define 	PRINT_WHEN_YOU_CAN	false
+
+class Timer {
+	const char* id;
+	struct timespec t0;
+
+public:
+	Timer(const char* _id): id(_id) {
+		clock_gettime(CLOCK_REALTIME_COARSE, &t0);
+	}
+	long diffmsec() {
+		struct timespec time_now;
+		clock_gettime(CLOCK_REALTIME_COARSE, &time_now);
+		return ::diffmsec(&t0, &time_now);
+	}
+	long report(int seq = 0) {
+		long rc = diffmsec();
+		fprintf(stderr, "Timer::report(%d) %s %ld msec\n", seq, id, rc);
+		return rc;
+	}
+};
 
 struct Progress {
 	enum STATE state;
@@ -1299,7 +1239,6 @@ struct Progress {
 	struct timespec last_time;
 	static long min_report_interval;
 	const char* name;
-
 	char previous[80];
 
 	FILE* status_fp;
@@ -1320,12 +1259,9 @@ struct Progress {
 		memset(this, 0, sizeof(Progress));
 		name = _name;
 		status_fp = stderr;
-		if (getenv("MIN_REPORT_INTERVAL_MS")){
-			min_report_interval = atoi(getenv("MIN_REPORT_INTERVAL_MS"));
-			if (verbose){
-				fprintf(status_fp, "min_report_interval set %ld\n",
-						min_report_interval);
-			}
+
+		if (verbose){
+			fprintf(status_fp, "min_report_interval set %ld\n", min_report_interval);
 		}
 		clock_gettime(CLOCK_REALTIME_COARSE, &last_time);
 
@@ -1337,7 +1273,6 @@ struct Progress {
 
 	}
 	virtual void print(bool ignore_ratelimit = true, int extra = 0) {
-
 	}
 	virtual void setState(enum STATE _state){
 
@@ -1349,10 +1284,7 @@ struct Progress {
 Progress Progress::null_progress(stderr);
 
 
-struct ProgressImpl: public Progress {
-
-	ProgressImpl(FILE *_fp) : Progress(_fp, "ProgressImpl") {
-	}
+class ProgressImpl: public Progress {
 	virtual void printState(char current[]) {
 		if (G::state_fp){
 			rewind(G::state_fp);
@@ -1360,9 +1292,13 @@ struct ProgressImpl: public Progress {
 			fflush(G::state_fp);
 		}
 	}
+public:
+	ProgressImpl(FILE *_fp) : Progress(_fp, "ProgressImpl") {
+	}
+
 	virtual void print(bool ignore_ratelimit = true, int extra = 0) {
-		char current[80];
-		snprintf(current, 80, "%d %d %d %llu %d\n", state, pre, post, elapsed, extra);
+		char current[128];
+		snprintf(current, 128, "STX %d %d %d %llu %d\n", state, pre, post, elapsed, extra);
 
 		if ((ignore_ratelimit || !isRateLimited()) && strcmp(current, previous)){
 			fputs(current, status_fp);
@@ -1377,7 +1313,7 @@ struct ProgressImpl: public Progress {
 	}
 };
 
-const char* stream_fmt = "%s.c";
+
 
 int shuffle_test;
 int fill_ramp_incr;
@@ -1442,7 +1378,7 @@ struct poptOption opt_table[] = {
 	{ "shuffle_test", 0, POPT_ARG_INT, &shuffle_test, 0,
 			"time buffer shuffle"
 	},
-	{ "fill_ramp", 0, POPT_ARG_INT, &fill_ramp_incr, 'R', "fill with test data"},
+	{ "fill_ramp", 0, POPT_ARG_INT, &fill_ramp_incr, 'R', "fill with test data, negitive means fill and drop out"},
 	{ "pre-demux-script", 0, POPT_ARG_STRING, &G::pre_demux_script, 0,
 			"breakout before demux"
 	},
@@ -1465,6 +1401,10 @@ struct poptOption opt_table[] = {
         { "stream-sob-sig", 0, POPT_ARG_INT, &G::stream_sob_sig, 0,
                        "insert Start of Buffer signature in stream"
         },
+	{
+	  "live-instance", 0, POPT_ARG_INT, &G::live_instance, 0,
+	                "default:1 set 0 to cancel the live instance where it makes no sense (eg short, high intensity shot)"
+	},
 	{ "subset", 0, POPT_ARG_STRING, &G::subset, 0, "reduce output channel count" },
 	{ "sum",    0, POPT_ARG_STRING, &G::sum, 0, "sum N channels and output on another stream" },
 	POPT_AUTOHELP
@@ -1472,24 +1412,7 @@ struct poptOption opt_table[] = {
 };
 
 
-char *getRoot(int devnum)
-{
-	char *_root = new char [128];
-	struct stat sb;
 
-	sprintf(_root, "/dev/acq420.%d", devnum);
-	if (stat(_root, &sb) == 0){
-		return _root;
-	}
-
-	sprintf(_root, "/dev/acq400.%d", devnum);
-	if (stat(_root, &sb) == 0){
-		return _root;
-	}
-
-	fprintf(stderr, "ERROR: /dev/acq4x0.%d NOT FOUND\n", devnum);
-	exit(1);
-}
 const char* root;
 
 void acq400_stream_getstate(void);
@@ -1528,7 +1451,7 @@ static void default_wait_on_sigterm(int signo)
 
 	while ((wpid = wait(&status)) > 0){
 		if (verbose){
-			fprintf(stderr, "%s %d reaps %d\n", _PFN, getpid(), wpid);
+			fprintf(stderr, "%s %d reaps %d status:%d\n", _PFN, getpid(), wpid, status);
 		}
 	}
 	exit(0);
@@ -1540,6 +1463,7 @@ static void wait_and_cleanup_sighandler(int signo)
 static void wait_and_cleanup(pid_t child)
 {
 	sigset_t  emptyset, blockset;
+	int error_rc = 0;
 
 	if (verbose) fprintf(stderr, "%s 01 pid %d\n", _PFN, getpid());
 
@@ -1569,29 +1493,45 @@ static void wait_and_cleanup(pid_t child)
 	FD_ZERO(&readfds);
 	FD_SET(0, &readfds);
 
+	fprintf(stderr, "%s 01\n", _PFN);
+
 	for(bool finished = false; !finished;){
 		int ready = pselect(1, &readfds, NULL, &exceptfds, NULL, &emptyset);
 
-		if (ready == -1 && errno != EINTR){
-			if (it_was_sig_term){
-				perror("pselect");
+		if (ready == -1){
+			if (errno == EINTR){
+				if (it_was_sig_term){
+					fprintf(stderr, "%s sig_term detected, quit\n", _PFN);
+					finished = true;
+				}else{
+					fprintf(stderr, "%s pselect return EINTR but no signal detected, continue\n", _PFN);
+				}
+			}else{
+				fprintf(stderr, "ERROR %s pselect %d\n", _PFN, errno);
 				finished = true;
 			}
 		}else if (FD_ISSET(0, &exceptfds)){
-			if (verbose) fprintf(stderr, "exception on stdin\n");
-			finished = true;
+			if (verbose) fprintf(stderr, "%s exception on stdin why? feof:%d ferror:%d\n", _PFN, feof(stdin), ferror(stdin));
+			if (feof(stdin) || ferror(stdin)){
+				clearerr(stdin);
+				finished = true;
+				error_rc = 1;
+			}else{
+				continue;
+			}
 		}else if (FD_ISSET(0, &readfds)){
 			if (feof(stdin)){
-				if (verbose) fprintf(stderr,"EOF\n");
+				if (verbose) fprintf(stderr,"%s EOF\n", _PFN);
 				finished = true;
 			}else if (ferror(stdin)){
-				if (verbose) fprintf(stderr, "ERROR\n");
+				if (verbose) fprintf(stderr, "%s ERROR\n", _PFN);
 				finished = true;
+				error_rc = 2;
 			}else{
 				char stuff[80];
 				fgets(stuff, 80, stdin);
 
-				if (verbose) fprintf(stderr, "data on stdin %s\n", stuff);
+				if (verbose) fprintf(stderr, "%s data on stdin %s\n", _PFN, stuff);
 				if (strncmp(stuff, "quit", 4) == 0){
 					finished = true;
 				}else{
@@ -1599,25 +1539,28 @@ static void wait_and_cleanup(pid_t child)
 				}
 			}
 		}else{
-			if (verbose) fprintf(stderr, "out of pselect, not sure why\n");
+			if (verbose) fprintf(stderr, "%s out of pselect, not sure why\n", _PFN);
 		}
 	}
+
+	fprintf(stderr, "%s 50\n", _PFN);
 	sigaddset(&blockset, SIGTERM);
 	sigdelset(&blockset, SIGCHLD);
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
-	fprintf(stderr, "%s %d exterminate\n", _PFN, getpid());
-    Progress::instance().setState(ST_CLEANUP);
-    kill(0, SIGTERM);
+	verbose && fprintf(stderr, "%s %d exterminate\n", _PFN, getpid());
+	Progress::instance().setState(ST_CLEANUP);
+	kill(0, SIGTERM);
 
 	int nwait = 0;
 	pid_t wpid;
 	int status = 0;
 	while ((wpid = waitpid(-getpgrp(), &status, 0)) > 0){
 		++nwait;
-		fprintf(stderr, "%d waited for %d\n", nwait, wpid);
+		verbose && fprintf(stderr, "%d waited for %d\n", nwait, wpid);
 	}
 
-    exit(0);
+	fprintf(stderr, "%s 99\n", _PFN);
+	exit(error_rc);
 }
 
 static void hold_open(int site)
@@ -1772,7 +1715,6 @@ void do_fill_ramp()
 	while(cursor < ba99){
 		*cursor++ = xx += fill_ramp_incr;
 	}
-	exit(0);
 }
 
 
@@ -1784,8 +1726,7 @@ void init_globs(void)
 	getKnob(0, "/etc/acq400/0/data32", &data32);
 	G::wordsize = data32? sizeof(int): sizeof(short);
 
-	if(getenv("ES_DIAGNOSTIC")){
-		G::es_diagnostic = atoi(getenv("ES_DIAGNOSTIC"));
+	if (G::es_diagnostic){
 		fprintf(stderr, "set ES_DIAGNOSTIC:%d\n", G::es_diagnostic);
 	}
 }
@@ -1834,7 +1775,7 @@ void init(int argc, const char** argv) {
 		getKnob(G::devnum, "nbuffers",  &Buffer::nbuffers);
 	}
 	getKnob(G::devnum, "bufferlen", &Buffer::bufferlen);
-	getKnob(G::devnum, "has_axi_dma", &G::dualaxi);
+	getKnob(G::devnum, "has_axi_dma", &G::naxi);
 
 	while ( (rc = poptGetNextOpt( opt_context )) >= 0 ){
 		switch(rc){
@@ -1861,7 +1802,10 @@ void init(int argc, const char** argv) {
 			G::stream_mode = SM_TRANSIENT;
 			break;
 		case 'S':
-			G::state_fp = fopen(G::state_file, "w");
+			G::state_fp = fopen(G::state_file, "r+");
+			if (G::state_fp == 0){
+				G::state_fp = fopen(G::state_file, "w");
+			}
 			if (G::state_fp == 0){
 				perror(G::state_file);
 				exit(1);
@@ -1913,7 +1857,7 @@ void init(int argc, const char** argv) {
 	root = getRoot(G::devnum);
 
 	if (ISACQ480()){
-		if (G::nchan == 4 || (G::nchan==8 && G::dualaxi==2)){
+		if (G::nchan == 4 || (G::nchan==8 && G::naxi==2)){
 			G::double_up = true;
 			if (verbose) fprintf(stderr, "G::double_up set true\n");
 		}
@@ -1927,7 +1871,13 @@ void init(int argc, const char** argv) {
 		do_shuffle_test(shuffle_test);
 	}
 	if (fill_ramp){
+		bool quit_on_fill = fill_ramp_incr < 0;
+		fill_ramp_incr = abs(fill_ramp_incr);
+
 		do_fill_ramp();
+		if (quit_on_fill){
+			exit(0);
+		}
 	}
 
 }
@@ -1937,6 +1887,8 @@ class StreamHead {
 	static bool has_pre_post_live_demux(void);
 	static StreamHead* createLiveDataInstance();
 protected:
+	static const char* stream_fmt;
+
 	int fc;
 	int fout;
 	static int multi_event;			/* file handle to multi-event comms */
@@ -1958,7 +1910,7 @@ protected:
 			assert(ib <= Buffer::nbuffers);
 			return ib;
 		}else{
-			return rc;
+			return rc<0 ? rc: -1;
 		}
 	}
 	virtual char* findEvent(Buffer* the_buffer) {
@@ -1967,6 +1919,7 @@ protected:
 	}
 	static void multiEventServer(int fd_in);
 	static void createMultiEventInstance(const char* def);
+
 
 public:
 	virtual void stream() {
@@ -1985,14 +1938,15 @@ public:
 };
 
 int StreamHead::multi_event;
+const char* StreamHead::stream_fmt = "%s.c";
 
-#define TRG_POLL_MS 10
+#define TRG_POLL_MS 100
 
 class StreamHeadImpl: public StreamHead {
 
 protected:
 	Progress& actual;
-	const int samples_buffer;
+	int samples_buffer;
 	int f_ev;
 	int nfds;
 	bool event_received;
@@ -2027,14 +1981,14 @@ protected:
         }
 
 	void close() {
+		if (fc){
+			::close(fc);
+			fc = 0;
+		}
 		kill_the_holders();
 		if (G::aggsem){
 		       	sem_close(G::aggsem);
 		       	sem_unlink(G::aggsem_name);
-		}
-		if (fc){
-			::close(fc);
-			fc = 0;
 		}
 	}
 	virtual ~StreamHeadImpl() {
@@ -2063,6 +2017,7 @@ protected:
 	void soft_trigger_control() {
 		int repeat = 1;
 		do_soft_trigger();
+		usleep(TRG_POLL_MS*1000);
 		while (!is_triggered()){
 			if (repeat%100 == 0){
 				fprintf(stderr, "WARNING: failed to trigger in %d ms\n", repeat*TRG_POLL_MS);
@@ -2087,8 +2042,7 @@ protected:
 		pid_t child = fork();
 		if (child == 0){
 			ident("acq400_stream_st");
-			nice(7);
-			sched_yield();
+			goRealTime(10);
 			soft_trigger_control();
 			exit(0);
 		}
@@ -2266,7 +2220,7 @@ protected:
 		fprintf(fp, "%u,%u\n", FE_HISTO[FE_FOUND], FE_HISTO[FE_NOTFOUND]);
 		fclose(fp);
 
-		if (verbose) fprintf(stderr, "findEvent=%d,%d,%d\n", festa, ib, buffers_searched);
+		fprintf(stderr, "findEvent=%d,%d,%d\n", festa, ib, buffers_searched);
 	}
 	virtual char* findEvent(Buffer* the_buffer) {
 		unsigned stride = G::nchan*G::wordsize/sizeof(unsigned);
@@ -2299,6 +2253,46 @@ protected:
 
 		return 0;
 	}
+	bool findEventSearchAll(int *ibuf, char** espp) {
+		unsigned stride = G::nchan*G::wordsize/sizeof(unsigned);
+		unsigned *base = reinterpret_cast<unsigned*>(MapBuffer::get_ba_lo());
+		unsigned *top  = reinterpret_cast<unsigned*>(MapBuffer::get_ba_hi());
+		int length_all  = top - base;
+		int len32 = Buffer::the_buffers[2]->getLen()/sizeof(unsigned);
+		int sample_offset = 0;
+		unsigned *cursor = base;
+
+		buffers_searched = 0;
+
+		Buffer* the_buffer = MapBuffer::getBuffer(cursor);
+		reportFindEvent(the_buffer, FE_SEARCH);
+		if (verbose) fprintf(stderr, "%s 01 base:%p lenw %d len32 %d length_all %d stride %d\n", _PFN,
+				base, the_buffer->getLen()/G::wordsize, len32, length_all, stride);
+
+
+
+		for (; cursor - base < length_all; cursor += stride, sample_offset += 1){
+			if (verbose > 2) fprintf(stderr, "%s cursor:%p\n", _PFN, cursor);
+			if (evA.isES(cursor)){
+				the_buffer = MapBuffer::getBuffer(cursor);
+				*ibuf = the_buffer->ib();
+				*espp = reinterpret_cast<char*>(cursor);
+				reportFindEvent(the_buffer, FE_FOUND);
+				if (verbose){
+					fprintf(stderr, "%s FOUND: %d offset %d %08x %08x %08x %08x\n",
+						_PFN,
+						the_buffer->ib(), (cursor-base)*sizeof(int),
+						cursor[0], cursor[1], cursor[2], cursor[3]);
+				}
+				esDiagnostic(the_buffer, cursor);
+				return reinterpret_cast<char*>(cursor);
+			}
+		}
+		reportFindEvent(the_buffer = MapBuffer::getBuffer(cursor), FE_NOTFOUND);
+		if (verbose) fprintf(stderr, "%s 99 NOT FOUND sample_offset %d\n", _PFN, sample_offset);
+
+		return false;
+	}
 	virtual int getBufferId() {
 		int ib = StreamHead::getBufferId();
 		if (buffer_id_verbose) fprintf(stderr, "StreamHeadImpl::getBufferId() %d %s\n", ib, G::stream_sob_sig? "SOB":"");
@@ -2306,6 +2300,9 @@ protected:
 			insertStartOfBufferSignature(ib);
 		}
 		return ib;
+	}
+	static void set_axi_oneshot(int value){
+		setKnob(0, "/sys/module/acq420fmc/parameters/AXI_ONESHOT", value);
 	}
 public:
 	StreamHeadImpl(Progress& progress) : StreamHead(1234),
@@ -2342,6 +2339,15 @@ public:
 		fc = open_feed();
 		stream();
 	}
+	virtual void onStreamStart() {
+
+	}
+	virtual void onStream(int ib){
+		Buffer::the_buffers[ib]->writeBuffer(1, Buffer::BO_NONE);
+	}
+	virtual void onStreamEnd() {
+
+	}
 	virtual void stream() {
 		int ib;
 		if (verbose) fprintf(stderr, "StreamHeadImpl::stream() :\n");
@@ -2351,9 +2357,10 @@ public:
 		if (G::soft_trigger){
 			schedule_soft_trigger();
 		}
+		onStreamStart();
 		while((ib = getBufferId()) >= 0){
 			if (verbose) fprintf(stderr, "StreamHeadImpl::stream() : %d\n", ib);
-			Buffer::the_buffers[ib]->writeBuffer(1, Buffer::BO_NONE);
+			onStream(ib);
 			switch(actual.state){
 			case ST_ARM:
 				setState(ST_RUN_PRE);
@@ -2361,9 +2368,12 @@ public:
 				;
 			}
 			actual.elapsed += samples_buffer;
+			actual.print(PRINT_WHEN_YOU_CAN);
 		}
 		setState(ST_CLEANUP);
+		onStreamEnd();
 	}
+	friend class StreamHead;
 };
 
 
@@ -2376,26 +2386,10 @@ protected:
 		fflush(stdout);
 	}
 public:
-	virtual void stream() {
-		int ib;
-		setState(ST_ARM);
-		_println("000 ST_ARM");
-		if (G::soft_trigger){
-			schedule_soft_trigger();
-		}
-		while((ib = getBufferId()) >= 0){
-			switch(actual.state){
-			case ST_ARM:
-				setState(ST_RUN_PRE);
-			default:
-				;
-			}
-			_println("%3d\n", ib);
-			actual.elapsed += samples_buffer;
-		}
-		_println("999 ST_CLEANUP");
-		setState(ST_CLEANUP);
+	virtual void onStream(int ib) {
+		_println("%3d\n", ib);
 	}
+
 	NullStreamHead(Progress& progress) :
 		StreamHeadImpl(progress)
 	{}
@@ -2458,14 +2452,21 @@ void StreamHeadHB0::stream() {
 	char buf[80];
 	int rc;
 	int nb = 0;
+	bool quit_at_end_loop = false;
 
 	while((rc = read(fc, buf, 80)) > 0){
 		buf[rc] = '\0';
 
 		unsigned ib[2];
 		int nscan = sscanf(buf, "%d %d", ib, ib+1);
+
 		assert(nscan >= 1);
 		if (nscan > 0) assert(ib[0] >= 0 && ib[0] < Buffer::nbuffers);
+		if (nscan > 1 && !(ib[1] >= 0 && ib[1] < Buffer::nbuffers)){
+			fprintf(stderr, "ASSERT: ib[0]=%d ib[1]=%d nb:%d\n", ib[0], ib[1], Buffer::nbuffers);
+			nscan = 1;
+			quit_at_end_loop = true;
+		}
 		if (nscan > 1) assert(ib[1] >= 0 && ib[1] < Buffer::nbuffers);
 
 		if (verbose) fprintf(stderr, "\n\n\nUPDATE:%4d nscan:%d read: %s",
@@ -2490,6 +2491,10 @@ void StreamHeadHB0::stream() {
 			b0->writeBuffer(1, Buffer::BO_START|Buffer::BO_FINISH);
 		}
 		if (verbose) fprintf(stderr, "UPDATE:%4d finished\n", nb);
+
+		if (quit_at_end_loop){
+			break;
+		}
 	}
 }
 
@@ -2510,6 +2515,7 @@ class StreamHeadLivePP : public StreamHeadHB0 {
 
 	void getSampleInterval();
 	void startSampleIntervalWatcher();
+
 
 	static bool getPram(const char* pf, unsigned* pram)
 	{
@@ -2567,18 +2573,15 @@ class StreamHeadLivePP : public StreamHeadHB0 {
 
 	int  _stream();
 	static int verbose;
-	bool show_es;
+	static bool show_es;
 public:
 	StreamHeadLivePP():
 			pre(0), post(4096),
 			sample_size(G::nchan*G::wordsize) {
-		const char* vs = getenv("StreamHeadLivePPVerbose");
-		vs && (verbose = atoi(vs));
-		if (verbose) fprintf(stderr, "StreamHeadLivePP() verbose=%d\n", verbose);
-		const char* ses = getenv("StreamHeadLivePPShowES");
-		ses && (show_es = atoi(ses));
 
-		fprintf(stderr, "StreamHeadLivePP() pid:%d\n", getpid());
+		if (verbose) fprintf(stderr, "StreamHeadLivePP() verbose=%d\n", verbose);
+
+		if (verbose) fprintf(stderr, "StreamHeadLivePP() pid:%d\n", getpid());
 		startEventWatcher();
 		startSampleIntervalWatcher();
 
@@ -2599,7 +2602,8 @@ public:
 	virtual void stream();
 };
 
-int StreamHeadLivePP::verbose;
+int StreamHeadLivePP::verbose = getenv_default("StreamHeadLivePPVerbose");
+bool StreamHeadLivePP::show_es = getenv_default("StreamHeadLivePPShowES");
 
 bool StreamHead::has_pre_post_live_demux(void) {
 	return StreamHeadLivePP::hasPP();
@@ -2827,8 +2831,8 @@ protected:
 		void init(int _ibuf) {
 			ibuf = _ibuf;
 			base = cursor = Buffer::the_buffers[ibuf]->getBase();
-			//if (verbose)
-			fprintf(stderr, "BufferCursor::init(%d) base:%p\n", ibuf, base);
+			if (verbose)
+				fprintf(stderr, "BufferCursor::init(%d) base:%p\n", ibuf, base);
 		}
 		BufferCursor(int _cbb) :
 			channel_buffer_bytes(_cbb)
@@ -2842,7 +2846,6 @@ protected:
 	/* watch out for end of source buffer ! */
 	virtual int _demux(void* start, int nbytes) = 0;
 	Demuxer(int _wordsize, int _cbb) : wordsize(_wordsize), bufstep(1), dst(_cbb) {
-		verbose = getenv_default("DemuxerVerbose");
 		if (verbose) fprintf(stderr, "Demuxer: verbose=%d\n", verbose);
 	}
 public:
@@ -2870,7 +2873,7 @@ public:
 	static Demuxer* instance(enum DemuxBufferType N, unsigned WS = sizeof(short));
 };
 
-int Demuxer::verbose;
+int Demuxer::verbose = getenv_default("DemuxerVerbose");
 
 
 
@@ -3293,7 +3296,7 @@ int Demuxer::demux(void* start, int nbytes)
 
 
 
-long Progress::min_report_interval = MIN_REPORT_INTERVAL_MS;
+long Progress::min_report_interval = getenv_default("MIN_REPORT_INTERVAL_MS", MIN_REPORT_INTERVAL_MS);
 
 Progress& Progress::instance(FILE *fp) {
 	static Progress* _instance;
@@ -3320,14 +3323,6 @@ Progress& Progress::instance(FILE *fp) {
 				Progress *p = new ProgressImpl(fp? fp: stdout);
 				_instance = (Progress*)shm;
 				memcpy(_instance, p, sizeof(Progress));
-
-				if (getenv("MIN_REPORT_INTERVAL_MS")){
-					min_report_interval = atoi(getenv("MIN_REPORT_INTERVAL_MS"));
-					fprintf(stderr,"min_report_interval set %ld\n",
-							min_report_interval);
-				}
-				if (verbose) fprintf(stderr,"min_report_interval set %ld\n",
-						min_report_interval);
 			}
 		}
 
@@ -3584,7 +3579,7 @@ public:
 		post_fits(headroom >= G::post),
 		bd_scale(_bd_scale)
 	{
-		verbose = getenv_default("BufferDistributionVerbose");
+		if (verbose) fprintf(stderr, "BufferDistributionVerbose\n");
 	}
 	void show() {
 		fprintf(stderr, "%s pre_fits:%d post_fits:%d\n", _PFN, pre_fits, post_fits);
@@ -3683,7 +3678,7 @@ public:
 	vector<Segment>& getSegments();
 };
 
-int BufferDistribution::verbose;
+int BufferDistribution::verbose = getenv_default("BufferDistributionVerbose");
 
 void StreamHeadImpl::report(const char* id, int ibuf, char *esp){
 	if (!G::report_es) return;
@@ -3861,7 +3856,7 @@ struct BufferSeq {
 	}
 };
 
-int BufferSeq::verbose = getenv("BufferSeqVerbose")? atoi(getenv("BufferSeqVerbose")): 0;
+int BufferSeq::verbose = getenv_default("BufferSeqVerbose");
 
 
 void BufferDistribution::sortToLinearBuffer(char* start, char* finish)
@@ -4021,37 +4016,19 @@ public:
 		if (verbose) fprintf(stderr, "append %p\n", pp);
 		peers.push_back(pp);
 	}
-	virtual void stream() {
-		int ib;
-		if (verbose) fprintf(stderr, "StreamHeadImpl::stream() :\n");
 
-		ident("acq400_stream_headImpl");
-		setState(ST_ARM);
-
+	virtual void onStreamStart() {
 		for (IT it = peers.begin(); it != peers.end(); ++it){
 			(*it)->onStreamStart();
 		}
-
-		if (G::soft_trigger){
-			schedule_soft_trigger();
+	}
+	virtual void onStream(int ib){
+		for (IT it = peers.begin(); it != peers.end(); ++it){
+			if (verbose > 1) fprintf(stderr, "call peer %p %p\n", *it, this);
+			(*it)->onStreamBufferStart(ib);
 		}
-		while((ib = getBufferId()) >= 0){
-			if (verbose) fprintf(stderr, "StreamHeadImpl::stream() : %d\n", ib);
-
-			for (IT it = peers.begin(); it != peers.end(); ++it){
-				if (verbose > 1) fprintf(stderr, "call peer %p %p\n", *it, this);
-				(*it)->onStreamBufferStart(ib);
-			}
-			switch(actual.state){
-			case ST_ARM:
-				setState(ST_RUN_PRE);
-			default:
-				;
-			}
-			actual.elapsed += samples_buffer;
-		}
-		setState(ST_CLEANUP);
-
+	}
+	virtual void onStreamEnd() {
 		for (IT it = peers.begin(); it != peers.end(); ++it){
 			(*it)->onStreamEnd();
 		}
@@ -4094,18 +4071,22 @@ protected:
 
 	bool cooked;
 	char* typestring;
+	static bool clear_data_on_arm;
 	static int verbose;
+	static bool skip_roi_search;
+	static bool full_search;
 
 	unsigned ib;
 	bool accepting_events;
 	EventController event0;
 
 	/* COOKED=1 NSAMPLES=1999 NCHAN=128 >/dev/acq400/data/.control */
+	/* setting NSAMPLES > 0 makes data available to clients, NSAMPLES==0 : no data */
 
-	void notify_result() {
+	void notify_result(int nsamples) {
 		char resbuf[128];
 		sprintf(resbuf, "COOKED=%d NSAMPLES=%d NCHAN=%d TYPE=%s\n",
-				cooked? 1:0, G::pre+G::post, G::nchan,
+				cooked? 1:0, nsamples, G::nchan,
 				G::wordsize==2? "SHORT": "LONG");
 		if (verbose) fprintf(stderr, "%s \"%s\"\n", _PFN, resbuf);
 		FILE* fp = fopen(NOTIFY_HOOK, "w");
@@ -4115,6 +4096,22 @@ protected:
 		}
 		fprintf(fp, resbuf);
 		fclose(fp);
+	}
+	void notify_result() {
+		notify_result(G::pre+G::post);
+	}
+	void report_shot() {
+		unsigned last_armed_shot, last_completed_shot, last_successful_shot;
+		getEtcKnob(G::aggregator_sites[0]-'0', "shot", &last_armed_shot);
+		getEtcKnob(0, "shot_complete", &last_completed_shot);
+		getEtcKnob(0, "shot", &last_successful_shot);
+		printf("SHOT=%u,%u,%u,%u\n", actual.state, last_armed_shot, last_completed_shot, last_successful_shot);
+	}
+	void update_last_successful_shot() {
+		char cmd[80];
+		snprintf(cmd, 80, "cp /etc/acq400/%c/shot /etc/acq400/0/shot", G::aggregator_sites[0]);
+		printf("updating site 0 shot: \"%s\"\n", cmd);
+		system(cmd);
 	}
 	virtual void postProcess(int ibuf, char* es) {
 		BLT blt(MapBuffer::get_ba0());
@@ -4136,31 +4133,52 @@ protected:
 				blt(es, s2b(G::post));
 			}
 		}
+
 	}
 	virtual void onStreamStart() 		 {}
 	virtual void onStreamBufferStart(int ib) {
 		if (verbose>1) fprintf(stderr, "%s onStreamBufferStart %d\n", _PFN, ib);
 	}
 	virtual void onStreamEnd() {
-		verbose = getenv_default("ACQ400_STREAM_DEBUG_STREAM_END");
+		int verbose2 = getenv_default("ACQ400_STREAM_DEBUG_STREAM_END");
+		if (verbose2 > verbose){
+			verbose = verbose2;
+		}
 
 		setState(ST_POSTPROCESS); actual.print();
 		Demuxer::_msync(MapBuffer::get_ba_lo(),
 			MapBuffer::get_ba_hi()-MapBuffer::get_ba_lo(), MS_SYNC);
+
 		if (pre){
 			int ibuf;
 			char* es;
+			Timer roiTime("ROI");
+			Timer fullTime("ALL");
 
-			if (findEvent(&ibuf, &es)){
-				if (verbose) fprintf(stderr, "%s call postProcess\n", _PFN);
+			if (!skip_roi_search && findEvent(&ibuf, &es)){
+				roiTime.report();
+				if (verbose) fprintf(stderr, "%s %s call postProcess\n", _PFN, "ROI");
 				postProcess(ibuf, es);
-			}else{
-				fprintf(stderr, "%s ERROR EVENT NOT FOUND, DATA NOT VALID\n", _PFN);
+				roiTime.report(1);
+				goto on_success;
+			}else if (full_search && findEventSearchAll(&ibuf, &es)){
+				fullTime.report();
+				if (verbose) fprintf(stderr, "%s %s call postProcess\n", _PFN, "ALL");
+				postProcess(ibuf, es);
+				fullTime.report(1);
+				goto on_success;
 			}
+			fprintf(stderr, "%s ERROR EVENT NOT FOUND, DATA NOT VALID RAW offloads entire DRAM\n", _PFN);
+			notify_result((MapBuffer::get_ba_hi()-MapBuffer::get_ba_lo())/sample_size() - sizeof(unsigned));
+			goto on_fail;
 		}else{
 			postProcess(0, MapBuffer::get_ba_lo());
 		}
+  on_success:
+		update_last_successful_shot();
 		notify_result();
+  on_fail:
+		report_shot();
 	}
 
 	virtual int bufferSkip(unsigned &ib) {
@@ -4253,6 +4271,9 @@ protected:
 
 			switch(actual.state){
 			case ST_ARM:
+				if (!clear_data_on_arm){
+					notify_result(0);	// clear on first buffer, the data really has GONE
+				}
 				setState(pre? ST_RUN_PRE: ST_RUN_POST);
 			default:
 				;
@@ -4325,9 +4346,11 @@ protected:
 		setKnob(0, "estop", "1");
 	}
 	static void initVerbose() {
-		verbose = getenv_default("StreamHeadPrePostVerbose");
 		if (verbose) fprintf(stderr, "StreamHeadPrePostVerbose set %d\n", verbose);
 	}
+
+
+
 public:
 	StreamHeadPrePost(Progress& progress, int _pre, int _post) :
 		StreamHeadWithClients(progress),
@@ -4372,13 +4395,27 @@ public:
 		}
 		peers.push_back(this);
 
+		if (G::naxi && pre == 0){
+			if (verbose){
+				fprintf(stderr, "set_axi_oneshot(%d)\n", 1);
+			}
+			set_axi_oneshot(1);
+		}
+
 		startEventWatcher();
+	}
+	virtual ~StreamHeadPrePost() {
+		// destructor is NOT called ?? @todo
 	}
 
 
 
 	virtual void stream() {
+		if (clear_data_on_arm){
+			notify_result(0);    // result data is cleared regardless of whether any data flows or not.
+		}
 		setState(ST_ARM);
+		report_shot();
 		for (IT it = peers.begin(); it != peers.end(); ++it){
 			(*it)->onStreamStart();
 		}
@@ -4386,18 +4423,25 @@ public:
 		if (G::soft_trigger){
 			schedule_soft_trigger();
 		}
+
 		streamCore();
 		estop();
+
+		// NB first peer is myself:
 		for (IT it = peers.begin(); it != peers.end(); ++it){
 			(*it)->onStreamEnd();
 		}
+
 		setState(ST_CLEANUP);
+
 		close();
 	}
 };
 
-int StreamHeadPrePost::verbose;
-
+bool StreamHeadPrePost::clear_data_on_arm 	= ::getenv_default("ClearDataOnArm", 1);
+bool StreamHeadPrePost::skip_roi_search 	= ::getenv_default("StreamHeadPrePostSkipRoiSearch", 0);
+bool StreamHeadPrePost::full_search 		= ::getenv_default("StreamHeadPrePostFullSearch", 1);
+int StreamHeadPrePost::verbose 			= ::getenv_default("StreamHeadPrePostVerbose");
 
 class SubrateStreamHead: public StreamHead {
 	static int createOutfile() {
@@ -4508,7 +4552,7 @@ protected:
 	}
 public:
 	virtual int bufferSkip(unsigned &ib) {
-		if (first){
+		if (first && verbose){
 			fprintf(stderr, "%s FIRST buffer %d\n", _PFN, ib);
 			first = false;
 		}
@@ -4521,12 +4565,12 @@ public:
 		}
 	}
 	DemuxingStreamHeadPrePostDualBuffer(Progress& progress, Demuxer& _demuxer, int _pre, int _post) :
-		DemuxingStreamHeadPrePost(progress, _demuxer, _pre, _post), bale_out(false)
+		DemuxingStreamHeadPrePost(progress, _demuxer, _pre, _post),
+		bale_out(getenv_default("DemuxingStreamHeadPrePostDualBufferBaleOut"))
 	{
 		bd_scale = 2;
-		char* bo = getenv("DemuxingStreamHeadPrePostDualBufferBaleOut");
-		if (bo) bale_out = atoi(bo);
-		fprintf(stderr, "%s %s\n", _PFN, bale_out? "bale_out": "");
+		samples_buffer *= 2;
+		fprintf(stderr, "%s %s samples_buffer %d\n", _PFN, bale_out? "bale_out": "", samples_buffer);
 	}
 };
 void checkHolders() {
@@ -4574,14 +4618,15 @@ void waitHolders() {
 StreamHead* StreamHead::createLiveDataInstance()
 {
 	ident("acq400_stream_LDI");
-	nice(-10);
 
 	for (nb_cat = 1;
 	     nb_cat*Buffer::bufferlen/(G::nchan*G::wordsize) < G::nsam; ++nb_cat){
 		;
 	}
 	BufferCloner::cloneBuffers<DemuxBufferCloner>();
-	stream_fmt = "%s.hb0";
+
+	const char* _sf = ::getenv("StreamHead_LDI_SOURCE");
+	stream_fmt = _sf? _sf: "%s.hb0";
 
 	bool live_pp = G::stream_mode != SM_TRANSIENT && has_pre_post_live_demux();
 	setKnob(0, "/etc/acq400/0/live_mode", live_pp? "2": "1");
@@ -4608,6 +4653,7 @@ class MultiEventServer {
 	const char* b1;
 	FILE* fp_in;
 	int verbose;
+	int suppress_event;
 	int pre;
 	int post;
 	int maxfiles;
@@ -4619,6 +4665,22 @@ class MultiEventServer {
 	const int maxfiles_limit;
 	int ev_count;
 
+	unsigned get_hb_last() {
+		unsigned hb_last;
+		getKnob(0, "hb_last", &hb_last);
+		if (verbose > 1) fprintf(stderr, "%s hb_last %u\n", __FUNCTION__, hb_last);
+		return hb_last;
+	}
+	static unsigned delta_hb(unsigned hb0, unsigned hb1){
+		if (hb1 >= hb0){
+			return hb1 - hb0;
+		}else{
+			return Buffer::nbuffers - hb0 + hb1;
+		}
+	}
+	unsigned post_buffers() {
+		return post/(Buffer::bufferlen/Buffer::sample_size);
+	}
 	static long df(int fd)
 	{
 		struct statvfs buf;
@@ -4636,7 +4698,7 @@ class MultiEventServer {
 	void handle_event(int ev, int ibuf, char* esp){
 		char fn[80];
 		sprintf(fn, "event-%03d-%lu-%u-%u.dat", ev, time(0), pre, post);
-
+		unsigned hb0 = get_hb_last();
 		if (verbose) fprintf(stderr, "MultiEventServer::handle_event() %s\n", fn);
 
 		char fn0[80];
@@ -4657,21 +4719,29 @@ class MultiEventServer {
 
 			if (pre_bytes > linear_pre){
 				fwrite(b1-(pre_bytes-linear_pre), 1, pre_bytes-linear_pre, fp);
-				pre_bytes -= linear_pre;
+				fwrite(esp-linear_pre, 1, linear_pre, fp);
+			}else{
+				fwrite(esp-pre_bytes, 1, pre_bytes, fp);
 			}
-			fwrite(esp-pre_bytes, 1, pre_bytes, fp);
 
+			unsigned dhb;
+			for(unsigned pb = post_buffers(); (dhb = delta_hb(hb0, get_hb_last())) < pb+1; ){
+				if (verbose) fprintf(stderr, "%s wait post %u < %u\n", __FUNCTION__, dhb, pb);
+				usleep(10000);
+			}
+			int ss = sample_size() * suppress_event;
 			if (post_bytes > linear_post){
-				fwrite(esp, 1, linear_post, fp);
+				fwrite(esp+ss, 1, linear_post-ss, fp);
 				fwrite(b0, 1, post_bytes-linear_post, fp);
 			}else{
-				fwrite(esp, 1, post_bytes, fp);
+				fwrite(esp+ss, 1, post_bytes-ss, fp);
 			}
 		}
 		fclose(fp);
 		char fn1[80];
 		sprintf(fn1, "/tmp/%s", fn);
 		rename(fn0, fn1);				/* atomic, file safe to use */
+		setKnob(0, "/etc/acq400/1/multi_event_latest", fn);
 	}
 	void set_maxfiles(int _maxfiles){
 		maxfiles = _maxfiles > maxfiles_limit? maxfiles_limit: _maxfiles;
@@ -4728,6 +4798,7 @@ public:
 	{
 		ident("acq400_stream_MES");
 		verbose = getenv_default("MultiEventServerVerbose");
+		suppress_event = getenv_default("MultiEventServerSuppressEvent");
 		if (verbose) fprintf(stderr, "MultiEventServer\n");
 
 		update_prams(def);
@@ -4785,13 +4856,16 @@ void StreamHead::createMultiEventInstance(const char* def)
 StreamHead* StreamHead::instance() {
 	static StreamHead* _instance;
 
-	nice(-10);
+
+	//nice(-10);
 	if (_instance == 0){
+		StreamHeadImpl::set_axi_oneshot(0);
 		setEventCountLimit(
 				G::show_events? ECL_NOLIMIT:
 				G::stream_mode == SM_TRANSIENT? 1: ECL_NOLIMIT);
 
 		if (G::is_spy){
+			goRealTime(10);
 			return _instance = new StreamHead(
 					open("/dev/acq400.0.bqf", O_RDONLY), 1);
 		}
@@ -4804,17 +4878,18 @@ StreamHead* StreamHead::instance() {
 			return _instance;
 		}
 
-		if (fork() == 0){
+		if (G::live_instance && fork() == 0){
 			_instance = createLiveDataInstance();
 			return _instance;
 		}
 
+		goRealTime(10);
 		ident("acq400_stream_main");
 		if (G::stream_mode == SM_TRANSIENT){
 			if (G::buffer_mode == BM_PREPOST && G::demux > 0){
 				Demuxer *demuxer;
 
-				if (G::dualaxi == 2){
+				if (G::naxi == 2){
 					demuxer = Demuxer::instance(G::double_up? DB_2D_DOUBLE: DB_2D_REGULAR);
 					_instance = new DemuxingStreamHeadPrePostDualBuffer(
 						Progress::instance(), *demuxer, G::pre, G::post);

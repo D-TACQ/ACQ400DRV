@@ -1,8 +1,20 @@
 #!/bin/sh
 
+if [ "x$1" = "xall" ]; then
+	sites=$(set.site 0 aggregator | awk '{print $2}' | grep -o '[1-6]')
+	for site in $sites; do
+		/usr/local/bin/ao420_init $site > /dev/null
+	done
+	exit 0
+fi
+
 SITE=${1:-0}
 KNOBS=/dev/acq400.${SITE}.knobs
 MODEL=$(cat $KNOBS/module_name)
+
+EK=/etc/acq400/$SITE
+
+mkdir -p ${EK}
 
 
 vset_sys() {
@@ -14,6 +26,8 @@ vset_sys() {
 echo "dac_range_ALL=dac_range_??" >/etc/acq400/${SITE}/groups	
 echo +++ initializing DACs for $MODEL
 
+EN=$(get.sys ${KNOBS}/dac_enable)
+vset_sys ${KNOBS}/dac_enable 0
 vset_sys ${KNOBS}/dacreset 1
 vset_sys ${KNOBS}/dacreset 0
 vset_sys ${KNOBS}/dacspi 0x300000	# Clear Code
@@ -26,13 +40,17 @@ ao428elf|cpsc2dac)
 	vset_sys ${KNOBS}/dacspi 0x400002
 	vset_sys ${KNOBS}/dacspi 0x200000;;
 esac
+vset_sys ${KNOBS}/dac_enable ${EN}
 
-ln -s /usr/local/bin/wavegen /etc/acq400/$SITE
+[ ! -e /etc/acq400/$SITE/wavegen ] && ln -s /usr/local/bin/wavegen /etc/acq400/$SITE
 
 for gx in ${KNOBS}/G?; do
 	[ -e $gx ] && set.sys $gx 32767
 done
 
+for rch in 1 2 3 4; do
+	[ -L ${EK}/dac_range_0${rch} ] || ln -s $KNOBS/dac_range_0${rch} ${EK}/dac_range_0${rch}
+done
 
 case $MODEL in
 ao428elf)

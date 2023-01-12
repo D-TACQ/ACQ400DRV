@@ -258,7 +258,7 @@ int _axi64_data_once_sg(struct acq400_dev *adev, struct dma_chan *rx_chan, unsig
  * bad Linux, but effective here as it's a singleton */
 int axi64_data_once(struct acq400_dev *adev, unsigned char blocks[], int nb)
 {
-	struct dma_chan *rx_chan = adev->dma_chan[0];
+	struct dma_chan *rx_chan = adev->dma_chan0;
 	/* blocks : 0 1 2 3 then 0 terminated.. */
 	int rc = 0;
 	int ii;

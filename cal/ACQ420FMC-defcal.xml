@@ -13,32 +13,21 @@
         <Model>ACQ420FMC</Model>
 	<SerialNum>F42010001</SerialNum>
     </Info>
-    <Data AICHAN="4" code_min="-32768" code_max="32764" SW="gains,data32">
-        <Range name="1.25" sw="0,3">
-			<Nominal min="-1.25" max="1.25" eoff="0" eslo="38.146972e-6"/>
-        </Range>
-		<Range name="2.5" sw="0,2">
-			<Nominal min="-2.5" max="2.5" eoff="0" eslo="76.293945e-6" />
-		</Range>
-        <Range name="5" sw="0,1">
-            <Nominal min="-5" max="5" eoff="0" eslo="152.58789e-6" />
-        </Range>
-        <Range name="10" sw="0,0">
-            <Nominal min="-10" max="10" eoff="0" eslo="305.17578e-6" />
-        </Range>        
-        <Range name="1.25" sw="1,3">
-			<Nominal min="-1.25" max="1.25" eoff="0" eslo="1.490e-7"/>
-        </Range>
-		<Range name="2.5" sw="1,2">
-			<Nominal min="-2.5" max="2.5" eoff="0" eslo="2.980e-7" />
-		</Range>
-        <Range name="5" sw="1,1">
-            <Nominal min="-5" max="5" eoff="0" eslo="0.596e-6" />
-        </Range>
-        <Range name="10" sw="1,0">
-            <Nominal min="-10" max="10" eoff="0" eslo="1.192e-6" />
-        </Range>        
+     <Data AICHAN="4" SW="gain%d" code_max="32767" code_min="-32768">
+      <Range name="10V" sw="0">
+        <Nominal eoff="0" eslo="0.00030517578125" roff="0"/>
+      </Range>
+      <Range name="5V" sw="1">
+        <Nominal eoff="0" eslo="0.00030517578125" roff="0"/>
+      </Range>
+      <Range name="2.5V" sw="2">
+        <Nominal eoff="0" eslo="0.00030517578125" roff="0"/>
+      </Range>
+      <Range name="1.25V" sw="3">
+        <Nominal eoff="0" eslo="0.00030517578125" roff="0"/>
+      </Range>
     </Data>
+
 </AcqCalibration>
 <ModelSpec>
         <ChannelBlockMask>

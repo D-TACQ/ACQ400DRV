@@ -1,0 +1,11 @@
+#!/bin/sh
+# stream data from the UUT spy port, reduce to fit AWG, play on UUT AWG port
+
+UUT=${1:-localhost}
+IN=${2:-32}
+OUT=${3:-4}
+
+if [ "x$VERBOSE" != "" ]; then
+	ARGS=-v1
+fi
+nc $UUT 53667 | reduce $IN $OUT | nc $UUT 54207

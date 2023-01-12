@@ -1,0 +1,8 @@
+#!bin/sh
+
+CONF=/etc/sysconfig/acq400_streamd.conf
+if [ ${1:-1} -eq 1 ]; then
+	echo >> $CONF "export StreamHead_LDI_SOURCE=%s.bqf"
+else
+	sed -ie 's/^export StreamHead_LDI_SOURCE/#export StreamHead_LDI_SOURCE/' $CONF
+fi

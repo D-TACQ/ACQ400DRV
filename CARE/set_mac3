@@ -1,0 +1,43 @@
+#!/usr/bin/expect
+# generate "eth2" mac using u-boot ethaddr
+# for ethaddr, set high bits of 3rd octet index from zero
+# eg
+# acq2106_132> cat /sys/class/net/eth0/address 
+# 00:21:54:13:00:84
+# acq2106_132> cat /sys/class/net/eth1/address 
+# 00:21:54:d3:00:84
+
+
+
+set ub_env [dict create]
+set fp [open /tmp/u-boot_env r]
+
+while {[gets $fp line] != -1} {
+#	puts $line
+	if {[regexp {(\S+)="(\S+)"} $line match key value]} {
+		dict lappend ub_env $key $value
+	}
+}
+
+close $fp
+
+#puts [dict get $ub_env]
+
+set EDEV eth2
+
+proc set_eth2_mac {macaddr} {
+	global EDEV
+	puts "ifconfig $EDEV hw ether $macaddr"
+	#exec ifconfig $EDEV hw ether $macaddr
+}
+
+proc calc_eth2_mac {eth0_macaddr} {
+	set octets [split $eth0_macaddr :]
+	set b3 [lindex $octets 3]
+	set b32 [format %02x [expr 0x$b3 + 0xc0] ]
+	return [join [lreplace $octets 3 3 $b32] :]
+}
+
+set eth2_mac [calc_eth2_mac [lindex [dict get $ub_env ethaddr] 0] ]
+puts $eth2_mac
+

@@ -92,7 +92,11 @@ REVBIAS=0xa000
 init_b8_hardware() 
 {
 	site=$1
-	echo init_b8_hardware ${site}
+	echo init_b8_hardware ${site} reset all ADC and DAC
+	set.sys  /dev/bolo8/${site}/CURR_ADC_RESET 1
+	set.sys  /dev/bolo8/${site}/OS_DAC_RESETn 1
+	set.sys  /dev/bolo8/${site}/DAC_RESETn 1
+	sleep 0.1
 	set.sys  /dev/bolo8/${site}/CURR_ADC_RESET 0
 	set.sys  /dev/bolo8/${site}/OS_DAC_RESETn 0
 	set.sys  /dev/bolo8/${site}/DAC_RESETn 0	

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+[ -e /dev/ttyPS1 ] && exit 0
+
+echo before:
+ls -l /dev/ttyPS*
+
+CFG=/sys/kernel/config
+mount | grep -q $CFG
+[ $? -eq 0 ] || mount -t configfs none $CFG
+UART0=$CFG/device-tree/overlays/uart0
+mkdir -p $UART0
+cat /mnt/dtb.d/acq400_uart0.dtb > $UART0/dtbo
+echo after:
+ls -l /dev/ttyPS*
+

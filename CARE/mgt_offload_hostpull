@@ -6,7 +6,7 @@
 # spawns mgt_offload_hostpull server .. spawns mgt_offload, 
 # calls mgt_offload_hostpull
 
-log_file -a /var/log/mgt_offload_hostpull.log
+log_file -noappend /var/log/mgt_offload_hostpull.log
 log_user 0
 
 # callback for mgt_offload - blocks while top level does the work on $blocknum

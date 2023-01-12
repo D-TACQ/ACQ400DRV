@@ -37,6 +37,8 @@ struct xilinx_dma_desc_sw {
 	struct dma_async_tx_descriptor async_tx;
 } __aligned(64);
 
+#define MAXTRACE	(1<<8)
+
 /* Per DMA specific operations should be embedded in the channel structure */
 struct xilinx_dma_chan {
 	void __iomem *regs;		/* Control status registers */
@@ -65,6 +67,11 @@ struct xilinx_dma_chan {
 					/* Device configuration info */
 	struct dentry* debug_dir;
 	char* debug_names;
+	char devname[32];
+	struct DescriptorTrace {
+		u32 buffer[MAXTRACE];
+		int cursor;
+	} dTrace;
 
 	void* client_private;
 };

@@ -40,6 +40,7 @@ protected:
 public:
 	static unsigned last_buf;
 	static int verbose;
+	static int checkiten;
 	static unsigned bufferlen;
 	static unsigned nbuffers;
 	static unsigned sample_size;
@@ -116,6 +117,7 @@ protected:
 	static char* ba_lo;		/* lo end of data set */
 	static char* ba_hi;		/* hi end of data set likely == ba1 */
 	static int buffer_0_reserved;
+	static bool contiguous;		/* contiguous mapping not always possible */
 
 public:
 	virtual int writeBuffer(int out_fd, int b_opts, unsigned start_off, unsigned len);
@@ -141,6 +143,14 @@ public:
 			return (pb-ba0)/bufferlen;
 		}
 	}
+	static Buffer* getBuffer(unsigned* pb) {
+		int ib = getBuffer((char*)pb);
+		if (ib >= 0){
+			return Buffer::the_buffers[ib];
+		}else{
+			return 0;
+		}
+	}
 	static const char* listBuffers(char* p0, char* p1, bool show_ba = false);
 	static void reserve() {
 		ba_lo = ba0 + 2*bufferlen;
@@ -161,6 +171,9 @@ public:
 	static char* ba(int ibuf){
 		return reinterpret_cast<MapBuffer*>(Buffer::the_buffers[ibuf])->pdata;
 	}
+	bool isContiguous() {
+		return contiguous;
+	}
 };
 
 class BufferManager {
@@ -170,7 +183,7 @@ class BufferManager {
 		for (unsigned ii = 0; ii < Buffer::nbuffers; ++ii){
 			Buffer::create(root, Buffer::bufferlen);
 		}
-		printf("BufferManager::init_buffers %d\n", Buffer::nbuffers);
+		fprintf(stderr, "BufferManager::init_buffers %d\n", Buffer::nbuffers);
 	}
 	void delete_buffers()
 	{

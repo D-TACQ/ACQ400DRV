@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<ACQ>
+  <AcqCalibration>
+    <Info>
+      <CalDate>20220323_111956</CalDate>
+      <Carrier>acq1001_000</Carrier>
+      <Model>ACQ465ELF-32-HG004</Model>
+      <SerialNum>E46510000</SerialNum>
+      <Temperature>41.0</Temperature>
+      <SampleRate>6250000 kHz</SampleRate>
+      <FirmwareRev>acq400-486-20220322203619</FirmwareRev>
+      <FPGAInfo>ACQ1001_0A_0A_32B</FPGAInfo>
+    </Info>
+    <Data AICHAN="32" code_max="8388607" code_min="-8388608">
+      <Range name="1V" sw="default">
+        <Nominal eoff="0" eslo="1.19209289551e-07" max="1" min="-1" roff="0"/>
+      </Range>
+    </Data>
+  </AcqCalibration>
+  <ModelSpec>
+    <ChannelBlockMask>
+      <BlockWidth>32</BlockWidth>
+      <BlockSet>1</BlockSet>
+      <MaxDeviceRate>1000000 S/sec</MaxDeviceRate>
+    </ChannelBlockMask>
+  </ModelSpec>
+</ACQ>

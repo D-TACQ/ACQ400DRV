@@ -1,0 +1,22 @@
+#!/bin/sh
+# controls acq400_stream input command connction.
+
+INP=/dev/shm/streamd.in
+
+if [ $# -eq 0 ]; then
+	nbcat $INP
+else
+	while [ "x$1" != "x" ]; do
+		case $1 in
+		id)
+			echo $INP;;
+		quit)
+			echo quit > $INP;;
+		create|clear)
+			rm -f $INP; mkemlog $INP 1 >/dev/null;;
+		*)
+			echo "arg $1 not supported, please use quit,create,clear";;
+		esac
+		shift
+	done
+fi

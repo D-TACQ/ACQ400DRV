@@ -73,12 +73,15 @@ static void set_address(
         printf("set_address 99\n");
 }
 
+static ServerInfo null_callback;
+static ServerInfo* G_server_info = &null_callback;
+
 static void reaper(int sig)
 {
         int ws, rc;
 
         while ((rc = waitpid(-1, &ws, WNOHANG)) > 0){
-                ;
+        	G_server_info->onReap(rc);
         }
 }
 
@@ -108,24 +111,44 @@ static SOCKET build_socket(void)
         return s;
 }
 
+int inetd_tcp_wait(int (*interpreter)(FILE* fin, FILE* fout))
+{
+	struct sockaddr_in peer;
+	socklen_t peerlen = sizeof peer;
 
+	printf("accept\n");
+
+	SOCKET s1 = accept(0, (struct sockaddr *)&peer, &peerlen);
+
+	if (!isvalidsock( s1 )){
+	       perror("accept failed");
+	}
+
+	interpreter(fdopen(s1, "r"), fdopen(s1, "w"));
+	shutdown(s1, SHUT_RDWR);
+	exit(0);
+}
 
 int tcp_server(const char* host, const char* port,
-		int (*interpreter)(FILE* fin, FILE* fout))
+		int (*interpreter)(FILE* fin, FILE* fout),
+		ServerInfo* serverInfo)
 {
-	printf("tcp_server 01\n");
+	printf("tcp_server %s\n", port);
 	struct sockaddr_in local;
 	SOCKET skt;
 
+	if (serverInfo){
+		G_server_info = serverInfo;
+	}
 	signal(SIGCHLD, reaper);
 	set_address(host, port, &local, "tcp");
 	skt = build_socket();
 
-	printf("bind\n");
+	//printf("bind\n");
         if (bind(skt, (struct sockaddr *)&local, sizeof(local))){
                 perror("bind failed"); exit(1);
         }
-        printf("listen\n");
+        //printf("listen\n");
         if (listen(skt, NLISTEN )){
                 perror("listen failed" ); exit(1);
         }
@@ -133,20 +156,22 @@ int tcp_server(const char* host, const char* port,
         while(1){
         	struct sockaddr_in peer;
         	socklen_t peerlen = sizeof peer;
-
-        	printf("accept\n");
+        	pid_t child;
 
         	SOCKET s1 = accept(skt, (struct sockaddr *)&peer, &peerlen);
+        	//printf("accept");
 
         	if (!isvalidsock( s1 )){
         	       perror("accept failed");
         	}
 
-        	if (fork() == 0){
+        	if ((child = fork()) == 0){
         		interpreter(fdopen(s1, "r"), fdopen(s1, "w"));
         		shutdown(s1, SHUT_RDWR);
         		exit(0);
         	}else{
+        		G_server_info->onConnect(child, peer);
+
         		if (close(s1)){
         			perror("close");
         		}

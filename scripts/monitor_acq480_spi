@@ -1,7 +1,7 @@
 #!/bin/sh
 
 DEV=${1:-acq480.1}
-DIR=/proc/driver/acq480/${DEV}
+DIR=/proc/driver/${DEV%.*}/${DEV}
 
 #httpd doesn't like names with periods..
 XMLNAME=${DEV%.*}${DEV#*.}

@@ -61,7 +61,7 @@ int act_on_fiferr = 1;
 module_param(act_on_fiferr, int, 0644);
 MODULE_PARM_DESC(act_on_fiferr, "0: log, don't act. 1: abort on error");
 
-int ao420_mapping[AO_CHAN] = { 4, 3, 2, 1 };
+int ao420_mapping[AO_CHAN] = { 1, 2, 3, 4 };
 int ao420_mapping_count = 4;
 module_param_array(ao420_mapping, int, &ao420_mapping_count, 0644);
 
@@ -73,6 +73,8 @@ MODULE_PARM_DESC(no_ao42x_llc_ever, "refuse to set LLC mode on exit AWG. Won't w
 int dio432_rowback = 256/4;
 module_param(dio432_rowback, int, 0644);
 MODULE_PARM_DESC(dio432_rowback, "stop short filling FIFO by this much");
+
+
 
 
 void acq420_onStart(struct acq400_dev *adev);
@@ -134,7 +136,7 @@ int acq420_convActive(struct acq400_dev *adev)
 int acq480_train_fail(struct acq400_dev *adev)
 {
 	if ((adev->mod_id&MOD_ID_REV_MASK) >= 0xa){
-		return (acq400rd32(adev, ADC_CTRL)&ADC480_CTRL_TRAIN_OK) == 0;
+		return (acq400rd32_nocache(adev, ADC_CTRL)&ADC480_CTRL_TRAIN_OK) == 0;
 	}else{
 		return -1;
 	}
@@ -174,7 +176,7 @@ static void acq420_enable_fifo(struct acq400_dev *adev)
 	}else{
 		ctrl &= ~ADC_CTRL_RAMP_EN;
 	}
-	if (IS_ACQ42X(adev)){
+	if (IS_ACQ42X(adev) || IS_ACQ465(adev)){
 		ctrl = acq420_set_fmt(adev, ctrl);
 	}
 	acq400wr32(adev, ADC_CTRL, ctrl|ADC_CTRL_ENABLE_FIFO);
@@ -229,6 +231,7 @@ void _dio432_DO_onStart(struct acq400_dev *adev)
 
 	x400_disable_interrupt(adev);
 	acq400wr32(adev, DIO432_DO_LOTIDE, adev->lotide);
+	acq400wr32(adev, DIO432_DI_HITIDE, adev->hitide);
 
 	if (xo_use_distributor){
 		dev_dbg(DEVP(adev), "_dio432_DO_onStart() 05");
@@ -245,7 +248,7 @@ void _dio432_DO_onStart(struct acq400_dev *adev)
 	}else{
 		dev_dbg(DEVP(adev), "_dio432_DO_onStart() 20");
 	}
-	acq400wr32(adev, DIO432_DIO_CTRL, acq400rd32(adev, DIO432_DIO_CTRL)|DIO432_CTRL_DIO_EN);
+	acq400wr32(adev, DIO432_CTRL, acq400rd32(adev, DIO432_CTRL)|DIO432_CTRL_DIO_EN);
 	dev_dbg(DEVP(adev), "_dio432_DO_onStart() 99");
 }
 
@@ -310,7 +313,7 @@ static void acq420_init_defaults(struct acq400_dev *adev)
 	adev->data32 = data_32b;
 	adev->adc_18b = adc_18b;
 	adc_ctrl |= acq420_set_fmt(adev, adc_ctrl);
-	acq400wr32(adev, ADC_CTRL, ADC_CTRL_MODULE_EN|adc_ctrl);
+	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
 	adev->nchan_enabled = IS_ACQ424(adev)? 32:
 			      IS_ACQ423(adev)? 32:
 			      IS_ACQ425(adev)? 16:
@@ -336,7 +339,7 @@ static void acq480_init_defaults(struct acq400_dev *adev)
 	adev->data32 = 0;
 	adev->adc_18b = 0;
 
-	acq400wr32(adev, ADC_CTRL, ADC_CTRL_MODULE_EN);
+	acq400wr32(adev, ADC_CTRL, ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
 	adev->nchan_enabled = 8;
 	adev->word_size = 2;
 	adev->hitide = hitide;
@@ -392,26 +395,42 @@ static void _qen_onStop(struct acq400_dev *adev)
 
 static void _qen_onStart(struct acq400_dev *adev)
 {
-	acq420_enable_fifo(adev);
-	acq420_reset_fifo(adev);
+	dev_info(DEVP(adev), "01");
+	acq420_onStart(adev);
+	dev_info(DEVP(adev), "99");
 }
 
-static void qen_init_defaults(struct acq400_dev *adev)
+static void dio422aqb_init_defaults(struct acq400_dev *adev)
 {
-	struct acq400_dev *adev1 = acq400_devices[1];
-	if (adev1 && adev1->data32 == 0){
-		adev->data32 = 0;
-		adev->word_size = 2;
-		adev->nchan_enabled = 2;
-	}else{
-		adev->data32 = 1;
-		adev->word_size = 1;
-		adev->nchan_enabled = 1;
-	}
+	u32 qen_dio = acq400rd32(adev, QEN_DIO_CTRL);
+	int snap32 = qen_dio&QEN_DIO_CTRL_SNAP32? 1: 0;
+	int zcount = qen_dio&QEN_DIO_CTRL_ZCOUNT? 1: 0;
+
+	adev->data32 = 1;
+	adev->word_size = 2;
+	adev->nchan_enabled = 1 + snap32 + zcount;
 
 	acq400wr32(adev, QEN_CTRL, QEN_CTRL_MODULE_EN);
 	adev->onStart = _qen_onStart;
 	adev->onStop = _qen_onStop;
+}
+
+static void qen_init_defaults(struct acq400_dev *adev)
+{
+       struct acq400_dev *adev1 = acq400_devices[1];
+       if (adev1 && adev1->data32 == 0){
+               adev->data32 = 0;
+               adev->word_size = 2;
+               adev->nchan_enabled = 2;
+       }else{
+               adev->data32 = 1;
+               adev->word_size = 1;
+               adev->nchan_enabled = 1;
+       }
+        acq400wr32(adev, QEN_CTRL, QEN_CTRL_MODULE_EN);
+        adev->onStart = _qen_onStart;
+        adev->onStop = _qen_onStop;
+
 }
 
 static void acq1014_init_defaults(struct acq400_dev *adev)
@@ -515,6 +534,9 @@ static void acq43X_init_defaults(struct acq400_dev *adev)
 		adev->nchan_enabled = 24;
 		banksel = ACQ436_BANKSEL;
 		devname = "ACQ436";
+	}else if (IS_TIMBUS(adev)){
+		adev->nchan_enabled = 1;
+		devname = "TIMBUS";
 	}else{
 		adev->nchan_enabled = 32;	// 32 are you sure?.
 		devname = "ACQ435";
@@ -527,12 +549,49 @@ static void acq43X_init_defaults(struct acq400_dev *adev)
 	adev->hitide = 128;
 	adev->lotide = adev->hitide - 4;
 	acq400wr32(adev, ADC_CLKDIV, 16);
-	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_MODULE_EN);
+	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
 	adev->onStart = acq43X_onStart;
 	adev->onStop = acq420_disable_fifo;
 	if (HAS_XTD(adev)){
 		start_xtd_watchdog(adev);
 	}
+}
+
+
+static void acq465_init_defaults(struct acq400_dev *adev)
+{
+	u32 adc_ctrl = acq400rd32(adev, ADC_CTRL);
+	adev->nchan_enabled = 32;
+	dev_info(DEVP(adev), "%s device init", "acq465elf");
+
+	adev->data32 = 1;
+	adev->word_size = 4;
+	adev->hitide = 128;
+	adev->lotide = adev->hitide - 4;
+	acq400wr32(adev, ADC_CLKDIV, 16);
+	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
+	adev->onStart = acq420_onStart;
+	adev->onStop = acq420_disable_fifo;
+}
+
+static void acq494_init_defaults(struct acq400_dev *adev)
+{
+	u32 adc_ctrl = acq400rd32(adev, ADC_CTRL);
+	dev_info(DEVP(adev), "%s device init MODULE_EN", "acq494elf");
+	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_MODULE_EN);
+
+#if 0
+	adev->nchan_enabled = 1;		// because the data _is_ one channel at a time
+	adev->word_size = 8;
+	adev->data32 = 2;
+#else
+	dev_info(DEVP(adev), "%s try some previously used values: 2x4", __FUNCTION__);
+	adev->nchan_enabled = 2;
+	adev->word_size = 4;
+	adev->data32 = 1;
+#endif
+	adev->onStart = acq420_onStart;
+	adev->onStop = acq420_disable_fifo;
 }
 
 int _ao420_getFifoSamples(struct acq400_dev* adev) {
@@ -564,7 +623,7 @@ static void ao428_init_defaults(struct acq400_dev *adev)
 	xo_dev->xo.fsr = DAC_FIFO_STA;
 	adev->lotide = 1024;
 
-	dac_ctrl |= ADC_CTRL_MODULE_EN;
+	dac_ctrl |= DAC_CTRL_MODULE_EN;
 	acq400wr32(adev, DAC_CTRL, dac_ctrl);
 	if (measure_ao_fifo_ok){
 		measure_ao_fifo(adev);
@@ -573,6 +632,7 @@ static void ao428_init_defaults(struct acq400_dev *adev)
 static void ao420_init_defaults(struct acq400_dev *adev, int data32)
 {
 	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
 
 	adev->data32 = data32;
 	adev->nchan_enabled = IS_AO420_HALF436(adev)? 2: 4;
@@ -587,11 +647,13 @@ static void ao420_init_defaults(struct acq400_dev *adev, int data32)
 	adev->lotide = 16384;
 
 	dev_info(DEVP(adev), "AO420 device init NCHAN %d", adev->nchan_enabled);
-	{
-		u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
-		dac_ctrl |= ADC_CTRL_MODULE_EN;
-		acq400wr32(adev, DAC_CTRL, dac_ctrl);
+
+	dac_ctrl |= DAC_CTRL_MODULE_EN;
+	if (data32){
+		dac_ctrl |= ADC_CTRL32B_data;
 	}
+	acq400wr32(adev, DAC_CTRL, dac_ctrl);
+
 	measure_ao_fifo(adev);
 }
 
@@ -632,7 +694,7 @@ static void ao424_init_defaults(struct acq400_dev *adev)
 	xo_dev->xo.fsr = DAC_FIFO_STA;
 	adev->lotide = 1024;
 
-	dac_ctrl |= ADC_CTRL_MODULE_EN;
+	dac_ctrl |= DAC_CTRL_MODULE_EN;
 	xo_dev->ao424_device_settings.encoded_twocmp = 0;
 	acq400wr32(adev, DAC_CTRL, dac_ctrl);
 	ao424_set_spans(adev);
@@ -800,7 +862,7 @@ static void dio432_init_defaults(struct acq400_dev *adev)
 	//set_debugs("on");
 	dac_ctrl |= IS_DIO432PMOD(adev)?
 		DIO432_CTRL_SHIFT_DIV_PMOD: DIO432_CTRL_SHIFT_DIV_FMC;
-	dac_ctrl |= DIO432_CTRL_MODULE_EN | DIO432_CTRL_DIO_EN;
+	dac_ctrl |= DIO432_CTRL_MODULE_EN;
 	acq400wr32(adev, DAC_CTRL, dac_ctrl);
 
 	dev_info(DEVP(adev), "dio432_init_defaults %d dac_ctrl=%08x",
@@ -826,6 +888,7 @@ static void dio432_init_defaults(struct acq400_dev *adev)
 	dev_info(DEVP(adev), "dio432_init_defaults %d dac_ctrl=%08x",
 			__LINE__, acq400rd32(adev, DAC_CTRL));
 	//@@todo dev_info(DEVP(adev), "dio432_init_defaults() 99 cursor %d", adev->cursor.hb[0]->ix);
+
 }
 
 
@@ -904,11 +967,49 @@ void measure_ao_fifo(struct acq400_dev *adev)
 	ao420_reset_fifo(adev);
 }
 
+void dio432_set_direction(struct acq400_dev *adev, unsigned byte_is_output);
 
+void dio482_pg_init_defaults(struct acq400_dev* adev, int gpg32)
+{
+	struct PG_dev* pg_dev = container_of(adev, struct PG_dev, adev);
+	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
+	dac_ctrl |= DIO432_CTRL_PG_CLK_IS_DO;  /* avoid possible bogus CLK output on PG5 line */
+	dac_ctrl |= DIO432_CTRL_MODULE_EN;
+	acq400wr32(adev, DAC_CTRL, dac_ctrl);
+
+	init_gpg_buffer(adev, &pg_dev->gpg, DIO482_PG_GPGMEM, DIO482_PG_GPGDR);
+
+	if (gpg32){
+		init_gpg_buffer(adev, &pg_dev->gpg32, DIO482_PG_GPGMEM32, 0xffff);
+	}
+}
+
+void dio482_ppw_init_defaults(struct acq400_dev* adev)
+{
+	u32 dac_ctrl;
+	dev_info(DEVP(adev), "%s", __FUNCTION__);
+	dac_ctrl = acq400rd32(adev, DAC_CTRL);
+	dac_ctrl |= DIO432_CTRL_MODULE_EN;
+	acq400wr32(adev, DAC_CTRL, dac_ctrl);
+
+	dio432_set_direction(adev, 0x03);
+	acq400wr32(adev, DIO482_PG_IMM_MASK, ~DIO482_PPW_PPW_DOx);
+}
+
+void dio482td_init_defaults(struct acq400_dev* adev)
+{
+	dio482_pg_init_defaults(adev, 0);
+	acq400wr32(adev, DIO482_PG_IMM_MASK, ~DIO482_PG_PG_DOx);
+	adev->clkdiv_mask = 0xffffffff;
+}
 void _acq400_mod_init_defaults(struct acq400_dev* adev)
 {
 	adev->sysclkhz = SYSCLK_M100;
+	adev->clk_ctr_reg = ADC_CLK_CTR/sizeof(int);
+	adev->sample_ctr_reg = ADC_SAMPLE_CTR/sizeof(int);
 }
+
+
 void acq400_mod_init_defaults(struct acq400_dev* adev)
 {
 	_acq400_mod_init_defaults(adev);
@@ -916,13 +1017,22 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 	if (IS_ACQ42X(adev)){
 		acq420_init_defaults(adev);
 	}else if (IS_DIO432X(adev)){
-		dio432_init_defaults(adev);
+		if (IS_DIO482ELF_PG(adev)){
+			dio482_pg_init_defaults(adev, 1);
+		}else if (IS_DIO482PPW(adev)){
+			dio482_ppw_init_defaults(adev);
+		}else{
+			dio432_init_defaults(adev);
+		}
+	}else if (IS_DIO422AQB(adev)){
+		dio422aqb_init_defaults(adev);
 	}else{
 		switch(GET_MOD_ID(adev)){
 		case MOD_ID_ACQ430FMC:
 		case MOD_ID_ACQ435ELF:
 		case MOD_ID_ACQ436ELF:
 		case MOD_ID_ACQ437ELF:
+		case MOD_ID_TIMBUS:
 			acq43X_init_defaults(adev);
 			break;
 		case MOD_ID_AO420FMC:
@@ -938,6 +1048,12 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 			break;
 		case MOD_ID_PMODADC1:
 			pmodadc1_init_defaults(adev);
+			break;
+		case MOD_ID_ACQ465ELF:
+			acq465_init_defaults(adev);
+			break;
+		case MOD_ID_ACQ494FMC:
+			acq494_init_defaults(adev);
 			break;
 		case MOD_ID_ACQ480FMC:
 			acq480_init_defaults(adev);
@@ -960,10 +1076,14 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 			pig_celf_init_defaults(adev);
 			break;
 		case MOD_ID_RAD_CELF:
+		case MOD_ID_DDS_WERA:
 			rad_celf_init_defaults(adev);
 			break;
 		case MOD_ID_DAC_CELF:
 			ao428_init_defaults(adev);
+			break;
+		case MOD_ID_DIO482TD_PG:
+			dio482td_init_defaults(adev);
 			break;
 		default:
 			dev_warn(DEVP(adev), "no custom init for module type %x",
@@ -972,6 +1092,18 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 	}
 }
 
-
+void acq465_lcs(int site, unsigned value)
+{
+	struct acq400_dev* adev = acq400_sites[site];
+	BUG_ON(adev == 0);
+	dev_dbg(DEVP(adev), "%s site:%d value:%02x", __FUNCTION__, site, value);
+	{
+		u32 lcs = acq400rd32(adev, ACQ465_LCS);
+		lcs &=~ ACQ465_LCS_MASK;
+		lcs |= value;
+		acq400wr32(adev, ACQ465_LCS, lcs);
+	}
+}
+EXPORT_SYMBOL_GPL(acq465_lcs);
 
 

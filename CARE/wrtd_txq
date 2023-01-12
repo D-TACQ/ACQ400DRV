@@ -1,0 +1,22 @@
+#!/bin/sh
+# wrtd_txi message ... small integer :: send default
+
+MAX_TX=${1:-1}
+ARGS=""
+SITE=${SITE:-11}
+WRSH=/dev/shm/wr${SITE}.sh
+eval $(sed -e 's/^/export /' ${WRSH})
+
+if [ "${MAX_TX#[0-9]*}" != "$MAX_TX" ]; then
+    ARGS="--max_tx $MAX_TX"
+else
+	 WRTD_ID=$MAX_TX 
+	 ARGS="--max_tx 1"  
+fi
+shift
+ARGS="$ARGS $@"
+
+
+/usr/local/bin/wrtd 2>&1  $WRTD_OPTS  $ARGS txq $WRTD_ID
+
+

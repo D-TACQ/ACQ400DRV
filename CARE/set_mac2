@@ -24,9 +24,26 @@ close $fp
 #puts [dict get $ub_env]
 
 
+if { [ file exists /sys/class/net/eth1 ] } {
+	set EDEV eth1
+} elseif { [ file exists /sys/class/net/eth0 ] } {
+	set status [exec ls -l /sys/class/net/eth0 ]
+	if { [ string first e000c000 $status ] >= 0 } {
+		puts "gem1 labelled as eth0"
+		set EDEV eth0
+	} else {
+		puts "ERROR: no eth1 and eth0 is gem0"
+		exit 1
+	}
+} else {
+	puts "ERROR: no ethernet device found"
+	exit 1
+}
+
 proc set_eth1_mac {macaddr} {
-	puts "ifconfig eth1 hw ether $macaddr"
-	exec ifconfig eth1 hw ether $macaddr
+	global EDEV
+	puts "ifconfig $EDEV hw ether $macaddr"
+	exec ifconfig $EDEV hw ether $macaddr
 }
 
 proc calc_eth1_mac {eth0_macaddr} {

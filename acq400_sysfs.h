@@ -23,6 +23,11 @@
  * TODO
  * ------------------------------------------------------------------------- */
 
+
+#ifndef __ACQ400_SYSFS_H__
+#define __ACQ400_SYSFS_H__
+
+
 #define DEVICE_CREATE_FILE(dev, attr) 							\
 	do {										\
 		if (device_create_file(dev, attr)){ 					\
@@ -184,6 +189,12 @@ static ssize_t show_bitN##NAME(						\
 }									\
 static DEVICE_ATTR(NAME, S_IRUGO|S_IWUSR, show_bitN##NAME, store_bitN##NAME)
 
+#ifndef SHOW_BITS
+#define SHOW_BITS	acq400_show_bits
+#endif
+#ifndef STORE_BITS
+#define STORE_BITS	acq400_store_bits
+#endif
 
 #define _MAKE_BITS(NAME, REG, SHL, MASK, WD)				\
 static ssize_t show_bits##NAME(						\
@@ -193,9 +204,9 @@ static ssize_t show_bits##NAME(						\
 {									\
 	if (SHL==MAKE_BITS_FROM_MASK){					\
 		unsigned shl = getSHL(MASK);				\
-		return acq400_show_bits(d, a, b, REG, shl, (MASK)>>shl);\
+		return SHOW_BITS(d, a, b, REG, shl, (MASK)>>shl);\
 	}else{								\
-		return acq400_show_bits(d, a, b, REG, SHL, MASK);	\
+		return SHOW_BITS(d, a, b, REG, SHL, MASK);	\
 	}								\
 }									\
 static ssize_t store_bits##NAME(					\
@@ -206,9 +217,9 @@ static ssize_t store_bits##NAME(					\
 {									\
 	if (SHL==MAKE_BITS_FROM_MASK){					\
 		unsigned shl = getSHL(MASK);					\
-		return acq400_store_bits(d, a, b, c, REG, shl, (MASK)>>shl, WD);\
+		return STORE_BITS(d, a, b, c, REG, shl, (MASK)>>shl, WD);\
 	}else{								\
-		return acq400_store_bits(d, a, b, c, REG, SHL, MASK, WD);\
+		return STORE_BITS(d, a, b, c, REG, SHL, MASK, WD);\
 	}								\
 }									\
 static DEVICE_ATTR(NAME, S_IRUGO|S_IWUSR, show_bits##NAME, store_bits##NAME)
@@ -217,6 +228,13 @@ static DEVICE_ATTR(NAME, S_IRUGO|S_IWUSR, show_bits##NAME, store_bits##NAME)
 #define MAKE_BITS(NAME, REG, SHL, MASK)	_MAKE_BITS(NAME, REG, SHL, MASK, 0)
 #define DEPRECATED_MAKE_BITS(NAME, REG, SHL, MASK)	_MAKE_BITS(NAME, REG, SHL, MASK, 1)
 
+#ifndef SHOW_DNUM
+#define SHOW_DNUM	acq400_show_dnum
+#endif
+#ifndef STORE_DNUM
+#define STORE_DNUM	acq400_store_dnum
+#endif
+
 #define MAKE_DNUM(NAME, REG, MASK)					\
 static ssize_t show_dnum##NAME(						\
 	struct device *d,						\
@@ -224,7 +242,7 @@ static ssize_t show_dnum##NAME(						\
 	char *b)							\
 {									\
 	unsigned shl = getSHL(MASK);				\
-	return acq400_show_dnum(d, a, b, REG, shl, (MASK)>>shl);\
+	return SHOW_DNUM(d, a, b, REG, shl, (MASK)>>shl);\
 }									\
 static ssize_t store_dnum##NAME(					\
 	struct device * d,						\
@@ -233,9 +251,11 @@ static ssize_t store_dnum##NAME(					\
 	size_t c)							\
 {									\
 	unsigned shl = getSHL(MASK);					\
-	return acq400_store_dnum(d, a, b, c, REG, shl, (MASK)>>shl);	\
+	return STORE_DNUM(d, a, b, c, REG, shl, (MASK)>>shl);	\
 }									\
 static DEVICE_ATTR(NAME, S_IRUGO|S_IWUSR, show_dnum##NAME, store_dnum##NAME)
+
+
 
 #define SCOUNT_KNOB(name, reg) 							\
 static ssize_t show_clk_count_##name(						\
@@ -243,8 +263,8 @@ static ssize_t show_clk_count_##name(						\
 	struct device_attribute *attr,						\
 	char * buf)								\
 {										\
-	u32 counter = acq400_devices[dev->id]->reg_cache.data[reg/sizeof(int)]; \
-	return sprintf(buf, "%u\n", counter);					\
+	u32 counter = acq400_devices[dev->id]->clk_reg_cache.data[reg/sizeof(int)]; \
+	return sprintf(buf, "%u\n", counter&0x7fffffff);			\
 }										\
 static DEVICE_ATTR(scount_##name, S_IRUGO, show_clk_count_##name, 0)
 
@@ -255,9 +275,75 @@ static ssize_t show_clk_count_##name(						\
 	char * buf)								\
 {										\
 	unsigned shl = getSHL(field);						\
-	u32 counter = acq400_devices[dev->id]->reg_cache.data[reg/sizeof(int)]; \
+	u32 counter = acq400_devices[dev->id]->clk_reg_cache.data[reg/sizeof(int)]; \
 	return sprintf(buf, "%u\n", (counter&field)>>shl);			\
 }										\
 static DEVICE_ATTR(scount_##name, S_IRUGO, show_clk_count_##name, 0)
 
 extern u32 get_edge_sense(char edge[], u32 vv);
+
+#define MAKE_SIGNAL(SIGNAME, REG, shl, mbit, HI, LO, NWB)		\
+static ssize_t show_##SIGNAME(						\
+	struct device * dev,						\
+	struct device_attribute *attr,					\
+	char * buf)							\
+{									\
+	return show_signal(dev, attr, buf, REG, shl, mbit, #SIGNAME, HI, LO);\
+}									\
+									\
+static ssize_t store_##SIGNAME(						\
+	struct device * dev,						\
+	struct device_attribute *attr,					\
+	const char * buf,						\
+	size_t count)							\
+{									\
+	return store_signal(dev, attr, buf, count, REG, shl, mbit, HI, LO, NWB);\
+}									\
+static DEVICE_ATTR(SIGNAME, S_IRUGO|S_IWUSR, 				\
+		show_##SIGNAME, store_##SIGNAME)
+
+#define ENA	"enable"
+#define DIS	"disable"
+#define EXT	"external"
+#define SOFT	"soft"
+#define INT	"internal"
+
+ssize_t store_signal(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count,
+	unsigned REG,
+	int shl, int mbit, const char* mbit_hi, const char* mbit_lo,
+	int not_while_busy);
+
+ssize_t show_signal(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	unsigned REG,
+	int shl, int mbit,
+	const char*signame, const char* mbit_hi, const char* mbit_lo);
+
+
+ssize_t store_fields(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count,
+	unsigned REG,
+	const unsigned* FIELDS,
+	const int zero_based)			/* zero terminated for count */;
+
+ssize_t show_fields(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf,
+	const char* signal,
+	unsigned REG,
+	const unsigned* FIELDS,
+	const int zero_based);
+
+#define ZERO_BASED 1
+
+#endif 	/* #ifndef __ACQ400_SYSFS_H__ */

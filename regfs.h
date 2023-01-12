@@ -33,6 +33,8 @@
 #undef PD
 #undef PDSZ
 
+#define GROUP_FIRST_N_TRIGGERS_ALL	0
+
 struct REGFS_DEV {
 	void* va;
 	struct platform_device* pdev;
@@ -53,6 +55,7 @@ struct REGFS_DEV {
 	unsigned status_latch;
 	unsigned group_status_latch;
 	unsigned group_trigger_mask;
+	unsigned group_first_n_triggers;      /* trigger if N in the group are set. N=0 -> ALL */
 	enum GSMODE { GS_NOW, GS_HISTORIC } gsmode;
 	unsigned sample_count;
 	unsigned latch_count;

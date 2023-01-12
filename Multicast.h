@@ -11,6 +11,8 @@
 
 class MultiCast {
 
+protected:
+	static const char* multicast_if;
 public:
 	virtual ~MultiCast() {}
 
@@ -19,6 +21,9 @@ public:
 
 	enum MC { MC_SENDER, MC_RECEIVER };
 	static MultiCast& factory(const char* group, int port, enum MC mode);
+	static void set_IP_MULTICAST_IF(const char* addr) {
+		multicast_if = addr;
+	}
 };
 
 

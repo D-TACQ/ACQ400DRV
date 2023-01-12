@@ -231,7 +231,7 @@ static ssize_t store_multibytes(
 			return -1;
 		}
 	}else{
-		dev_err(dev, "store_multibytes %d bytes needed", LEN);
+		dev_err(dev, "store_multibytes reg:%02x %d bytes needed", REG, LEN);
 		return -1;
 	}
 

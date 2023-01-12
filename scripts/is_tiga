@@ -1,0 +1,3 @@
+#!/bin/sh
+[ -e /dev/acq400.0.knobs/wr_tai_trg_s1 ] && exit 0
+exit 1

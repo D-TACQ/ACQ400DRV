@@ -54,6 +54,11 @@ Knob::~Knob()
 	delete [] kpath;
 }
 
+bool Knob::exists()
+{
+	File file(kpath, "r", false);
+	return file.exists();
+}
 int Knob::get(unsigned *value)
 {
 	File file(kpath, "r");
@@ -89,17 +94,36 @@ int Knob::setX(unsigned value)
 	return fprintf(file(), "%x\n", value);
 }
 
-int getKnob(int idev, const char* knob, unsigned* value)
+#define MAXPATH 128
+int getKnob(int idev, const char* knob, unsigned* value, const char* fmt)
 {
-	char kpath[128];
+	char kpath[MAXPATH+1];
 	if (knob[0] == '/'){
-		strncpy(kpath, knob, 128);
+		strncpy(kpath, knob, MAXPATH);
 	}else{
-		snprintf(kpath, 128, "/dev/acq400.%d.knobs/%s", idev, knob);
+		snprintf(kpath, MAXPATH, "/dev/acq400.%d.knobs/%s", idev, knob);
 	}
 	FILE *fp = fopen(kpath, "r");
 	if (fp){
-		int rc = fscanf(fp, "%u", value);
+		int rc = fscanf(fp, fmt, value);
+		fclose(fp);
+		return rc;
+	} else {
+		return -1;
+	}
+}
+
+int getEtcKnob(int idev, const char* knob, unsigned* value, const char* fmt)
+{
+	char kpath[MAXPATH+1];
+	if (knob[0] == '/'){
+		strncpy(kpath, knob, MAXPATH);
+	}else{
+		snprintf(kpath, MAXPATH, "/etc/acq400/%d/%s", idev, knob);
+	}
+	FILE *fp = fopen(kpath, "r");
+	if (fp){
+		int rc = fscanf(fp, fmt, value);
 		fclose(fp);
 		return rc;
 	} else {
@@ -148,5 +172,48 @@ int setKnob(int idev, const char* knob, int value)
 	char vx[32]; snprintf(vx, 32, "%d", value);
 	return setKnob(idev, knob, vx);
 }
+
+
+bool get_local_env(const char* fname, bool verbose)
+{
+	const int maxline = 80+256;
+	char newline[maxline];
+
+	if (verbose){
+		fprintf(stderr, "get_local_env(%s)\n", fname);
+	}
+
+	FILE* fp = fopen(fname, "r");
+	if (fp == 0){
+		return false;
+	}
+	while(fgets(newline, maxline, fp)){
+		char* key = new char[80];
+		char* value = new char[256];
+		chomp(newline);
+		int rc = sscanf(newline, "%80[^=#]=%255c", key, value);
+		if (verbose){
+			fprintf(stderr, "get_local_env(\"%s\") rc=%d\n", newline, rc);
+		}
+		switch(rc){
+		case 2:
+			if (key[0] == '#'){
+				break;
+			}
+			if (verbose){
+				fprintf(stderr, "::setenv(%s, %s, true)\n", key, value);
+			}
+			::setenv(key, value, true);
+			continue;			// deliberate memleak : setenv needs the variables to stick
+		default:
+			break;
+		}
+		delete [] key;
+		delete [] value;
+	}
+	fclose(fp);
+	return true;
+}
+
 
 

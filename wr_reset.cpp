@@ -1,8 +1,5 @@
 /* ------------------------------------------------------------------------- */
-/* atd.cpp  D-TACQ ACQ400 comb memory for ATD result
- * field the event, locate in memory, extract and save
- * Project: ACQ420_FMC
- * Created: 17 August 2019  			/ User: pgm
+/* wr_reset.cpp  D-TACQ ACQ400 reset wrpc in soft core
  * ------------------------------------------------------------------------- *
  *   Copyright (C) 2019 Peter Milne, D-TACQ Solutions Ltd         *
  *                      <peter dot milne at D hyphen TACQ dot com>           *
@@ -135,6 +132,7 @@ void wr_load(char* wrbase, const char* fname)
 		wrbase[ii] = buf[ii];
 		sched_yield();
 	}
+	delete [] buf;
 }
 
 void set_mac(char* wrbase)
@@ -239,7 +237,7 @@ int restore_cal(char* wrbase)
 }
 struct poptOption opt_table[] = {
 	{ "save_cal", 's', POPT_ARG_INT, &G::save_cal, 's', "save calibration and quit" },
-	{ "is_wr_present", 'w', POPT_ARG_INT, &G::is_wr_present, 'w', "report if WRC present in systemi and quit" },
+	{ "is_wr_present", 'w', POPT_ARG_INT, &G::is_wr_present, 'w', "report if WRC present in system and quit" },
 	{
 	  "verbose", 'v', POPT_ARG_INT, &G::verbose, 0, "debug"
 	},

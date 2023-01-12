@@ -1,33 +1,19 @@
-#!/usr/local/bin/expect
-# for full block set export SLOWMON_COUNT=0 in /mnt/local/sysconfig/acq400.sh
+#!/bin/sh
 
-set COUNT 1
-if { [info exists ::env(SLOWMON_COUNT) ] } {
-	set COUNT $::env(SLOWMON_COUNT)
-}
+while [ ! -e /etc/acq400/0/slowmon_hw ]; do
+	sleep 1
+done
 
-if { $COUNT == 0 } {
-	set COUNT_CMD {}	
-} else {
-	set COUNT_CMD "count=$COUNT"
-}
+SLOWMON_HW=$(cat /etc/acq400/0/slowmon_hw)
+#echo SLOWMON_HW $SLOWMON_HW
+[ $SLOWMON_HW -eq 1 ] && exec slowmon_hw
 
-set BS 4096
-
-log_user 0
-
-spawn -open [open "/dev/acq400.0.bqf" r]
-
-while { 1 } {
-    expect {
-        -re "^(\[0-9\]*)\n" {
-            set blk $expect_out(1,string)
-#	    puts $blk;flush stdout
-	    exec >@stdout 2>/dev/null \
-		dd if=/dev/acq400.0.hb/$blk bs=$BS $COUNT_CMD
-        }
-    }
-}
-
+FIN=$(cat /etc/acq400/0/slowmon_fin)
+FS=$(cat /etc/acq400/0/slowmon_fs)
+SPB=$(echo $FIN $FS | awk '{ nb=int($2/$1); print(nb>0? nb: 1) }')
+SPP=$(cat /etc/acq400/0/slowmon_nacc)
+SPAD=$(cat /etc/acq400/0/spad)
+#echo exec bbq_send_ai --stdout=1 --samples_per_packet=$SPP --packets_per_buffer=$SPB --spad=$SPAD
+[ $SLOWMON_HW -ne 1 ] && exec bbq_send_ai --stdout=1 --samples_per_packet=$SPP --packets_per_buffer=$SPB --spad=$SPAD 2>/dev/null
 
 

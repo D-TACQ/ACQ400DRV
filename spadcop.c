@@ -24,6 +24,31 @@ struct SpadCop {
 	unsigned updates;
 };
 
+
+enum hrtimer_restart _spadCopTime(struct hrtimer* hrt, ktime_t _kt)
+{
+	uint64_t kt = (uint64_t)_kt;	// do not use before 1970!
+	struct SpadCop *sc = container_of(hrt, struct SpadCop, timer);
+	unsigned ns = do_div(kt, 1000000000);
+	unsigned secs = kt&0xfffff;	/* truncated to 20b */
+	unsigned short ms = ns/1000000;
+
+	secs = (secs << 12) | ms;
+
+	*sc->dst = secs;				// 20 bits seconds, 12 bits msec
+	hrtimer_forward_now(hrt, sc->kt_period);
+	return HRTIMER_RESTART;
+}
+enum hrtimer_restart spadCopTimeRealAction(struct hrtimer* hrt)
+{
+	return _spadCopTime(hrt, ktime_get_real_ns());
+}
+
+enum hrtimer_restart spadCopTimeTAIAction(struct hrtimer* hrt)
+{
+	return _spadCopTime(hrt, ktime_get_clocktai());
+}
+
 enum hrtimer_restart spadCopMsecAction(struct hrtimer* hrt)
 {
 	struct SpadCop *sc = container_of(hrt, struct SpadCop, timer);
@@ -67,6 +92,8 @@ void spadCopStart(struct SpadCop *sc)
 {
 	hrtimer_init(&sc->timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
 	sc->timer.function = sc->reg==0xcafe? spadCopMsecAction:
+			     sc->reg==0xfeed? spadCopTimeRealAction:
+			     sc->reg==0xd0d0? spadCopTimeTAIAction:
 			     sc->reg==0xcccc? spadCopRampAction:
 			     sc->enabled&0x2? spadCopReadClear: spadCopRead;
 	if (spadcop_tightloop == 0){

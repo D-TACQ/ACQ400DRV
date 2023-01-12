@@ -1,0 +1,4 @@
+#!/bin/sh
+cd /dev/acq400.0.hb
+for file in ???; do cat $file; done
+

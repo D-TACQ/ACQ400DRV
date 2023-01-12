@@ -1,0 +1,6 @@
+#!/bin/sh
+files="${*:--}"
+
+cat $files | nc localhost 54201
+
+

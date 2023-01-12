@@ -9,43 +9,51 @@ LPORT=$(get-port-from-service acq4xx-$SERVICE-console)
 SIGTERM=15
 HATXNOEFFECT=0
 start() {
-		/usr/local/bin/procServ --noautorestart --restrict -c / -p $PIDF --killsig=$HATXNOEFFECT $LPORT \
-			/usr/local/bin/streamtonowhere
+        /usr/local/bin/procServ --noautorestart --restrict -c / -p $PIDF --killsig=$HATXNOEFFECT $LPORT \
+            /usr/local/bin/streamtonowhere
 }
 
 ACQ400_MAIN_PIDF=/var/run/acq400_stream.0.pid
+INP=$(/usr/local/CARE/acq400_stream_inp id)
 
-stop() {		
-        if [ -r ${ACQ400_MAIN_PIDF} ]; then
-#        	echo 1 > /dev/acq400.0.knobs/estop			
-            kill -${SIGTERM} $(cat ${ACQ400_MAIN_PIDF})
-#            echo $'\x14' | nc localhost $LPORT
-            rm ${ACQ400_MAIN_PIDF}
-			sleep 0.1
-			set.site 0 state 0
-        fi
+stop() {
+    echo "no go" > /dev/shm/nopostshot
+    echo quit > $INP
+    usleep 100000
+
+    echo quit > $INP 
+    if [ -r ${ACQ400_MAIN_PIDF} ]; then
+        echo 1 > /dev/acq400.0.knobs/estop
+        sleep 0.1			
+        kill -${SIGTERM} $(cat ${ACQ400_MAIN_PIDF})
+#           echo $'\x14' | nc localhost $LPORT
+        rm ${ACQ400_MAIN_PIDF}
+        sleep 0.1
+        set.site 0 state 0
+    fi
         
-        if [ -r ${PDIF}]; then
-		sleep 1
-        	kill -${SIGTERM} $(cat ${PIDF})
-        fi
+    if [ -r ${PDIF}]; then
+        sleep 1
+        [ -r ${PDIF} ] && kill -${SIGTERM} $(cat ${PIDF}) 2>/dev/null
+    fi
+    /usr/local/CARE/acq400_stream_inp clear
 }
 
 status() {
-	if [ -r ${PIDF} ]; then
-		echo running $(cat ${PIDF})
-	else
-		echo stopped
-	fi
+    if [ -r ${PIDF} ]; then
+        echo running $(cat ${PIDF})
+    else
+        echo stopped
+    fi
 }
 
 case $1 in
 start|"")
-	stop; start;;
+    stop; start;;
 stop)
         stop;;
 status)
-	status;;
+    status;;
 *)
         echo "USAGE streamtonowhered  start\|stop";;
 esac

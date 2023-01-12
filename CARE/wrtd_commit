@@ -1,0 +1,19 @@
+#!/bin/sh
+NAME=$0
+RESET=0
+TX=0
+PORT=42080
+SITE=${SITE:-11}
+WRSH=/dev/shm/wr${SITE}.sh
+[ $SITE -ne 11 ] && PORT=42${SITE}80
+if [ "x$1" = "x1" ]; then
+	[ "${NAME%%reset*}" != "$NAME" ] 	&& RESET=1
+	[ "${NAME%%tx*}" 	!= "$NAME" ] 	&& TX=1
+	
+	if [ $RESET -ne 0 ] && [ -e /mnt/local/sysconfig/wr.sh ]; then
+		source /mnt/local/sysconfig/wr.sh
+		set | grep WRTD | tr -d \' > ${WRSH}
+	fi			
+	[ $TX -eq 0 ] && PORT=$(($PORT+1))
+	printf '\030\n' | nc localhost $PORT	
+fi

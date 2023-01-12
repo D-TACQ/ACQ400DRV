@@ -1,4 +1,5 @@
 #!/bin/sh
 
-echo $(cat /etc/acq400/0/ssb /etc/acq400/1/rtm_translen) > \
-	/dev/acq400.0.knobs/optimise_bufferlen
+[ -e /etc/acq400/0/ssb ] && [ /etc/acq400/1/rtm_translen ] && 
+	echo $(cat /etc/acq400/0/ssb /etc/acq400/1/rtm_translen) > \
+		/dev/acq400.0.knobs/optimise_bufferlen

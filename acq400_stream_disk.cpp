@@ -73,7 +73,7 @@ static void processBuffer(const char* outroot, int ibuf, short* buf, int nbuf){
 
 
 	fwrite(buf, sizeof(short), nbuf, fp);
-	if (++icat > concat){
+	if (++icat >= concat){
 		fclose(fp);
 		icat = 0;
 	}

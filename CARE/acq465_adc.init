@@ -1,0 +1,103 @@
+#!/bin/sh
+
+# --all is handy for humans, but CHIPS is easier to script ..
+CHIPS=${CHIPS:-ABCDEFGH}
+VERBOSE=${VERBOSE:-0}
+LIVE=${LIVE:-1}
+DATA32=${DATA32:-1}
+
+if [ "x$1" == "--all" ]; then
+	export args="--all"
+elif [ "x$1" != x${1#--chips*} ]; then
+	export args="$1"
+else
+	export args="--chips=$CHIPS"
+fi
+
+args="$args -t1"
+
+export SITE=${SITE:-1}
+
+DATA32=$(cat /dev/acq400.${SITE}.knobs/data32)
+
+echo "++ acq465_adc.init SITE:$SITE 01"
+
+reset=${2:-1}
+
+acq465_reg() {
+	[ $VERBOSE -eq 1 ] && echo /etc/acq400/${SITE}/acq465_reg $args $*
+	[ $LIVE -ne 0 ] && /etc/acq400/${SITE}/acq465_reg $args $*
+}
+acq465_mclkmon() {
+	[ $VERBOSE -eq 1 ] && echo /etc/acq400/${SITE}/acq465_mclkmon $args $*
+	[ $LIVE -ne 0 ] && /etc/acq400/${SITE}/acq465_mclkmon $args $*
+}
+
+acq465_readall() {
+	[ $VERBOSE -eq 1 ] && echo /etc/acq400/${SITE}/acq465_readall $args $*
+	[ $LIVE -ne 0 ] && /etc/acq400/${SITE}/acq465_readall $args $*
+}
+
+acq465_filter_all() {
+	[ $VERBOSE -eq 1 ] && echo /etc/acq400/${SITE}/acq465_filter $args $*
+	[ $LIVE -ne 0 ] && /etc/acq400/${SITE}/acq465_filter $args $*
+}
+
+
+### ACTION
+
+[ $reset -eq 1 ] && set.site ${SITE} adc_reset 1
+# Read all the registers, this initial read seems to ensure the first writes are successful
+acq465_readall
+# set hi speed filter to avoid range errors
+acq465_filter_all 2
+# Initial values to registers
+
+#acq465_reg 0x2 0xd10 # Low Power Mode
+acq465_reg 0x2 0xd1 # High Performance Mode
+acq465_reg 0x10 0x02 # Enable Input Ref Gain Correction
+acq465_reg 0x12 0x01 # Dual channel mode. D0 and D1
+
+acq465_reg 0x24 0x01 # VCM = AVDD/2 = 2.5 V
+acq465_reg 0x25 0x28 # Switch on MCLK_CNT and Overvoltage monitor
+
+FILTER=0
+if [ -e /etc/acq400/${SITE}/acq465_filter_default ]; then
+	FILTER=$(cat /etc/acq400/${SITE}/acq465_filter_default)
+fi
+acq465_filter_all $FILTER
+echo $FILTER > /dev/acq400.${SITE}.knobs/filter_sel
+
+
+
+# Data bitwidth
+acq465_reg 0x11 0x20;set.site 1 data32 $DATA32; # 24-bit:1, 16-bit:0
+
+
+sleep 1
+
+# Read all the registers
+acq465_knobs readall
+
+echo -e "\nOutput Mode; 1=Dual, 2=Quad"
+acq465_reg 0x12
+
+echo -e "\nBitwidth; 00=16, 20=24"
+acq465_reg 0x11
+
+# Read DEVICE_STATUS
+echo -e "\nLook for LOCK 0001: success"
+acq465_reg 0x15
+
+# Read DEVICE_STATUS
+echo -e "\nLook for errors 0000: good"
+acq465_reg 0x42
+
+echo
+
+echo "++ acq465_adc.init SITE:$SITE 99"
+# MCLK Monitor
+#echo -e "\n"
+#acq465_mclkmon
+
+

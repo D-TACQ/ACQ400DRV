@@ -1,0 +1,13 @@
+#!/bin/sh
+
+cd /dev/acq400/data
+
+if [ "x$*" = "x" ]; then
+	FILES=raw/0
+else
+	FILES=$*
+fi
+
+ls -l $FILES | awk '{ print $5" "$6" "$7" "$8" " $9 }'
+
+

@@ -1,0 +1,2 @@
+file=${1:-/dev/shm/acq4000.xml}
+cat $file  | sed -n /CDATA/,/]]/p | sed -e 's/.*MOD_ID/MOD_ID/' -e '/v/d' -e 's/ *//' | awk '{ printf( "%30s %s\n", $1, $2) }'

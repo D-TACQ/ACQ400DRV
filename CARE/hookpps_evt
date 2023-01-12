@@ -1,0 +1,11 @@
+#!/bin/sh
+# hook interrupt on EVT.d4, driven from WRPPS
+
+if [ -e /sys/class/gpio/gpio461 ]; then
+	(cd /dev/gpio; echo 1 > EVT/d4.tmp; mv EVT/d4.tmp EVT/d4)
+	echo 460 > /sys/class/gpio/unexport
+	set.site 0 SIG:EVENT_SRC:4 WR_PPS
+fi
+
+
+

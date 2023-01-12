@@ -1,8 +1,9 @@
 #!/bin/bash
 
 
+LATEST=$(ls -t release/*.tgz |head  -n 1)
 UUT=$1
-PKG=$2
+PKG=${2:-$LATEST}
 ROOT=${3:-/mnt/packages}
 
 if [ "x$UUT" = "x" -o "x$PKG" = "x" ]; then
@@ -15,7 +16,14 @@ else
 	ACT=${UUT}
 fi
 
-if [ ! -e $PKG ]; then
+if [ "$PKG" != "$LATEST" ]; then
+	echo "WARNING $PKG != $LATEST are you sure y/n"
+	read yn
+	if [ "$yn" != "y" ]; then
+		echo "Quitting, good move"
+		exit 1
+	fi
+elif [ ! -e $PKG ]; then
 	echo ERROR: $PKG does not exist
 	echo usage deploy.package UUT package
 	exit 1
@@ -35,7 +43,8 @@ if [ -e $PKO ]; then
 	ssh ${ACT} rm -f /mnt/ko/packageko*
 	scp $PKO ${ACT}:/mnt/ko
 fi
-ssh ${ACT} rm -f ${ROOT}/$PKGNAME\*
+ssh ${ACT} "echo TEST rm -f ${ROOT}/$PKGNAME* /mnt/local/acq420fmc.ko"
+ssh ${ACT} "rm -f ${ROOT}/$PKGNAME* /mnt/local/acq420fmc.ko"
 scp ${PKG} ${ACT}:${ROOT}
 ssh ${ACT} ls -l ${ROOT}
 

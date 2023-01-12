@@ -1,0 +1,25 @@
+#!/bin/sh
+SITE=${1:-0}
+
+wait_usb=1
+
+while [ $wait_usb -ne 0 ]; do
+	grep usbstick /proc/mounts
+	wait_usb=$?
+	if [ $wait_usb -ne 0 ]; then
+		/usr/local/CARE/usb-stick mount
+		sleep 1
+	fi
+done
+
+export BUFFERLEN=$(get.site 0 bufferlen)
+export EXTENSION=.dat
+export FILESDIR=${FILESDIR:-100}
+export CONCATFILES=${CONCATFILES:-16}
+export MAXSTREAMBUF=${MAXSTREAMBUF:-1000000}
+
+acq400_streamd ${SITE} | acq400_stream_disk ${MAXSTREAMBUF} /usbstick
+
+
+
+

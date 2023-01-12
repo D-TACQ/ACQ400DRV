@@ -1,0 +1,35 @@
+<?xml version="1.0" standalone="no" ?>
+<ACQ>
+<!-- acq435-2V5.xml
+     add calibration data if available via <Calibrated> fields -->
+<!-- calibration data -->
+<AcqCalibration>
+    <Info>
+        <CalDate>20141225</CalDate>
+        <Version>B1007</Version>
+        <Model>ACQ435ELF</Model>
+	<SerialNum>E43510000</SerialNum>
+    </Info>
+     <Data AICHAN="32" code_min="-8388608" code_max="8388607" SW="hi_res_mode,gain%d">
+		<Range name="HI_RES_2V5" sw="1,0">		
+			<Nominal min="-2.5" max="2.5" eoff="0" eslo="0.29847322e-06" roff="0"/>
+        </Range>
+        <Range name="HI_SPEED_2V5" sw="0,0">
+ 			<Nominal min="-2.5" max="2.5" eoff="0" eslo="0.29847322e-06" roff="0"/>
+        </Range>
+     </Data>
+</AcqCalibration>
+<ModelSpec>
+        <ChannelBlockMask>
+                <BlockWidth>8</BlockWidth>
+                <BlockSet>"1111","1110","1100","1000"</BlockSet>
+        </ChannelBlockMask>
+        <MaxAggregateRate>16.4 MB/sec</MaxAggregateRate>
+        <MaxDeviceRate>128 kS/sec</MaxDeviceRate>
+        <MinDeviceRate>0 MS/sec</MinDeviceRate>
+        <CalClock>128000</CalClock>
+        <CalMeanN>1024000</CalMeanN>
+</ModelSpec>
+</ACQ>
+
+

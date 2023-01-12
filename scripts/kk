@@ -1,0 +1,4 @@
+#!/bin/sh
+dev=${1:-/dev/ttyACM0}
+
+kermit -b 115200 -l $dev -c

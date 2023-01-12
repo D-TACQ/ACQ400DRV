@@ -1,0 +1,35 @@
+#!/bin/sh
+
+export SITE=${SITE:-2}
+# nb: leave TSCALE at 1, use CSCALE to scale
+#TSCALE=${TSCALE:-1}
+TSCALE=1
+MODE=${1:-2}
+STIM_FILE=${2:-""}
+
+[ $TSCALE -ne 1 ] && echo Loading with timescaler=$TSCALE
+
+set.site $SITE gpg_enable 0
+set.site $SITE gpg_timescaler $TSCALE
+/usr/local/epics/scripts/gpg_monitor 1
+
+if [ -z $STIM_FILE ]; then
+	stl2gpg  /dev/acq400.$SITE.gpg <<-EOF
+	10,1
+	20,0
+	30,2
+	40,0
+	50,4
+	60,0
+	70,1f
+	80,81
+	90,0
+	EOF
+else
+	stl2gpg /dev/acq400.$SITE.gpg < $STIM_FILE
+fi
+
+# Set GPG to LOOP and Enable GPG
+set.site $SITE gpg_mode $MODE
+set.site $SITE gpg_enable 1
+

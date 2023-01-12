@@ -1,0 +1,9 @@
+#!/bin/sh
+SECONDS=${1:-1}
+while true; do
+	for f in all-leds-off all-green-leds-on all-leds-off all-red-leds-on; do
+		echo $f
+		/usr/local/CARE/$f
+                sleep $SECONDS
+	done
+done

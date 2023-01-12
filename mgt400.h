@@ -40,8 +40,12 @@ struct mgt400_dev {
 		unsigned previous_count;
 		int fd_ix;
 	} push, pull;
-	struct RegCache reg_cache;
+	struct RegCache clk_reg_cache;
 	struct hrtimer buffer_counter_timer;
+	struct StatusClient {
+		unsigned status;
+		wait_queue_head_t status_change;
+	} dma_enable_status[2];			/* PULL, PUSH */
 };
 
 #define dev_virtaddr	va
@@ -93,6 +97,7 @@ int mgt400_clear_histo(struct mgt400_dev *mdev, int minor);
 #define MGT_DRAM_TX_CNT (0x0088)
 
 
+#define ZDMA_CR_KILL_COMMS      (1<<3)
 #define ZDMA_CR_AUTO_PUSH_DMA	(1<<1)
 #define ZDMA_CR_ENABLE		(1<<0)
 
@@ -139,6 +144,8 @@ int mgt400_clear_histo(struct mgt400_dev *mdev, int minor);
 #define DMA_PULL_DESC_FIFO	(0x2080)
 
 
+#define ID_PUSH				0
+#define ID_PULL				1
 #define DMA_DATA_PULL_SHL		16
 #define DMA_DATA_PUSH_SHL		0
 
@@ -165,7 +172,9 @@ int mgt400_clear_histo(struct mgt400_dev *mdev, int minor);
 #define MINOR_PULL_DESC_LIST	5
 #define MINOR_PUSH_DESC_FIFO	6
 #define MINOR_PULL_DESC_FIFO	7
-#define MGT_MINOR_COUNT		8
+#define MINOR_PUSH_STATUS	8
+#define MINOR_PULL_STATUS	9
+#define MGT_MINOR_COUNT	       10
 
 #define PD_FIFO_SHL(file)	\
     ( PD(file)->minor==MINOR_PUSH_DESC_FIFO? \
@@ -177,5 +186,38 @@ int mgt400_clear_histo(struct mgt400_dev *mdev, int minor);
 #define MOD_ID_MGT_DRAM		0x95
 
 #define IS_MGT_DRAM(mdev)	(GET_MOD_ID(mdev) == MOD_ID_MGT_DRAM)
+#define IS_MGT_HUDP(mdev)	(GET_MOD_ID(mdev) == MOD_ID_HUDP)
+
+#define HUDP_CON		0x0004
+#define HUDP_IP_ADDR		0x0008
+#define HUDP_GW_ADDR		0x000c
+#define HUDP_NETMASK		0x0010
+#define HUDP_MAC		0x0014		/* 00:21:ww:xx:yy:zz  ww should be 54 */
+#define HUDP_SRC_PORT		0x0018
+#define HUDP_TX_PKT_SZ		0x001c
+#define HUDP_RX_PORT		0x0020
+#define HUDP_RX_SRC_ADDR	0x0024
+
+#define HUDP_TX_PKT_COUNT	0x0030
+#define HUDP_RX_PKT_COUNT	0x0034
+#define HUDP_DISCO_COUNT	0x0038
+#define HUDP_RX_PKT_LEN		0x003c     	/* R/O detected packet lenght */
+#define HUDP_STATUS		0x0040
+#define HUDP_CALC_PKT_SZ	0x0044
+#define ARP_RESP_MAC_UPPER	0x0048
+#define ARP_RESP_MAC_LOWER	0x004c
+#define UDP_SLICE		0x0050
+
+#define HUDP_DEST_ADDR		0x0108
+#define HUDP_DEST_PORT		0x0118
+
+#define HUDP_DISCO_EN		0x80000000
+#define HUDP_DISCO_INDEX	0x7ff00000
+#define HUDP_DISCO_COUNT_COUNT	0x000fffff
+
+
+
+void mgt400wr32(struct mgt400_dev *mdev, int offset, u32 value);
+u32 mgt400rd32(struct mgt400_dev *mdev, int offset);
 
 #endif /* MGT400_H_ */

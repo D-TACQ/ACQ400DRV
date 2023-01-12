@@ -26,18 +26,22 @@
 #include "mgt400.h"
 #include "dmaengine.h"
 
-#define REVID "0.128"
+#define REVID "0.147"
 
 #ifdef MODULE_NAME
 #undef MODULE_NAME
 #endif
 #define MODULE_NAME 	"mgt400"
 
+
+static char* revid = REVID;
+module_param(revid, charp, 0644);
+
 int ndevices;
 module_param(ndevices, int, 0444);
 MODULE_PARM_DESC(ndevices, "number of devices found in probe");
 #undef MAXDEVICES
-#define MAXDEVICES 3
+#define MAXDEVICES 4
 
 char* MODEL = "";
 module_param(MODEL, charp, 0444);
@@ -52,6 +56,10 @@ int maxdevices = MAXDEVICES;
 int mgt_reset_on_close = 0;
 module_param(mgt_reset_on_close, int , 0644);
 MODULE_PARM_DESC(mgt_reset_on_close, "1: close resets FIFO");
+
+int mgt400_cr_init = 0;
+module_param(mgt400_cr_init, int , 0444);
+MODULE_PARM_DESC(mgt_reset_on_close, "0: no CR init. 1: enable 2: enable+full sites");
 
 /* index from 0. There's only one physical MGT400, but may have 2 channels */
 struct mgt400_dev* mgt400_devices[MAXDEVICES+2];
@@ -69,32 +77,6 @@ struct mgt400_dev* mgt400_devices[MAXDEVICES+2];
 #undef DEVP
 #define DEVP(mdev)		(&(mdev)->pdev->dev)
 
-
-void mgt400wr32(struct mgt400_dev *mdev, int offset, u32 value)
-{
-	if (mdev->RW32_debug){
-		dev_info(DEVP(mdev), "mgt400wr32 %p [0x%02x] = %08x\n",
-				mdev->va + offset, offset, value);
-	}else{
-		dev_dbg(DEVP(mdev), "mgt400wr32 %p [0x%02x] = %08x\n",
-				mdev->va + offset, offset, value);
-	}
-
-	iowrite32(value, mdev->va + offset);
-}
-
-u32 mgt400rd32(struct mgt400_dev *mdev, int offset)
-{
-	u32 rc = ioread32(mdev->va + offset);
-	if (mdev->RW32_debug){
-		dev_info(DEVP(mdev), "mgt400rd32 %p [0x%02x] = %08x\n",
-			mdev->va + offset, offset, rc);
-	}else{
-		dev_dbg(DEVP(mdev), "mgt400rd32 %p [0x%02x] = %08x\n",
-			mdev->va + offset, offset, rc);
-	}
-	return rc;
-}
 
 
 static struct mgt400_dev* mgt400_allocate_dev(struct platform_device *pdev)
@@ -186,6 +168,29 @@ static void _mgt400_buffer_counter(struct mgt400_dev* mdev)
 		_update_histograms(mdev, push, pull);
 	}
 }
+
+static void _mgt400_dma_status_check1(struct mgt400_dev* mdev, int id, int stat)
+{
+	if (stat != mdev->dma_enable_status[id].status){
+		mdev->dma_enable_status[id].status = stat;
+		wake_up_interruptible(&mdev->dma_enable_status[id].status_change);
+	}
+}
+
+static void _mgt400_dma_status_check(struct mgt400_dev* mdev)
+{
+	unsigned dma_ctrl = mgt400rd32(mdev, DMA_CTRL);
+	_mgt400_dma_status_check1(mdev, ID_PUSH, (dma_ctrl>>DMA_DATA_PUSH_SHL)&1);
+	_mgt400_dma_status_check1(mdev, ID_PULL, (dma_ctrl>>DMA_DATA_PULL_SHL)&1);
+}
+
+
+static void _mgt_status_init(struct mgt400_dev* mdev, int id, int stat)
+{
+        init_waitqueue_head(&mdev->dma_enable_status[id].status_change);
+        mdev->dma_enable_status[id].status = stat;
+}
+
 static ktime_t kt_period;
 
 enum hrtimer_restart mgt400_buffer_counter(struct hrtimer* hrt)
@@ -194,6 +199,7 @@ enum hrtimer_restart mgt400_buffer_counter(struct hrtimer* hrt)
 		container_of(hrt, struct mgt400_dev, buffer_counter_timer);
 
 	_mgt400_buffer_counter(mdev);
+	_mgt400_dma_status_check(mdev);
 	counter_updates++;
 	hrtimer_forward_now(hrt, kt_period);
 	return HRTIMER_RESTART;
@@ -220,6 +226,15 @@ void mgt400_clear_counters(struct mgt400_dev* mdev)
 	dev_info(DEVP(mdev), "mgt400_clear_counters :%p  %d %lu",
 			&mdev->push, sizeof(struct DMA_CHANNEL), mdev->push.buffer_count);
 	memset(&mdev->pull, 0, sizeof(struct DMA_CHANNEL));
+	mgt400_start_buffer_counter(mdev);
+}
+
+
+static void mgt_status_init(struct mgt400_dev* mdev)
+{
+	unsigned dma_ctrl = mgt400rd32(mdev, DMA_CTRL);
+	_mgt_status_init(mdev, ID_PUSH, (dma_ctrl>>DMA_DATA_PUSH_SHL)&1);
+	_mgt_status_init(mdev, ID_PULL, (dma_ctrl>>DMA_DATA_PULL_SHL)&1);
 	mgt400_start_buffer_counter(mdev);
 }
 
@@ -429,12 +444,65 @@ int mgt400_dma_descr_open(struct inode *inode, struct file *file)
 		return 0;
 	}
 }
+
+#define MGT_STATUS_OLD  (PD(file)->buffer[0])
+#define MGT_STATUS_ID	(PD(file)->minor == MINOR_PULL_STATUS? ID_PULL: ID_PUSH)
+
+ssize_t mgt400_status_read(
+	struct file *file, char *buf, size_t count, loff_t *f_pos)
+{
+	struct mgt400_dev *mdev = PD(file)->dev;
+	unsigned id = MGT_STATUS_ID;
+	char lbuf[4];
+	int rc;
+
+	dev_dbg(DEVP(mdev), "%s 01 id:%d", __FUNCTION__, id);
+
+	if (count < 2){
+		return -EINVAL;
+	}
+	if (wait_event_interruptible(
+		mdev->dma_enable_status[id].status_change,
+		mdev->dma_enable_status[id].status != MGT_STATUS_OLD)){
+		return -EINTR;
+	}
+	MGT_STATUS_OLD = mdev->dma_enable_status[id].status;
+	snprintf(lbuf, 4, "%d\n", PD(file)->buffer[0]&1);
+	rc = copy_to_user(buf, lbuf, 2);
+
+	dev_dbg(DEVP(mdev), "%s 99 id:%d rc:%d", __FUNCTION__, id, rc);
+
+	if (rc != 0){
+		return -rc;
+	}else{
+		return 2;
+	}
+}
+int mgt400_status_open(struct inode *inode, struct file *file)
+{
+	static struct file_operations _fops = {
+		.read = mgt400_status_read,
+		.release = mgt400_release,
+	};
+	struct mgt400_dev *mdev = PD(file)->dev;
+	unsigned id = MGT_STATUS_ID;
+	dev_dbg(DEVP(mdev), "%s 01", __FUNCTION__);
+
+	MGT_STATUS_OLD = mdev->dma_enable_status[id].status;
+	file->f_op = &_fops;
+
+	return 0;
+}
+
 int mgt400_open(struct inode *inode, struct file *file)
 {
 	SETPD(file, kzalloc(PDSZ, GFP_KERNEL));
 	PD(file)->dev = container_of(inode->i_cdev, struct mgt400_dev, cdev);
 	PD(file)->minor = MINOR(inode->i_rdev);
 	switch(MINOR(inode->i_rdev)){
+	case MINOR_PULL_STATUS:
+	case MINOR_PUSH_STATUS:
+		return mgt400_status_open(inode, file);
 	case MINOR_PUSH_DESC_FIFO:
 	case MINOR_PULL_DESC_FIFO:
 		return mgt400_dma_descr_open(inode, file);
@@ -529,8 +597,19 @@ struct file_operations mgt400_fops = {
 
 static void enableZDMA(struct mgt400_dev* mdev)
 {
-        unsigned zdma_cr = mgt400rd32(mdev, ZDMA_CR);
-        mgt400wr32(mdev, ZDMA_CR, zdma_cr|ZDMA_CR_ENABLE);
+	if (mgt400_cr_init == 0){
+		return;
+	}else{
+		unsigned zdma_cr = mgt400rd32(mdev, ZDMA_CR);
+		unsigned enables = ZDMA_CR_ENABLE;
+		if (mgt400_cr_init > 1){
+			enables |= AGG_SITES_MASK << AGGREGATOR_MSHIFT;
+		}
+		mgt400wr32(mdev, ZDMA_CR, zdma_cr|enables);
+		dev_info(DEVP(mdev),
+				"mod_id 0x%02x enabling comms aggregator 0x%08x",
+				mdev->mod_id, mgt400rd32(mdev, ZDMA_CR));
+	}
 }
 static int mgt400_probe(struct platform_device *pdev)
 {
@@ -578,9 +657,15 @@ static int mgt400_probe(struct platform_device *pdev)
         }
 
         mdev->mod_id = mgt400rd32(mdev, MOD_ID);
-        if (IS_MGT_DRAM(mdev)){
+        switch(mdev->mod_id){
+        case MOD_ID_MGT_DRAM:
         	maxdevices = 1;
+        	break;
+        case MOD_ID_HUDP:
+        	dev_info(&pdev->dev, "HUDP detected");
+                break;
         }
+
         cdev_init(&mdev->cdev, &mgt400_fops);
         mdev->cdev.owner = THIS_MODULE;
         rc = cdev_add(&mdev->cdev, devno, MGT_MINOR_COUNT);
@@ -588,13 +673,17 @@ static int mgt400_probe(struct platform_device *pdev)
         	goto fail;
         }
 
-        mgt400_start_buffer_counter(mdev);
-
+        mgt_status_init(mdev);
         mgt400_createSysfs(&mdev->pdev->dev);
         mgt400_createDebugfs(mdev);
 
-        enableZDMA(mdev);
-
+        switch(mdev->mod_id){
+        default:
+        	enableZDMA(mdev);
+        	break;
+        case MOD_ID_HUDP:
+                break;
+        }
         return rc;
 
 fail:

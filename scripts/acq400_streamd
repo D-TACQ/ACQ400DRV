@@ -10,12 +10,22 @@ fi
 
 source /usr/local/bin/init_stream
 
-SITE=$1
+SITE=${1:-0}
 LOG=/var/log/acq400_streamd_$SITE.log
+INP=$(/usr/local/CARE/acq400_stream_inp id)
+
+(
+if [ ! -e $LOG ]; then
+        grep -q emlog /proc/modules; [ $? -ne 0 ] && /sbin/insmod /usr/local/lib/modules/emlog.ko
+        [ -e $LOG ] || mkemlog $LOG        
+fi
+/usr/local/CARE/acq400_stream_inp create
+) 2>&1 >/dev/null
+
 
 init_stream $SITE >$LOG 2>&1
-jobs >>$LOG
-echo $SAMPLE_SIZE $OVERSAMPLING $SITE >>$LOG
+jobs >$LOG
+echo $SAMPLE_SIZE $OVERSAMPLING $SITE >$LOG
 
 STREAM_OPTS="$STREAM_OPTS --state-file /dev/shm/state"
 
@@ -25,8 +35,8 @@ fi
 
 ACQ400_STREAM=acq400_stream
 
-echo $ACQ400_STREAM --$SSPEC $STREAM_OPTS $SAMPLE_SIZE $OVERSAMPLING $SITE  >>$LOG
-$ACQ400_STREAM --$SSPEC $STREAM_OPTS $SAMPLE_SIZE $OVERSAMPLING $SITE 2>/dev/null
+echo $ACQ400_STREAM --$SSPEC $STREAM_OPTS $SAMPLE_SIZE $OVERSAMPLING $SITE  >$LOG
+$ACQ400_STREAM --$SSPEC $STREAM_OPTS $SAMPLE_SIZE $OVERSAMPLING $SITE 2>$LOG <$INP
 
 fix_state; cat /dev/shm/state 1>&2
 

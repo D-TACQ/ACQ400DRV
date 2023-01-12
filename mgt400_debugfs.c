@@ -32,12 +32,35 @@
 
 struct dentry* mgt400_debug_root;
 
+#define adev	mdev
 
-
+void hudp_createDebugfs(struct mgt400_dev* mdev,char* pcursor)
+{
+	DBG_REG_CREATE_RW(HUDP_CON);
+	DBG_REG_CREATE_RW(HUDP_IP_ADDR);
+	DBG_REG_CREATE_RW(HUDP_GW_ADDR);
+	DBG_REG_CREATE_RW(HUDP_NETMASK);
+	DBG_REG_CREATE_RW(HUDP_MAC);
+	DBG_REG_CREATE_RW(HUDP_SRC_PORT);
+	DBG_REG_CREATE_RW(HUDP_TX_PKT_SZ);
+	DBG_REG_CREATE_RW(HUDP_RX_PORT);
+	DBG_REG_CREATE_RW(HUDP_RX_SRC_ADDR);
+	DBG_REG_CREATE_RW(HUDP_TX_PKT_COUNT);
+	DBG_REG_CREATE_RW(HUDP_RX_PKT_COUNT);
+	DBG_REG_CREATE_RW(HUDP_DISCO_COUNT);
+	DBG_REG_CREATE_RW(HUDP_RX_PKT_LEN);
+	DBG_REG_CREATE_RW(HUDP_STATUS);
+	DBG_REG_CREATE_RW(HUDP_CALC_PKT_SZ);
+	DBG_REG_CREATE(ARP_RESP_MAC_UPPER);
+	DBG_REG_CREATE(ARP_RESP_MAC_LOWER);
+	DBG_REG_CREATE(UDP_SLICE);
+	DBG_REG_CREATE_RW(HUDP_DEST_ADDR);
+	DBG_REG_CREATE_RW(HUDP_DEST_PORT);
+}
 
 void mgt400_createDebugfs(struct mgt400_dev* mdev)
 {
-#define adev	mdev
+
 	char* pcursor;
 	if (!mgt400_debug_root){
 		mgt400_debug_root = debugfs_create_dir("mgt400", 0);
@@ -59,6 +82,10 @@ void mgt400_createDebugfs(struct mgt400_dev* mdev)
 		return;
 	}
 	DBG_REG_CREATE(MOD_ID);
+
+	if (IS_MGT_HUDP(mdev)){
+		return hudp_createDebugfs(mdev, pcursor);
+	}
 	DBG_REG_CREATE(ZDMA_CR);
 	DBG_REG_CREATE_NAME("HEART", HEART);
 	DBG_REG_CREATE(AURORA_CR);

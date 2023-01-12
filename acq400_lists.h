@@ -52,4 +52,18 @@ void replace_all(struct acq400_path_descriptor* pd);
 int remove(struct acq400_path_descriptor* pd, int ibuf, struct list_head* rlist);
 
 void empty_lists(struct acq400_dev *adev);
+
+static inline int list_depth(struct list_head *head)
+{
+	struct list_head* pos;
+	struct list_head* n;
+	int entries = 0;
+
+	list_for_each_safe(pos, n, head){
+		entries++;
+	}
+	return entries;
+}
+
+
 #endif /* ACQ400_LISTS_H_ */

@@ -18,7 +18,6 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-
 class IpSocket : public Socket {
 protected:
 	int sockfd;
@@ -84,6 +83,17 @@ public:
 	}
 };
 
+class StdoutSocket: public Socket {
+public:
+	StdoutSocket() {}
+
+	virtual ~StdoutSocket() {}
+
+	virtual int send(const char* data, int len) {
+		return fwrite(data, len, 1, stdout);
+	}
+	virtual int readBuffer(char* data, int ndata) { return -1; }
+};
 
 Socket* Socket::createIpSocket(const char *type, const char* host, const char * port)
 {
@@ -91,6 +101,8 @@ Socket* Socket::createIpSocket(const char *type, const char* host, const char * 
 		return new UdpSocket(host, port);
 	}else if (strcmp(type, "tcp") == 0){
 		return new TcpSocket(host, port);
+	}else if (strcmp(type, "stdout") == 0){
+		return new StdoutSocket;
 	}else{
 		return 0;
 	}

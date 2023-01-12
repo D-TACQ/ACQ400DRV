@@ -1,0 +1,38 @@
+#!/bin/sh
+
+mode=${1:-otg}
+
+case $mode in
+host)
+	"echo HOST mode. Are you sure\?. Please make sure any PL90 target is POWERED OFF";
+	while [ 1 ]; do
+	    echo Y/n
+	    read something
+	    case $something in
+	    Y|y|yes)
+	        break;;
+	    N|n|no)
+	        exit 1;;
+	    esac
+	done;;
+otg|peripheral)
+	;;
+*)
+	echo "ERROR mode $mode not valid, choices are host,otg,peripheral"
+	exit 1;;
+esac
+
+ovl=/mnt/dtb.d/acq400_usb_${mode}_overlay.dtb
+
+if [ ! -e $ovl ]; then
+    echo "ERROR file $ovl not found";
+    exit 1
+fi
+
+mount | grep -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
+echo enable USB mode $mode
+mkdir -p /sys/kernel/config/device-tree/overlays/acq400_usb_${mode}
+cat $ovl > /sys/kernel/config/device-tree/overlays/acq400_usb_${mode}/dtbo
+
+
+

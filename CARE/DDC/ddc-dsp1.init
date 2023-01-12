@@ -1,0 +1,29 @@
+#!/bin/sh
+# custom_ddc.init
+
+S14=/etc/acq400/14
+cat /usr/local/CARE/DDC/ddc-dsp-regdef >/dev/dsp1/.create
+
+mkdir -p ${S14}/
+
+ln -s /dev/dsp1/* ${S14}/
+
+#nice /usr/local/CARE/monitor_s14 &
+
+
+# MODULE ENABLE
+#echo 1 > ${S14}/FSA_CSR.MOD_EN
+#echo 1 > ${S14}/FSA_CSR.FSA_EN
+
+echo "DSP sites 14, 15 active on 4224, 4225"
+/usr/local/init/acq400_knobs.init start
+
+cat >/etc/inetd.dsp.conf - <<EOF
+4252 stream tcp nowait root cat cat /dev/dsp1.event
+4253 stream tcp nowait root cat cat /dev/dsp2.event
+EOF
+
+inetd /etc/inetd.dsp.conf
+
+
+

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+SITES=${*:-12 13}
+
+echo $SITES
+
+eval $(get.site 0 aggregator)
+echo "SITE 0 aggregator sites:$sites spad:$spad"
+
+for site in $SITES; do
+	set.site $site spad=$spad
+	set.site $site aggregator sites=$sites on
+done

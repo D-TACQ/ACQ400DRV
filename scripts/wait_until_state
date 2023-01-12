@@ -1,6 +1,7 @@
 #!/usr/local/bin/expect
 
 log_user 0
+set timeout 1
 
 if { $argc > 0 } {
 	set wstate [lindex $argv 0]
@@ -13,9 +14,10 @@ spawn acq4xx-transient-console
 
 while { 1 } {
 	expect {
-		-re "\n(\[0-9\]) (.*)\r" {
+		-re "\nSTX (\[0-9\]) (.*)\r" {
 #			puts "match $expect_out(1,string)"
 			set trailer [string trim $expect_out(2,string)]
+#			puts trailer
 
 			if { $wstate == 0 && "$trailer" eq "0 0 0 0" } {
 				continue;
@@ -23,6 +25,13 @@ while { 1 } {
 			if { $expect_out(1,string) == $wstate } {
 				exit 0
 			}			
+		}
+		timeout {
+			puts "timeout"
+			set newstate [lindex [split [exec cat /dev/shm/state]] 0 ]
+			if { $newstate == $wstate } {
+				exit 0
+			}
 		}
 	}
 }

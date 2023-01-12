@@ -521,6 +521,30 @@ soft_trigger_timer_handler(struct hrtimer *handle)
 	return HRTIMER_NORESTART;
 }
 
+static int count_set_bits(unsigned xx)
+{
+	int count = 0;
+	for (; xx; xx >>= 1){
+		if ((xx&1) != 0){
+			++count;
+		}
+	}
+	return count;
+}
+static int is_group_trigger(struct REGFS_DEV* rdev)
+{
+	if (!rdev->group_trigger_mask){
+		return 0;
+	}else{
+		unsigned active = rdev->group_status_latch&rdev->group_trigger_mask;
+
+		if (rdev->group_first_n_triggers == GROUP_FIRST_N_TRIGGERS_ALL){
+			return active == rdev->group_trigger_mask;
+		}else{
+			return count_set_bits(active) >= rdev->group_first_n_triggers;
+		}
+	}
+}
 static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
 {
 	struct REGFS_DEV* rdev = (struct REGFS_DEV*)dev_id;
@@ -559,7 +583,7 @@ static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
 		hrtimer_start(&rdev->atd.timer, ktime_set(0, atd_suppress_mod_event_nsec), HRTIMER_MODE_REL);
 	}
 
-	if (rdev->group_trigger_mask && (rdev->group_status_latch&rdev->group_trigger_mask) == rdev->group_trigger_mask){
+	if (is_group_trigger(rdev)){
 		acq400_soft_trigger(1);
 		rdev->group_status_latch = 0;
 		hrtimer_start(&rdev->soft_trigger.timer, ktime_set(0, soft_trigger_nsec), HRTIMER_MODE_REL);
@@ -691,6 +715,32 @@ static ssize_t show_group_trigger_mask(
 
 static DEVICE_ATTR(group_trigger_mask, S_IRUGO|S_IWUSR, show_group_trigger_mask, store_group_trigger_mask);
 
+static ssize_t store_group_first_n_triggers(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
+
+	if (sscanf(buf, "%u", &rdev->group_first_n_triggers) == 1){
+		return count;
+	}else{
+		return -1;
+	}
+}
+static ssize_t show_group_first_n_triggers(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
+	int rc = sprintf(buf, "%d\n", rdev->group_first_n_triggers);
+	return rc;
+}
+
+static DEVICE_ATTR(group_first_n_triggers, S_IRUGO|S_IWUSR, show_group_first_n_triggers, store_group_first_n_triggers);
+
 static ssize_t store_group_status_mode(
 	struct device * dev,
 	struct device_attribute *attr,
@@ -725,6 +775,7 @@ static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_group_status_latch.attr,
 	&dev_attr_group_trigger_mask.attr,
 	&dev_attr_group_status_mode.attr,
+	&dev_attr_group_first_n_triggers.attr,
 	NULL
 };
 

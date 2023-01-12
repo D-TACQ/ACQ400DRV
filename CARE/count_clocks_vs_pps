@@ -1,0 +1,48 @@
+#!/usr/bin/python -u
+
+import epics
+import subprocess
+import sys
+import argparse
+
+out = subprocess.check_output(['hostname'])
+HN = out.decode('utf-8').strip()
+NMAX=10
+CLROFF=1      # add one second for clear
+
+
+parser = argparse.ArgumentParser(description='count Fs over period.')
+parser.add_argument('--sync_src', default='WRPPS',
+                    help='Latch source EXT, INT01M, WRPPS')
+
+args = parser.parse_args()
+
+fp = epics.PV("{}:0:SIG:FP:SYNC".format(HN))
+fp.put("INPUT")
+src = epics.PV("{}:0:SIG:SRC:SYNC:0".format(HN))
+src.put(args.sync_src)
+
+clr = epics.PV("{}:0:SIG:CLK_S1:RESET".format(HN))
+cnt = epics.PV("{}:0:SIG:CLK_S1:COUNT".format(HN))
+
+evt = subprocess.Popen(['unbuffer', 'gpiomon',  '-r', '-F',  '"%s.%n"',  'gpiochip0', '66'], 
+			stdout=subprocess.PIPE, cwd='/sys/class/gpio')
+
+waypoints = ( 10, 60, 600, 1200, 1800, 2400, 3000, 3600 )
+waystar = [ x+CLROFF for x in waypoints ]
+nn = 0
+
+for line in iter(evt.stdout.readline, b''):
+    if nn == 0:
+        clr.put(1)
+    if nn in waystar:
+        print("\nstatus at {} s count {}".format(nn-CLROFF, cnt.get()))
+        if nn >= max(waystar):
+            print("quitting time")
+            evt.kill()
+            sys.exit(0)
+    if nn < 5:
+        print("{:6d}:{}".format(nn, line.decode('utf-8').strip('\n').strip('\"')))
+    if nn % 5 == 0:
+        print(".", end='' if nn % 80 else '\n')
+    nn += 1

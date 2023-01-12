@@ -1,0 +1,34 @@
+#!/bin/sh
+# fir-subrate-append : embeds FIR output in data stream.
+# known instances: data32, DEC32. 32AI adds one column
+
+SITE=${1:-1}
+
+echo +++ ddc $SITE
+
+if [ $SITE -eq 14 ]; then
+	/usr/local/CARE/acq400_dspfs.init
+	/usr/local/CARE/DDC/ddc-dsp1.init
+	MAJOR=$(grep dsp1 /proc/devices | awk '{ print $1 }')
+	mknod /dev/acq400.14.dsp1 c $MAJOR 14
+
+	source /etc/sites
+	for s in $(echo $vg_sites | tr , \  ); do
+	    kd=/etc/acq400/$s
+		if [ -e ${kd}/is_adc ] && [ $(cat ${kd}/is_adc | awk '{print $1}') -eq 1 ]; then
+			nc=$(($(cat ${kd}/NCHAN)*2))			
+			echo $nc > ${kd}/NCHAN    		
+    		echo $nc > ${kd}/active_chan
+    		echo +++ ddc site $s NCHAN set $nc
+    	fi
+    done
+fi
+
+cat - >/etc/sysconfig/acq400_streamd.0.init <<EOF
+set.site 14 DDC_CSR.DDC_RESET 1
+/usr/bin/logger -t acq400_streamd.0.init DDC RESET
+set.site 14 DDC_CSR.DDC_RESET 0
+EOF
+
+
+echo +++ ddc 99

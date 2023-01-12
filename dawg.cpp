@@ -297,19 +297,6 @@ void set_hi_priority() {
 	}
 }
 
-
-
-char *chomp(char *line)
-{
-	char *nl;
-
-	while((nl = rindex(line, '\n')) != NULL){
-		*nl = '\0';
-	}
-	return line;
-}
-
-
 bool please_stop;		/* could be set by signal */
 
 void waitUntil(unsigned deadline)

@@ -2,6 +2,9 @@
 
 export WEB_APPEND_JOB=/tmp/wr-web-append.job
 
+WRSH=/dev/shm/wr11.sh
+PS=/usr/local/bin/procServ
+
 web_append()
 {
 	if [ ! -e $WEB_APPEND_JOB ]; then
@@ -19,16 +22,19 @@ monitor() {
         echo monitor wr.xml
         TPL=/dev/shm/si5326_tune_phase.log
         
+        tai_server &
+        
         while [ 1 ]
         do
-                (/usr/local/CARE/tai_date
+                (
+                get.site 0 tai_date
                 echo ------------------------------
                 cd /etc/acq400/0/
                 for k in wr_tai_cur wr_clk_pv; do 
                 	get_knob $k; 
                 done
                 echo
-				for k in wr_cur_vernier wr_tai_stamp wr_tai_trg; do 
+				for k in wr_tai_cur_raw wr_cur_vernier wr_tai_stamp wr_tai_trg wr_tai_trg1; do 
                 	get_knob $k; 
                 done                
                 echo
@@ -38,26 +44,119 @@ monitor() {
                 	get_knob $k; 
                 done
                 echo; echo ------------------------------
-        		if [ -e $TPL ]; then        			
-        			echo si5326_tune_phase ..
-        			tail -n 20 $TPL
-        		else
-        			echo "WARNING: si5326 has not been tuned"
-        		fi                     
+                
+                if is_tiga; then
+					for k in /etc/acq400/0/wr_tai_*_s?; do
+						[ -e $k ] && get_knob $(basename $k) 
+					done
+                else
+        			if [ -e $TPL ]; then        			
+        				echo si5326_tune_phase ..
+        				tail -n 12 $TPL
+        			else
+	        			echo "WARNING: si5326 has not been tuned"
+    	    		fi
+    	    	fi                     
                 )| fs2xml -k '' -o /dev/shm/wr-new.xml -s $C2R20
                 mv /dev/shm/wr-new.xml  /dev/shm/wr.xml
+                
+                (
+                	cat ${WRSH}
+                	if is_tiga; then
+                    	echo
+                		echo "DIO482 PG modules"
+                		echo "-----------------"
+						for wrsh in /dev/shm/wr?.sh; do
+							if [ -e $wrsh ]; then
+								echo $(egrep -H -e WRTD_ID -e WRTD_TX_MASK -e WRTD_DEV_TS $wrsh)
+							fi
+						done | sed -e 's!/dev/shm/wr! s!g' -e 's/.sh:/: /g'
+                	fi
+                ) | fs2xml -k '' -o /dev/shm/wrtd.xml -s $C2R20
                 sleep 1
         done
 }
 
-
-start_wr() {
-	if [ -e /mnt/local/wrc.le.bin ]; then
-		echo +++ wr load new firmware
-		wr_reset /mnt/local/wrc.le.bin
+init_wrsh() {
+ 	if [ -e /mnt/local/sysconfig/wr.sh ]; then
+		source /mnt/local/sysconfig/wr.sh
 	else
-		wr_reset
+		WRTD_DELTA_NS=50000000
+		WRTD_NICE=-10
+		WRTD_VERBOSE=0
+		WRTD_TICKNS=50.0
+		WRTD_RTPRIO=10
+		WRTD_TX=1
+		WRTD_RX=1
+		WRTD_ID=$(hostname)
+		WRTD_RX_MATCHES=$(hostname)
+		WRTD_RX_MATCHES1=
+		WRTD_RX_DOUBLETAP=
+		WRTD_DELAY01=1000000
+		WRTD_TX_MASK=0
 	fi
+	cat - > ${WRSH} <<EOF
+	# wr.sh defaults created by wr.init $(date)
+	# correct values for WRTD_TICKNS
+	# WRTD_TICKNS=25.0     ;# 40MHz : most ACQ48x
+	# WRTD_TICKNS=50.0     ;# 20MHz
+	# WRTD_TICKNS=48.83	   ;# ACQ435 at 20.000 kSPS
+	# WRTD_TICKNS=100.0    ;# TIGA at 10MHz
+EOF
+	set | grep WRTD | tr -d "'" >> ${WRSH}
+}
+
+init_wrtd() {
+	site=${1:-11}
+	S11KNOBS=""
+	[ $site -eq 11 ] && S11KNOBS="WRTD_RX WRTD_RX_MATCHES WRTD_RX_MATCHES1 WRTD_RX_DOUBLETAP WRTD_DELAY01"
+	for kb in WRTD_DELTA_NS WRTD_VERBOSE WRTD_TICKNS WRTD_TX  \
+		WRTD_ID WRTD_TX_MASK ${S11KNOBS}; do
+		ln -s /usr/local/CARE/wrtd_env /etc/acq400/${site}/$kb
+	done
+	[ $site -eq 11 ] && ln -s /dev/gpio/MGT482/SFP3/TX_DISABLE /etc/acq400/11/sfp_tx_disable
+ 
+ 	
+	ln -s /usr/local/CARE/wrtd_tx 			/etc/acq400/${site}
+	ln -s /usr/local/CARE/wrtd_tx_immediate /etc/acq400/${site}
+#	ln -s /usr/local/CARE/wrtd_txi 			/etc/acq400/${site}
+#	ln -s /usr/local/CARE/wrtd_txq 			/etc/acq400/${site}
+	ln -s /usr/local/bin/wrtd				/etc/acq400/${site}/wrtd_txq
+	ln -s /usr/local/bin/wrtd				/etc/acq400/${site}/wrtd_txi
+	ln -s /usr/local/bin/wrtd				/etc/acq400/${site}/wrtd_txa
+	
+	ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_reset_tx
+	ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_commit_tx
+	
+	if [ $site -eq 11 ]; then
+		ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_reset_rx
+		ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_commit_rx
+	fi
+}
+
+tiga_init() {
+	NAME=$1
+	MAJOR=$2
+	
+	for site in $(seq 6); do
+		if [ "$(cat /dev/acq400.${site}.knobs/module_type)" = "7B" ]; then
+			mknod /dev/${NAME}.wr_tiga_ts_s$site c ${MAJOR} $((120+$site-1))
+			mknod /dev/${NAME}.wr_tiga_tt_s$site c ${MAJOR} $((130+$site-1))
+			mknod /dev/${NAME}.wr_tiga_ttb_s$site c ${MAJOR} $((140+$site-1))
+			if [ -e /mnt/local/sysconfig/wr$site.sh ]; then
+				cp /mnt/local/sysconfig/wr$site.sh /dev/shm/wr${site}.sh
+			else
+				(cat ${WRSH}; echo WRTD_DEV_TS=/dev/acq400.0.wr_tiga_ts_s${site}) \
+					>/dev/shm/wr${site}.sh
+			fi
+			init_wrtd $site
+		fi
+	done
+}
+
+init_wr_onetime() {
+	[ -e /dev/${NAME}.wr_ts ] && return
+
 	NAME=acq400.0
 	MAJOR=$(grep ${NAME} /proc/devices | awk '{ print $1 }')
 	mknod /dev/${NAME}.wr_ts  c ${MAJOR} 20
@@ -71,54 +170,127 @@ start_wr() {
 	mknod /dev/${NAME}.wr_trg1 c ${MAJOR} 26
 	mknod /dev/${NAME}.wr_tt1  c ${MAJOR} 27
 	web_append wr nomon
+	web_append wrtd nomon
 	
+	init_wrsh
 	
 	nice daemon $WEB_APPEND_JOB
+	
 	nice daemon /usr/local/init/wr.init monitor
 	
-	ln -s /usr/local/CARE/tai_date			/etc/acq400/0
+	(cd /etc/acq400; ln -s C 11)
+	ln -s /usr/local/bin/wr_reset /etc/acq400/11
+	
+	[ -e /etc/acq400/${site}/tai_date ] || echo xxx > /etc/acq400/${site}/tai_date	
 	ln -s /usr/local/CARE/wrtd_tx 			/etc/acq400/0
 	ln -s /usr/local/CARE/wrtd_tx_immediate /etc/acq400/0
-	ln -s /usr/local/CARE/wrtd_txi 			/etc/acq400/0
+	ln -s /usr/local/bin/wrtd 				/etc/acq400/0/wrtd_txi
+	ln -s /usr/local/bin/wrtd 				/etc/acq400/0/wrtd_txq
+	cat ${WRSH}	>/dev/shm/wr0.sh
+	
+
+	
+	echo "no rx" > /etc/acq400/11/WRTD_REPORT
+	
+	ln -s /usr/local/bin/acq4xx-console /usr/local/bin/wrtd_tx
+	ln -s /usr/local/bin/acq4xx-console /usr/local/bin/wrtd_rx
+	
+	
+	printf '%2d %20s %2d :%s\n' 0 ST_OFF 0 0 > /dev/shm/si5326_tune_phase.state
+	ln -s /dev/shm/si5326_tune_phase.state  /etc/acq400/11/
+	if ! is_tiga; then		
+		ln -s /usr/local/CARE/si5326_tune_phase_trigger  /etc/acq400/11/si5326_tune_phase
+	fi
+	
+	init_wrtd 11
+	is_tiga && tiga_init $NAME $MAJOR	
 }
+
+start_wr() {
+	if [ -e /mnt/local/wrc.le.bin ]; then
+		echo +++ wr load new firmware
+		wr_reset /mnt/local/wrc.le.bin
+	else
+		wr_reset
+	fi
+	wr_reset --is_wr_present=1
+	if [ $? -ne 0 ]; then
+		echo +++ ERROR cold_start_wrtd .. WR not found
+		return
+    fi
+	init_wr_onetime
+}
+
+start_wrtd_tiga() {
+	for site in $(seq 6); do
+		if [ "$(cat /dev/acq400.${site}.knobs/module_type)" = "7B" ]; then
+			pidf_tx=/var/run/wrtd_tx${site}.pid
+			port=42${site}80
+			echo "+++ start_wrt_tiga site:$site port:$port"
+			source /dev/shm/wr${site}.sh
+			SITE=${site} ${PS} --holdoff=1 -c / -p $pidf_tx $port /usr/local/bin/wrtd $WRTD_OPTS tx
+		fi
+	done
+}
+
 
 PIDF_TX=/var/run/wrtd_tx.pid
 PIDF_RX=/var/run/wrtd_rx.pid
+PIDF_SI=/var/run/si5326_tune_phase.pid
 
 # /mnt/local/sysconfig/wr.sh can override set values. be sure to export values that to the wrtd executable..
 start_wrtd() {
-	export WRTD_DELTA_NS=50000000
-	export WRTD_NICE=-10
-	export WRTD_VERBOSE=0
-	export WRTD_TICKNS=50000
-	export WRTD_RTPRIO=10
-	WRTD_TX=1
-	WRTD_RX=1
-	export WRTD_ID=$(hostname)
-	export WRTD_RX_MATCHES=$(hostname)
-	[ -e /mnt/local/sysconfig/wr.sh ] && source /mnt/local/sysconfig/wr.sh
-	
+	echo "+++ start_wrtd 01"
 	if [ "x$WRTD_DNS" != "x" ]; then
 		echo "WARNING: WRTD_DNS is deprecated in favour of WRTD_DELTA_NS"
 		WRTD_DELTA_NS=$WRTD_DNS
 	fi
 # may define WRTD_ID="--tx_id SOMETHING", default is $(hostname)"
 
-    if [ $WRTD_RX -ne 0 ]; then
-    	/usr/local/bin/procServ -c / -p $PIDF_RX 4280 /usr/local/bin/wrtd rx
-		sleep 1
-		nc localhost 4280 -e logger -t wrtd_rx &
-	fi
-		
-	if [ $WRTD_TX -ne 0 ]; then
-		/usr/local/bin/procServ -c / -p $PIDF_TX 4281 /usr/local/bin/wrtd tx
-		sleep 1
-		nc localhost 4281 -e logger -t wrtd_tx &
-	fi
+	[ -e ${WRSH} ] && source ${WRSH} 
+	echo "+++ start wrtd rx"
+	SITE=11 ${PS} --holdoff=1 -c / -p $PIDF_RX 42081 /usr/local/bin/wrtd $WRTD_OPTS rx
+	echo "+++ start wrtd tx"
+	SITE=11 ${PS} --holdoff=1 -c / -p $PIDF_TX 42080 /usr/local/bin/wrtd $WRTD_OPTS tx
+	is_tiga || ${PS} -w --noautorestart -c / -p $PIDF_SI 4282 /usr/local/bin/si5326_tune_phase
+
+	(
+	sleep 1
+	nc localhost 42081 -e logger -t wrtd_rx &
+	nc localhost 42080 -e logger -t wrtd_tx &
+	is_tiga || nc localhost 4282 -e logger -t si5326_tune_phase &
+	) &
+	is_tiga && start_wrtd_tiga
+	[ ! -e  $PIDF_RX ] && echo "+++ WARNING: file does not exist $PIDF_RX"
+	[ ! -e  $PIDF_TX ] && echo "+++ WARNING: file does not exist $PIDF_TX"	
+	
+	backstop &
+	echo "+++ start_wrtd 99"
 }
 
+backstop() {
+	sleep 7
+	[ -e $PIDF_RX ] && return
+
+	echo backstop waking ALARM: no wrtd_rx restart
+	exec /usr/local/init/wr.init restart_wrtd
+}
+
+cold_start_wrtd() {
+	echo "+++ cold_start_wrtd 01"
+	sleep 45
+	nice /usr/local/init/wr.init start_wrtd
+	echo "+++ cold_start_wrtd 99"
+}
+
+cold_start_wr() {
+	/usr/local/CARE/load.ttyPS1
+	start_wr
+	cold_start_wrtd &
+	set.sys /sys/module/acq420fmc/parameters/subrate_wr_timing 1
+}
 stop_wrtd() {
-	for pidf in $PIDF_RX $PIDF_TX; do
+	for pidf in /var/run/wrtd*; do
 		if [ -e $pidf ]; then
 			pid=$(cat $pidf)
 			rm $pidf
@@ -131,11 +303,9 @@ case "$1" in
 monitor)
 	monitor;;
 start|"")
-	wr_reset --is_wr_present=1
-	if [ $? -eq 0 ]; then
-		start_wr
-		start_wrtd
-	fi;;
+	cold_start_wr;;
+start_wrtd)
+	start_wrtd;;
 restart_wrtd)
 	stop_wrtd
 	start_wrtd;;

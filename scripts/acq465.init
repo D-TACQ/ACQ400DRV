@@ -1,0 +1,110 @@
+#!/bin/sh
+
+
+for s in $*; do
+    if [ -z $SITES ]; then
+    	SITES=$s
+    else
+    	SITES=$SITES,$s
+    fi
+done
+
+# sourced by init_stream
+cat - >/etc/sysconfig/acq400_streamd.0.conf_acq465 <<EOF
+logger -t acq400_streamd.0.conf_acq465 -- /usr/local/bin/acq465_knobs --dig_if_reset=$SITES
+/usr/local/bin/acq465_knobs --dig_if_reset=$SITES
+EOF
+
+ 
+
+if [ -e /mnt/local/acq465.ko ]; then
+	MODFILE=/mnt/local/acq465.ko
+else
+	MODFILE=/usr/local/lib/modules/acq465.ko
+fi
+
+[ -e /mnt/local/sysconfig/acq400.sh ] && source /mnt/local/sysconfig/acq400.sh
+ACQ465_DATA32=${ACQ465_DATA32:-1}
+FILTER_WB=0
+FILTER_S3=2
+if [ $ACQ465_DATA32 -eq 1 ]; then
+    ACQ465_FILTER=$FILTER_WB
+else
+    ACQ465_FILTER=$FILTER_S3
+fi
+
+echo "acq465.init ACQ465_DATA32:$ACQ465_DATA32 ACQ465_FILTER:$ACQ465_FILTER"
+
+
+echo  /sbin/insmod $MODFILE acq465_sites=${SITES} HW=1
+/sbin/insmod $MODFILE acq465_sites=${SITES} HW=1
+
+build_nodes() {
+	while [ 1 ]; do
+		read M_DEV
+		if [ "x$M_DEV" = "x" ]; then
+			break
+		fi
+		MAJOR=${M_DEV% *}                             
+		NAME=${M_DEV#* }
+		mknod /dev/${NAME} c ${MAJOR} 0
+
+		DIR=/proc/driver/acq465/$NAME
+		retry=0
+		while [ ! -e $DIR ]; do
+			echo ERROR $DIR not there yet!
+			sleep 1
+			retry=$(($retry+1))
+			[ $retry -gt 2 ] && break
+		done
+		echo run /usr/local/bin/monitor_acq480_spi $NAME  
+
+		daemon /bin/nice /usr/local/bin/monitor_acq480_spi $NAME 
+	done
+}
+grep acq465 /proc/devices | build_nodes
+
+acq465_knobs makeLinks >/tmp/makeLinks
+
+cat - >/tmp/acq465_init.job <<EOF
+#!/bin/sh
+while [ ! -e  /var/www/d-tacq/rc-user-complete ]; do
+	sleep 3
+done
+echo acq465_init.job \$(cat /var/www/d-tacq/rc-user-complete)
+EOF
+
+for site in $*; do	
+	ek=/etc/acq400/${site}	
+	dk=/dev/acq400.${site}.knobs
+
+    echo $ACQ465_DATA32 > $dk/data32
+	rm $ek/data32
+	cat - >$ek/data32 <<EOF
+#!/bin/sh
+if [ "x\$1" = "x" ]; then
+	cat $dk/data32
+else
+	echo \$1 > $dk/data32
+	if [ \$1 -eq 1 ]; then
+		kcode=0x20
+	else
+		kcode=0x00
+	fi
+	acq465_knobs --all reg 0x11 \$kcode
+fi
+EOF
+
+	chmod a+rx $ek/data32
+	ln -s /usr/local/CARE/acq465_adc.init ${ek} 
+	echo $ACQ465_FILTER > ${ek}/acq465_filter_default
+	(cd ${ek};source /tmp/makeLinks)
+	echo "SITE=$site /usr/local/CARE/acq465_adc.init" >>/tmp/acq465_init.job
+done
+
+chmod a+rx /tmp/acq465_init.job
+nice /tmp/acq465_init.job &
+
+
+
+

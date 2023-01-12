@@ -694,7 +694,7 @@ static void a400fs_create_files (struct super_block *sb, struct dentry *root)
 
 	for (dev = 0; dev <= MAXDEVICES; ++dev){
 		struct acq400_dev *adev = acq400_devices[dev];
-		if (adev){
+		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev))){
 			FSN.nmap += adev->nchan_enabled + 1;
 		}
 	}

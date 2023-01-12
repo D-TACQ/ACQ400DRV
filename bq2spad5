@@ -1,0 +1,14 @@
+#!/usr/bin/expect
+
+log_user 0
+
+set file [open /dev/acq400.0.bqf r]
+spawn -open $file
+while { 1 } {
+	expect -re "(\[0-9]+)\n" {
+		set bn [scan $expect_out(1,string) %d]
+		set spad [open /etc/acq400/0/spad5 w]
+		puts $spad 0x[format %x $bn]
+		close $spad
+	}
+}

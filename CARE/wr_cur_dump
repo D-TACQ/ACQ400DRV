@@ -1,0 +1,5 @@
+#!/bin/sh
+SRC=${1:-/dev/acq400.0.wr_cur}
+hexdump -ve '1/4 "%08x\n"' $SRC
+
+

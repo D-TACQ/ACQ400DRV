@@ -1,51 +1,59 @@
+#!/bin/bash
 # sourced from run0 and play0
 
 # input $sites
-# output SS
+# output SSB sample size bytes, NCHAN, D32 (master size)
 
-nspad=${nspad:-0}
-
-let nchan=0
-d32=""
-ositelist=$sitelist
+NCHAN=0
+ncc=0
+D32=""
 sitelist=""
 sep=""
 
+nspad=${nspad:-0}
+d32c=$nspad
+d16c=0
 
 for site in $sites
 do
-	s_root=/etc/acq400/$site
-	wpc=1
-
+	s_root=/etc/acq400/$site	
 	if [ -e ${s_root}/data32 ]; then
-		echo $nchan > ${s_root}/AGIX
-		site_d32=$(cat ${s_root}/data32)
+		echo $ncc > ${s_root}/AGIX
+		site_d32=$(cat /dev/acq400.${site}.knobs/data32)
 		active_chan=$(cat ${s_root}/active_chan)
-		if [ "x$d32" = "x" ]; then
-			d32=$site_d32
+		ncc=$(($ncc+$active_chan))
+		if [ $site_d32 -eq 2 ]; then
+			d32c=$(($d32c+$active_chan*2))
+		elif [ $site_d32 -eq 1 ]; then
+			d32c=$(($d32c+$active_chan))
 		else
-			if [ $d32 -ne $site_d32 ]; then
-				echo WARNING: mixed data size
-				if [ $site_d32 -ne 0 ]; then 
-					wpc=2
-				fi
-			fi
+			d16c=$(($d16c+$active_chan))
 		fi
-		let nchan="${nchan}+${active_chan}*${wpc}"
+		if [ "x$D32" = "x" ]; then
+			D32=$site_d32
+		elif [ $D32 -ne $site_d32 ]; then
+			echo "WARNING: mixed data size"
+		fi
 		sitelist="${sitelist}${sep}${site}"
 		sep=","
+		echo "site:$site d32:$d32 ncc:$ncc d32c:$d32c d16c:$d16c AGIX=$(cat ${s_root}/AGIX)"
 	else
 		echo "ERROR: site $site does not exist"
 	fi
 done
 
-# channels per word
-if [ $d32 -eq 1 ]; then
-	cpw=1
+
+if [ -z $D32 ]; then
+    SSB=0
+	NCHAN=0
+elif [ $D32 -eq 1 ]; then
+	NCHAN=$(($d32c+$d16c/2))
+	SSB=$(($NCHAN*4))
 else
-	cpw=2
+	NCHAN=$(($d16c+$d32c*2))
+	SSB=$(($NCHAN*2))
 fi
 
-let nchan="$nchan+$nspad*$cpw"
-let SS="$nchan*4/$cpw"
+echo "get_site_total_size D32:$D32 NCHAN:$NCHAN d32c:$d32c d16c:$d16c SSB:$SSB"
+
 

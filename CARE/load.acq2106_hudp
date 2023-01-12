@@ -1,0 +1,8 @@
+
+
+mount -t configfs none /sys/kernel/config
+mkdir -p /sys/kernel/config/device-tree/overlays/acq2106_hudp
+cat /mnt/dtb.d/acq2106_hudp_overlay.dtb > \
+	/sys/kernel/config/device-tree/overlays/acq2106_hudp/dtbo
+
+

@@ -1,0 +1,61 @@
+#!/bin/sh
+
+DEV=s14
+DIR=/etc/acq400/14
+
+#httpd doesn't like names with periods..
+XMLNAME=$DEV
+
+cCrR() {
+cat - <<EOF
+        <pageFormat>
+                <noCols>$1</noCols>
+                <colItems>$2</colItems>
+        </pageFormat> 
+EOF
+}
+
+C4R10=/dev/shm/c4rR10
+C4R8=/dev/shm/c4R8
+
+[ -e $C4R10 ] || cCrR 4 10 > $C4R10
+[ -e $C4R8 ] || cCrR 4 8 > $C4R8
+
+
+dump_r() {
+	(cd $DIR; /usr/local/bin/lscat * | grep -v ^[cm] )
+}
+
+ADDED_WEB=0
+
+add_web() {
+if [ -e /var/www/d-tacq/acq_main_page.html ]; then
+	grep -q $DEV /var/www/d-tacq/acq_main_page.html
+	if [ $? -ne 0 ]; then
+		sed -ie '/TABAPPEND/ {
+a       <li><a title="'$DEV'" href="acq_info_page.html">'$DEV'</a></li>
+}' /var/www/d-tacq/acq_main_page.html
+	fi
+	ADDED_WEB=1
+fi
+}
+
+monitor() {
+	while [ 1 ]
+	do
+		[ $ADDED_WEB -eq 0 ] && add_web				
+		dump_r | fs2xml --kvp -o /dev/shm/$DEV.xml -s $C4R10
+		sleep 1		
+	done
+}
+
+if [ "$(basename $0)" = "monitor_s14" ]; then
+	if [ -d $DIR ]; then
+		monitor
+	else
+		echo ERROR: monitor dir not found: $DIR
+	fi
+fi
+
+
+

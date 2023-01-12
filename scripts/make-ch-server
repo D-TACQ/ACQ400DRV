@@ -1,8 +1,14 @@
 #!/bin/sh
 
+if [ "x$1" = "x" ]; then
+	make-ch-server server &
+	exit 0
+fi
 
-OLDPID=$(ps | grep '[0-9] inetd /etc/inetd.ch.con' | awk '{ print $1 }')
+pkill -f 'inetd /etc/inetd.ch.conf'
+OLDPID=$(ps | grep '[0-9] inetd /etc/inetd.ch.conf' | awk '{ print $1 }')
 if [ "$OLDPID" != "" ]; then
+	rm /etc/inetd.ch.conf
 	kill $OLDPID
 fi 
 
@@ -14,41 +20,55 @@ cat - > /etc/inetd.ch.conf <<EOF
 # $NCHAN $(date)
 53000 stream tcp nowait root bigcat bigcat /dev/acq400/data/raw/0
 53333 stream tcp nowait root bigcat bigcat /dev/shm/decims
-53666 stream tcp nowait root mr_offload mr_offload dummy
+53334 stream tcp nowait root mr_offload mr_offload server
 EOF
 
 if [ -e /mnt/local/sysconfig/acq400.sh ]; then
 	source /mnt/local/sysconfig/acq400.sh
 	if [ "x$ONESHOT_PORT" != "x" ]; then
+	    if [ "x$ONESHOT_PORT" = "xy" ]; then
+	    	ONESHOT_PORT=53999
+	    fi
 		echo $ONESHOT_PORT stream tcp nowait root oneshot oneshot dummy >> /etc/inetd.ch.conf
+		echo "acq400_oneshot	$ONESHOT_PORT/tcp # oneshot transient HIL" >>/etc/services
 	fi
 fi
 
 
 
+sites=none
+
+while [ "$sites" = "none" ]; do
+	sleep 3
+	eval $(cat /etc/acq400/0/aggregator)
+	echo ++ make-ch-server $sites
+done
 
 let cix=1
-
-eval $(cat /etc/acq400/0/aggregator)
-IFS=,
-for site in $sites
-do
-#	echo site $site  /dev/acq400/data/$site/
-	for ch in /dev/acq400/data/$site/??
-	do
-        	let px=$P0+$cix        
-        	echo >>/etc/inetd.ch.conf \
-        		"$px stream tcp nowait root cat cat $ch"
-		chl=$(printf "%02d" $cix)
-		echo "acq400_ch$chl $px/tcp	# ch $ch transient data" >>/etc/services
-        	let cix=$cix+1
-        done
+sitesp="$(echo $sites | tr , \  )" 
+for site in $sitesp; do
+	kadc=/etc/acq400/$site/is_adc	
+	if [ -e $kadc ] && [ $(cat $kadc | awk '{ print $1 }') -eq 1 ]; then
+		nchan=$(get.site $site NCHAN)
+		for chs in $(seq 1 $nchan); do
+			ch0s=$(printf "%02d" $chs)
+			ch=/dev/acq400/data/$site/$ch0s
+			[ ! -e $ch ] && (echo "ERROR file $ch not found"; exit 1)
+ 			let px=$P0+$cix        
+			echo >>/etc/inetd.ch.conf \
+        			"$px stream tcp nowait root cat cat $ch"
+			chl=$(printf "%02d" $cix)
+			echo "acq400_ch$chl $px/tcp	# ch $ch transient data" >>/etc/services
+		        let cix=$cix+1
+		done
+	fi
 done
 
 if [ -d /etc/acq400/2 ] && [ $(get.site 2 module_name) = "qen" ]; then
 	echo >>/etc/inetd.ch.conf \
-	"53999 stream tcp nowait root bpaste bpaste /dev/acq400/data/2/01 /dev/acq400/data/2/02"
+	"52999 stream tcp nowait root bpaste bpaste /dev/acq400/data/2/01 /dev/acq400/data/2/02"
 	echo "acq400_qen	52999/tcp # qen data" >>/etc/services
 fi
 
 inetd /etc/inetd.ch.conf
+

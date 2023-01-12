@@ -1,0 +1,26 @@
+#!/usr/bin/expect
+
+set old [exec cat /dev/shm/state]
+if { $::argc > 0 } {
+	if { "[lindex $::argv 0]" == "init" } {
+		puts $old
+	}
+	if { "[lindex $::argv 0]" == "nowait" } {
+		puts $old
+		exit 0
+	}	
+}
+
+log_user 0
+
+spawn inotifywait -e modify /dev/shm/state -m
+
+while { 1 } {
+	expect -re "MODIFY" {
+                set new [exec cat /dev/shm/state]
+		if { $old != $new } {
+			puts $new
+			set old $new
+		}
+	}
+}

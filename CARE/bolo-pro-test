@@ -1,0 +1,77 @@
+#!/usr/bin/expect
+# bolo-pro-test [dac-offset]
+# bolo-pro-test loop
+# bolo production test. enables passthru mode, sets dac_offset
+
+if { [exec get.site 1 NCHAN] == 24 } {
+	puts "ERROR: BOLODSP enabled, please deactivate the BOLODSP package and reboot"
+	exit 1
+}
+
+exec ao420_init all
+
+set dacoff 1fff
+if { $argc > 0 } {
+    set arg1 [lindex $argv 0]
+    if { $arg1 != "loop" } {
+	    set dacoff [lindex $argv 0]
+    }
+} else {
+    set arg1 none
+}
+
+set hn [exec hostname]
+
+set SF [open /etc/sites r]
+foreach line [split [read $SF] \n] {
+	if {[string match vg_sites=* $line ]} {
+		set sites [lindex [split $line = ] 1]
+		puts "play0 $sites"
+		exec play0 $sites
+	}
+}
+close $SF
+
+# still a DSP even though it will be in BYPASS
+exec set.site 1 bolo_dsp_enable=1
+
+
+# tweak regs. 
+# DSP_BYPASS
+# Step size for 1.8e3
+# DAC offset .. to be customized
+# show the result
+set cmds { 
+	{map /usr/local/acq2106.map >/dev/null} 
+	{mm.l $DSP1+0 10000}                       
+	{mm.l $DSP1+4 4b7f}
+        {mm.l $DSP1+c DACOFF}
+	{md.l $DSP1 8}
+	{echo init99}
+}
+
+spawn /bin/sh
+
+foreach cmd $cmds {
+	set cmd2 [regsub DACOFF $cmd $dacoff ]
+	send "$cmd2\r"
+	expect "$hn>" {
+
+	}
+}
+
+set DACOFF {mm.l $DSP1+c DACOFF}
+
+while { $arg1 == "loop" } {
+	foreach _dacoff { 0 1fff 3fff 5fff 7fff 7fff 0 } {
+		set cmd2 [regsub DACOFF $DACOFF $_dacoff]
+		send "$cmd2\r"
+		expect "$hn>" {
+
+		} 
+		after 250
+	}
+}
+
+
+

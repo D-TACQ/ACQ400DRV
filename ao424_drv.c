@@ -32,7 +32,7 @@ int set_spans_timeout = 10;
 module_param(set_spans_timeout, int, 0644);
 MODULE_PARM_DESC(set_spans_timeout, "timeout on setting spans pollcount 10*.1 = 1s");
 
-int allow_spans_in_odds_mode = 0;
+int allow_spans_in_odds_mode = 1;
 module_param(allow_spans_in_odds_mode, int, 0644);
 
 
@@ -63,7 +63,9 @@ static void _acq400wr32(struct acq400_dev *adev, int offset, u32 value)
 				adev->dev_virtaddr + offset, offset, value);
 	}
 
-	iowrite32(value, adev->dev_virtaddr + offset);
+	if (dev_rc_write(&adev->ctrl_reg_cache, offset, value)){
+		iowrite32(value, adev->dev_virtaddr + offset);
+	}
 }
 
 static u32 _acq400rd32(struct acq400_dev *adev, int offset)

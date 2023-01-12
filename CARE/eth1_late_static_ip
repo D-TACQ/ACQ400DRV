@@ -1,0 +1,26 @@
+#!/bin/sh
+# eth1 doesn't exist until later on boot.
+# this file /usr/local/CARE/eth1_late_static_ip doesn't exist until later on boot
+# usage: copy to /mnt/local/eth1_late_static_ip
+# echo >/mnt/local/network /mnt/local/eth1_late_static_ip [IPADDR]
+# if IPADDR is omitted, it will provide a default address 192.168.0.F(serial)
+
+IPA=${1}
+
+if [ "x${IPA} = "x" ]; then
+	hn=$(hostname)
+	sn=${hn#*_}
+	ipa=$(echo $sn | awk '{ m=$1%250; print (m==0)? 251: m  }')
+	IPA=192.168.0.$ipa
+fi
+
+(
+echo +++ network deferring until eth1 exists
+while [ ! -e /sys/class/net/eth1 ]; do
+	sleep 1
+done
+echo +++ network eth1 exists, bring it up
+ifconfig eth1 $IPA up
+) &
+
+

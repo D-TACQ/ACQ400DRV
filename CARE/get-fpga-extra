@@ -1,4 +1,15 @@
 #!/bin/sh
+FN=${1:-0}
+extra=$(/usr/local/CARE/get-fpga-name | awk -F_ '{ print $(NF-'$FN') }')
 
-/usr/local/CARE/get-fpga-name | awk -F_ '{ print $NF }'
+case $extra in
+32B|64B)
+	/usr/local/CARE/get-fpga-extra $((FN+1));;
+95*|90*)
+	/usr/local/CARE/get-fpga-extra $((FN+1));;
+*)
+	[ ${#extra} -eq 4 ] &&  echo $extra;;
+esac
+
+
 

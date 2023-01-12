@@ -76,17 +76,17 @@
 #define ACQ420_MINOR_0	        0
 #define ACQ420_MINOR_CONTINUOUS	1
 #define ACQ420_MINOR_HISTO	2
-#define ACQ420_MINOR_HB0	3	// block on HB0 fill
+#define ACQ400_MINOR_HB0	3	// block on HB0 fill
 #define ACQ420_MINOR_SIDEPORTED 4	// enable, but data flow elsewhere
-#define ACQ420_MINOR_GPGMEM	5	// mmap 4K of this
-#define ACQ420_MINOR_EVENT	6	// blocks on event
-#define ACQ420_MINOR_STREAMDAC	7
-#define ACQ420_MINOR_BOLO_AWG	8
+#define ACQ400_MINOR_GPGMEM	5	// mmap 4K of this
+#define ACQ400_MINOR_EVENT	6	// blocks on event
+#define ACQ400_MINOR_STREAMDAC	7
+#define ACQ400_MINOR_BOLO_AWG	8
 #define AO420_MINOR_HB0_AWG_ONCE	9
 #define AO420_MINOR_HB0_AWG_LOOP	10
-#define ACQ420_MINOR_RESERVE_BLOCKS	11
-#define ACQ420_MINOR_SEW1_FIFO	12		/* Software Embedded Word */
-#define ACQ420_MINOR_SEW2_FIFO	13
+#define ACQ400_MINOR_RESERVE_BLOCKS	11
+#define ACQ400_MINOR_SEW1_FIFO	12		/* Software Embedded Word */
+#define ACQ400_MINOR_SEW2_FIFO	13
 #define AO420_MINOR_HB0_AWG_ONCE_RETRIG	14
 #define ACQ400_MINOR_BQ_NOWAIT	15
 #define ACQ400_MINOR_ATD	16
@@ -101,22 +101,36 @@
 #define ACQ400_MINOR_WR_CUR_TRG0 25	// read : u32 WR_TAI_TRG0, no block.  write: u32 WR_TAI_TRG0
 #define ACQ400_MINOR_WR_CUR_TRG1 26	// read : u32 WR_TAI_TRG1, no block.  write: u32 WR_TAI_TRG1
 #define ACQ400_MINOR_WRTT1	27
-#define ACQ400_MINOR_MAP_PAGE	32	// 32 : page 0, 33: page 1 .. 47: page 15
+#define ACQ400_MINOR_GPGMEM32	28
+#define ACQ400_MINOR_STREAMDAC_DUMMY	37
+#define ACQ400_MINOR_AOFIFO	38
+#define ACQ400_MINOR_ADC_SAMPLE_COUNT 39
+#define ACQ400_MINOR_ADC_NACC_SUBRATE 40
+
+#define ACQ400_MINOR_MAP_PAGE	64	// 32 : page 0, 33: page 1 .. 47: page 15
 
 #define ACQ400_MINOR_MAP_PAGE_OFFSET(minor) \
 	((minor-ACQ400_MINOR_MAP_PAGE)*PAGE_SIZE)
-#define ACQ420_MINOR_BUF	1000
-#define ACQ420_MINOR_BUF2	2000
-#define ACQ420_MINOR_MAX	ACQ420_MINOR_BUF2
+#define ACQ400_MINOR_BUF	1000
+#define ACQ400_MINOR_BUF2	2000
+#define ACQ420_MINOR_MAX	ACQ400_MINOR_BUF2
 #define ACQ420_MINOR_CHAN	200
 #define ACQ420_MINOR_CHAN2	232	// in reality 203 of course, but looking ahead ..
+
+#define ACQ420_MINOR_TIGA_TS_1	120
+#define ACQ420_MINOR_TIGA_TT_1	130
+#define ACQ420_MINOR_TIGA_TTB_1 140
+#define ACQ420_MINOR_TIGA_99	150
+
+#define MINOR_IS_TIGA_TS(minor) \
+	()
 
 
 #define BQ_MIN_BACKLOG		2
 #define BQ_MAX_BACKLOG		512
 
 #define IS_BUFFER(minor) \
-	((minor) >= ACQ420_MINOR_BUF && (minor) <= ACQ420_MINOR_BUF2)
-#define BUFFER(minor) 		((minor) - ACQ420_MINOR_BUF)
+	((minor) >= ACQ400_MINOR_BUF && (minor) <= ACQ400_MINOR_BUF2)
+#define BUFFER(minor) 		((minor) - ACQ400_MINOR_BUF)
 
 #endif /* ACQ400_INCLUDES_H_ */

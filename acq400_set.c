@@ -101,6 +101,22 @@ int acq400_read_set(struct acq400_dev* set[],
 	return cursor;
 }
 
+unsigned _acq400_convert_aggregator_set_to_register_mask(struct acq400_dev* set[])
+{
+	u32 mask = 0;
+	int ia = 0;
+	for (ia = 0; ia < MAXDEVICES; ++ia){
+		if (set[ia] != 0){
+			mask |= 1<<ia;
+		}
+	}
+	return mask << AGGREGATOR_MSHIFT;
+}
+unsigned acq400_convert_aggregator_set_to_register_mask(struct acq400_dev *adev)
+{
+	struct acq400_sc_dev* sc_dev = container_of(adev, struct acq400_sc_dev, adev);
+	return _acq400_convert_aggregator_set_to_register_mask(sc_dev->aggregator_set);
+}
 int acq400_add_aggregator_set(struct acq400_dev *adev, int site)
 {
 	struct acq400_sc_dev* sc_dev = container_of(adev, struct acq400_sc_dev, adev);
@@ -112,6 +128,7 @@ int acq400_read_aggregator_set(struct acq400_dev *adev, char *buf, int maxbuf)
 	struct acq400_sc_dev* sc_dev = container_of(adev, struct acq400_sc_dev, adev);
 	return acq400_read_set(sc_dev->aggregator_set, adev, buf, maxbuf);
 }
+
 
 void acq400_clear_aggregator_set(struct acq400_dev *adev)
 {

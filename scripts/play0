@@ -31,13 +31,13 @@ echo sites: $sites
 
 nspad=$pad
 source get_site_total_size
-echo $SS > /etc/acq400/0/dssb
+echo $SSB > /etc/acq400/0/dssb
 
 set.sys /dev/acq400.0.knobs/distributor 0
 set.sys /dev/acq400.0.knobs/data_engine_1 0
 set.sys /dev/acq400.0.knobs/data_engine_1 distributor=1 
 set.sys /dev/acq400.0.knobs/distributor threshold=16384 pad=${pad} sites=${sitelist} on
-echo 1 > /etc/acq400/0/play0_ready
+echo $sites | awk 'BEGIN { FS="," } ; { print $1 }' > /etc/acq400/0/play0_ready
 
 
 

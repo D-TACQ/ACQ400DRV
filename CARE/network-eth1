@@ -1,0 +1,37 @@
+#!/bin/sh
+# copy to /mnt/local/network
+# call /mnt/local/network IP
+
+ETH=ETH1
+
+get_mac_address() {
+        cat /sys/class/net/${ETH}/address
+}
+
+set_fallback_static_ip() {
+        MAC=$(get_mac_address)
+        let DMINOR=$(printf "%d" 0x$(echo ${MAC##*:}))
+        let IPMINOR="$DMINOR==200? 200: $DMINOR%200"
+        IP=192.168.0.$IPMINOR
+}
+
+
+
+if [ "x$1" != "x" ]; then
+	IP=$1
+else
+	set_fallback_static_ip
+fi
+
+(
+echo +++ network deferring until eth1 exists
+while [ ! -e /sys/class/net/eth1 ]; do
+	sleep 1
+done
+echo +++ network eth1 exists, bring it up
+ifconfig eth1 $IP up
+) &
+
+
+
+

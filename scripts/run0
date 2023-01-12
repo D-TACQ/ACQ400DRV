@@ -1,6 +1,9 @@
 #!/bin/sh
 # configures site 0 aggregator.
-# usage: run0 site1[,site2,..]
+# usage: run0 site1[,site2,..]  [spad-def]
+
+S0KB=/dev/acq400.0.knobs
+ETC0=/etc/acq400/0
 
 spad2nchan() {
 	mode=$1
@@ -21,44 +24,41 @@ if [ "x$1" = "x" ]; then
 	echo using default sitelist $sitelist
 else
 	sitelist=$1
+	if [ "x$2" != "x" ]; then
+		set.site 0 spad=$2
+		echo spad set $(get.site 0 spad)
+	fi
 fi
 sites="$(echo $sitelist | tr , \ )"
 
 echo sitelist: $sitelist
 echo sites: $sites
 
-rm -f /etc/acq400/0/run0_ready
+rm -f $ETC0/run0_ready
 acq400_teardown
 
-spad3="$(tr , \  </etc/acq400/0/spad)"
+spad3="$(tr , \  <$ETC0/spad)"
 let nspad=$(spad2nchan $spad3)
-
 
 source get_site_total_size
 
-if [ ! -e /etc/acq400/0/NCHAN ] || [ $nchan -ne $(cat /etc/acq400/0/NCHAN) ]
+if [ ! -e $ETC0/NCHAN ] || [ $NCHAN -ne $(cat $ETC0/NCHAN) ]
 then
-	echo setting NCHAN=$nchan data32=$d32
-	set.sys /etc/acq400/0/NCHAN $nchan
-	set.sys /etc/acq400/0/data32 $d32
+	echo setting NCHAN:$NCHAN data32:$D32
+	set.sys $ETC0/NCHAN $NCHAN
+	set.sys $ETC0/data32 $D32
 	/usr/local/bin/ai_monitor_all start	
 fi
-set.sys /etc/acq400/0/sites ${sitelist}
+set.sys $ETC0/sites 	${sitelist}
+set.sys $ETC0/ssb 		$SSB
+set.sys $ETC0/spadstart	$(($SSB-$nspad*4))
 
+[ "x$NO_OPTIMISE_BUFFERLEN" = "xy" ] || set.sys $S0KB/optimise_bufferlen $SSB 
 
-echo $SS > /etc/acq400/0/ssb
-echo $(($SS-$nspad*4)) > /etc/acq400/0/spadstart
-
-[ "x$NO_OPTIMISE_BUFFERLEN" = "xy" ] || 
-	set.sys /dev/acq400.0.knobs/optimise_bufferlen $SS 
-
-	
-set.sys /dev/acq400.0.knobs/aggregator 0
-set.sys /dev/acq400.0.knobs/data_engine_0 0
-set.sys /dev/acq400.0.knobs/data_engine_0 aggregator=1 
-set.sys /dev/acq400.0.knobs/aggregator threshold=16384 sites=${sitelist}
-echo 1 > /etc/acq400/0/run0_ready
-
-
-
-
+DECIM=$(get.sys $S0KB/decimate)
+set.sys $S0KB/aggregator 	0
+set.sys $S0KB/data_engine_0 0
+set.sys $S0KB/data_engine_0 aggregator=1 
+set.sys $S0KB/aggregator 	threshold=16384 sites=${sitelist%*,14}
+set.sys $S0KB/decimate 		$DECIM
+set.sys $ETC0/run0_ready    1

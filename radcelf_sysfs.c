@@ -34,8 +34,14 @@ module_param(dds_strobe_msec, int, 0644);
 MODULE_PARM_DESC(dds_strobe_msec, "STROBE HI TIME in msec");
 
 
-MAKE_BITS(trgA_output, RAD_CTL, MAKE_BITS_FROM_MASK, RAD_CTL_TRG_A_OUT);
-MAKE_BITS(trgB_output, RAD_CTL, MAKE_BITS_FROM_MASK, RAD_CTL_TRG_B_OUT);
+MAKE_BITS(ddsA_gps_sync_chirp,  RAD_DDS_A, MAKE_BITS_FROM_MASK, DDS_GPS_SYNC_CHIRP);
+MAKE_BITS(ddsA_gps_engage_hold, RAD_DDS_A, MAKE_BITS_FROM_MASK, DDS_GPS_ENGAGE_HOLD);
+MAKE_BITS(ddsA_gps_arm_pps,     RAD_DDS_A, MAKE_BITS_FROM_MASK, DDS_GPS_ARM_PPS);
+
+MAKE_BITS(ddsB_gps_sync_chirp,  RAD_DDS_B, MAKE_BITS_FROM_MASK, DDS_GPS_SYNC_CHIRP);
+MAKE_BITS(ddsB_gps_engage_hold, RAD_DDS_B, MAKE_BITS_FROM_MASK, DDS_GPS_ENGAGE_HOLD);
+MAKE_BITS(ddsB_gps_arm_pps,     RAD_DDS_B, MAKE_BITS_FROM_MASK, DDS_GPS_ARM_PPS);
+
 MAKE_BITS(clkd_hard_reset, RAD_CTL, MAKE_BITS_FROM_MASK, RAD_CTL_CLKD_RESET);
 MAKE_BITS(ddsX_hard_reset, RAD_CTL, MAKE_BITS_FROM_MASK, RAD_CTL_DDS_RESET);
 MAKE_BITS(ddsA_upd_clk_fpga, RAD_DDS_A, MAKE_BITS_FROM_MASK, RAD_DDS_UPD_CLK_FPGA);
@@ -140,9 +146,17 @@ void acq400_spi_strobe(void *clidata, int cs, int mode)
 
 EXPORT_SYMBOL_GPL(acq400_spi_strobe);
 
+SCOUNT_KNOB_FIELD(clk_pps_latch, RAD_CLK_PPS_LATCH, 0x0fffffff);
+
 const struct attribute *sysfs_radcelf_attrs[] = {
-	&dev_attr_trgA_output.attr,
-	&dev_attr_trgB_output.attr,
+	&dev_attr_ddsA_gps_sync_chirp.attr,
+	&dev_attr_ddsA_gps_engage_hold.attr,
+	&dev_attr_ddsA_gps_arm_pps.attr,
+
+	&dev_attr_ddsB_gps_sync_chirp.attr,
+	&dev_attr_ddsB_gps_engage_hold.attr,
+	&dev_attr_ddsB_gps_arm_pps.attr,
+
 	&dev_attr_clkd_hard_reset.attr,
 	&dev_attr_ddsX_hard_reset.attr,
 	&dev_attr_ddsA_upd_clk_fpga.attr,
@@ -170,6 +184,8 @@ const struct attribute *sysfs_radcelf_attrs[] = {
 	&dev_attr_strobeB.attr,
 	&dev_attr_strobeC.attr,
 	&dev_attr_strobeAB.attr,
+
+	&dev_attr_scount_clk_pps_latch.attr,
 	NULL
 };
 
