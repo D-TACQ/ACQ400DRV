@@ -1,2 +1,4 @@
-date -ud @$(hexdump -ve '1/4 "%d\n"' /dev/acq400.0.wr_tai | head -n 1) | sed -e s/UTC/TAI/g
+#!/bin/sh
+DC=$(dd bs=4 count=1 if=/dev/acq400.0.wr_tai 2>/dev/null | hexdump -ve '1/4 "%d"')
+echo tai_date $(date -ud @$DC) | sed -e s/UTC/TAI/g
 

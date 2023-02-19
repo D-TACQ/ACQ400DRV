@@ -662,7 +662,7 @@ build_mgt400() {
     if [ -e /dev/acq400.${site}.knobs/module_type ]; then
         mt=$(cat /dev/acq400.${site}.knobs/module_type)
         case ${mt} in
-        9[01234])
+        9[0124])
             let snd="1${SN##CE4??}-10000"
             snx=$(printf "%04x" $snd)
             let mtyp=${dtsn#CE*}/10000
@@ -674,6 +674,12 @@ build_mgt400() {
                 set.sys $knobs/ident 0x${mtyp}${name##*.}${snx};;
             esac
             echo "aggregator sites=none off" >$knobs/aggregator;;
+        93)
+			HN=$(hostname)
+			snd=1${HN##*_}
+			snx=$(printf "%04x" $((snd-1000)))
+			set.sys $knobs/ident 0x93C1${snx}
+			echo "aggregator sites=none off" >$knobs/aggregator;;
         esac
         build_mgt400_node $(cat $knobs/name $knobs/dev)
     fi
@@ -701,12 +707,16 @@ build_knobs() {
             else
                 echo "ERROR ACQ1001 + ACQ480 : BUS SPEED $bs check BOOT.bin"
             fi;;
-        acq21*)
+        acq2206*)
+            echo "ACQ2206 + ACQ480 : OK";;
+        acq2106*)
             echo "ACQ2106 + ACQ480 : OK";;
         *zc706*)
             echo "ZC706 + ACQ480 : OK";;
         kmcuz30)
             echo "KMCUZ30 + ACQ480 : EXPERIMENTAL";;
+        z7io)
+            echo "Z7IO + ACQ480 : EXPERIMENTAL";;
         *)
             echo "ERROR: ACQ480 found, but not compatible with BASE $MODEL"
             exit 1;;
@@ -1007,6 +1017,8 @@ else
     case $MODEL in
     kmcu*)
         load_mgt $MODEL;;
+    z7io*)
+    	load_mgt $MODEL;;
     esac
 fi
 

@@ -62,6 +62,9 @@
 #define MOD_ID_ACQ2106SC	0x82
 #define MOD_ID_KMCU		0x83
 #define MOD_ID_KMCU30		0x84
+#define MOD_ID_CPSC2		0x85
+#define MOD_ID_Z7IO		0x86
+#define MOD_ID_ACQ2206SC	0x87
 
 #define MOD_ID_MTCA_ADAP	0xfc
 #define MOD_ID_ACQ400T_FMC	0xfd

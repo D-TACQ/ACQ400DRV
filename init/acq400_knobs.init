@@ -39,7 +39,11 @@ spawn_knob_servers() {
 		    [ -e $mt ] && [ "$(cat $mt)" = "97" ] && echo 10 > /etc/acq400/0/has_hudp;;
 		11)
 			specials="$specials $site"
-			[ ! -e $mt ] && echo 11 > /etc/acq400/0/has_wr;;
+			if [ -e $mt ]; then
+				mgt_list=$site
+			else
+				echo 11 > /etc/acq400/0/has_wr
+			fi;;
 		14)
 			specials="$specials $site"
 			echo 14 > /etc/acq400/0/has_dsp;;

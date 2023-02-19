@@ -445,34 +445,6 @@ static ssize_t show_gpg_debug(
 
 static DEVICE_ATTR(gpg_debug, S_IRUGO, show_gpg_debug, 0);
 
-static ssize_t show_gpg_timescaler(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
-{
-	struct acq400_dev* adev = acq400_devices[dev->id];
-	struct GPG_buffer* gpg = get_gpg(adev, 0);
-	return sprintf(buf, "%u\n", gpg->gpg_timescaler);
-}
-
-static ssize_t store_gpg_timescaler(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
-{
-	struct acq400_dev* adev = acq400_devices[dev->id];
-	struct GPG_buffer* gpg = get_gpg(adev, 0);
-
-	if (sscanf(buf, "%u", &gpg->gpg_timescaler) == 1){
-		return count;
-	}else{
-		return -1;
-	}
-}
-
-static DEVICE_ATTR(gpg_timescaler, S_IRUGO|S_IWUSR, show_gpg_timescaler, store_gpg_timescaler);
-
 static ssize_t show_axi_freq(
 	struct device * dev,
 	struct device_attribute *attr,
@@ -1537,7 +1509,7 @@ static ssize_t show_active_chan(
 		int snap32 = qen_dio&QEN_DIO_CTRL_SNAP32? 1: 0;
 		int zcount = qen_dio&QEN_DIO_CTRL_ZCOUNT? 1: 0;
 
-		adev->nchan_enabled = 1 + snap32 + zcount;
+		adev->nchan_enabled = 1 + (snap32||zcount);
 	}
 	return sprintf(buf, "%d\n", adev->nchan_enabled);
 }
@@ -3153,7 +3125,6 @@ static const struct attribute *gpg_attrs[] = {
 	&dev_attr_gpg_enable.attr,
 	&dev_attr_gpg_top_count.attr,
 	&dev_attr_gpg_debug.attr,
-	&dev_attr_gpg_timescaler.attr,
 	NULL
 };
 static const struct attribute *acq2006sc_attrs[] = {
@@ -3301,7 +3272,8 @@ static const struct attribute *fmc_fp_attrs[] = {
 
 extern const struct attribute *spadcop_attrs[];
 
-
+int _acq400_createSysfsSC(struct device *dev, struct acq400_dev *adev, const struct attribute **specials[], int nspec);
+int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const struct attribute **specials[], int nspec);
 
 void acq400_createSysfs(struct device *dev)
 {
@@ -3332,140 +3304,11 @@ void acq400_createSysfs(struct device *dev)
 			specials[nspec++] = es_enable_attrs;
 		}
 	}else if IS_SC(adev){
-		if (sysfs_create_files(&dev->kobj, sc_common_attrs)){
-			dev_err(dev, "failed to create sysfs");
-		}
-		if (HAS_HDMI_SYNC(adev)){
-			if (sysfs_create_files(&dev->kobj, hdmi_sync_attrs)){
-				dev_err(dev, "failed to create sysfs HDMI");
-			}
-		}
-		if (IS_AXI64(adev)){
-			if (sysfs_create_files(&dev->kobj, axi64_attrs)){
-				dev_err(dev, "failed to create sysfs axi64");
-			}
-		}
-
-		if (IS_ACQ2X06SC(adev)){
-			specials[nspec++] = acq2006sc_attrs;
-			if (IS_ACQ2106_WR(adev)) {
-				specials[nspec++] = acq2106_wr_attrs;
-			}
-			if (IS_ACQ2106_TIGA(adev)){
-				specials[nspec++] = acq2106_tiga_attrs;
-			}
-		}else if (IS_ACQ1001SC(adev)){
-			if (IS_ACQ1014(adev)){
-				dev_info(dev, "ACQ1014: loading extra knobs");
-				specials[nspec++] = acq1014sc_attrs;
-			}else{
-				specials[nspec++] = acq1001sc_attrs;
-			}
-		}else if (IS_KMCx_SC(adev)){
-			specials[nspec++] = kmcx_sc_attrs;
-		}
-		specials[nspec++] = gpg_attrs;
-		specials[nspec++] = spadcop_attrs;
+		nspec = _acq400_createSysfsSC(dev, adev, specials, nspec);
 	}else{
-		int has_device_attrs = 1;
-		if (HAS_AI(adev)){
-			if (sysfs_create_files(&dev->kobj, sysfs_adc_device_attrs)){
-				dev_err(dev, "failed to create sysfs");
-			}
-		}
-		if (HAS_RGM(adev)){
-			if (sysfs_create_files(&dev->kobj, rgm_attrs)){
-				dev_err(dev, "failed to create rgm sysfs");
-			}
-		}
-		if (HAS_ATD(adev)){
-			dev_info(dev, "HAS_ATD");
-			if (sysfs_create_files(&dev->kobj, atd_attrs)){
-				dev_err(dev, "failed to create atd sysfs");
-			}
-		}
-		if (HAS_DTD(adev)){
-			dev_info(dev, "HAS_DTD");
-			if (sysfs_create_files(&dev->kobj, dtd_attrs)){
-				dev_err(dev, "failed to create dtd sysfs");
-			}
-			acq400_clearDelTrg(adev);
-		}
-		if (IS_DIO482_PG(adev)) {
-			dev_info(dev, "IS_DIO482_PG");
-			specials[nspec++] = dio_attrs;
-			if (IS_DIO482TD_PG(adev)){
-				specials[nspec++] = dio482_pg_attrs;
-			}else{
-				specials[nspec++] = dio482_pg32_attrs;
-			}
-			specials[nspec++] = gpg_attrs;
-		}else if (IS_DIO422AQB(adev)){
-			dev_info(dev, "IS_DIO422AQB");
-			specials[nspec++] = sysfs_qen_attrs;
-			specials[nspec++] = es_enable_attrs;
-		}else if (IS_DIO482PPW(adev)){
-			specials[nspec++] = dio_attrs;
-			specials[nspec++] = dio482ppw_attrs;
-		}else if (IS_ACQ423(adev)){
-			specials[nspec++] = acq423_emulate_attrs;
-			specials[nspec++] = acq423_attrs;
-		}else if (IS_ACQ424(adev)){
-			specials[nspec++] = acq424_attrs;
-		}else if (IS_ACQ42X(adev)){
-			specials[nspec++] =
-				IS_ACQ425(adev) ? acq425_attrs: ACQ420_ATTRS;
-		}else if (IS_ACQ43X(adev)){
-			specials[nspec++] = acq435_attrs;
-		}else if (IS_ACQ465(adev)){
-			specials[nspec++] = acq465_attrs;
-		}else if (IS_ACQ494(adev)){
-			specials[nspec++] = acq494_attrs;
-		}else if (IS_AO420(adev)||IS_AO428(adev)){
-			specials[nspec++] = playloop_attrs;
-			specials[nspec++] = dacspi_attrs;
-			if (IS_AO420_HALF436(adev)){
-				specials[nspec++] = ((adev->mod_id&MOD_ID_IS_SLAVE) == 0)?
-						acq436_upper_half_attrs_master:
-						acq436_upper_half_attrs;
-				specials[nspec++] = ao420_half_436_attrs;
-			}else{
-				specials[nspec++] = IS_AO420(adev)? ao420_attrs: ao428_attrs;
-			}
-		}else if (IS_AO424(adev)){
-			specials[nspec++] = playloop_attrs;
-			specials[nspec++] = get_ao424_attrs();
-		}else if (IS_BOLO8(adev)){
-			specials[nspec++] = dacspi_attrs;
-			specials[nspec++] = bolo8_attrs;
-		}else if (IS_DIO432X(adev)){
-			specials[nspec++] = playloop_attrs;
-			specials[nspec++] = dio_attrs;
-			if (IS_DIO422ELF(adev)){
-				specials[nspec++] = dio422_attrs;
-			}else{
-				specials[nspec++] = dio432_attrs;
-				if (IS_DIO482FMC(adev) || IS_DIO482TD(adev)){
-					specials[nspec++] = dio482_attrs;
-					if (GET_MOD_IDV(adev)==MOD_IDV_PWM2){
-						specials[nspec++] = pwm2_attrs;
-					}
-				}
-			}
-		}else if (IS_ACQ400T(adev)){
-			specials[nspec++] = acq400t_attrs;
-		}else if (IS_ACQ480(adev)){
-			specials[nspec++] = HAS_FPGA_FIR(adev)?	acq480_ffir_attrs: acq480_attrs;
-		}else if (IS_PIG_CELF(adev)){
-			specials[nspec++] = pig_celf_attrs;
-		}else{
+		nspec = _acq400_createSysfsMOD(dev, adev, specials, nspec);
+		if (nspec < 0){
 			return;
-		}
-
-		if (has_device_attrs){
-			if (sysfs_create_files(&dev->kobj, sysfs_device_attrs)){
-				dev_err(dev, "failed to create sysfs");
-			}
 		}
 	}
 
@@ -3483,6 +3326,152 @@ void acq400_createSysfs(struct device *dev)
 			dev_err(dev, "failed to create fmc_fp_attrs");
 		}
 	}
+}
+
+int _acq400_createSysfsSC(struct device *dev, struct acq400_dev *adev, const struct attribute **specials[], int nspec)
+{
+	if (sysfs_create_files(&dev->kobj, sc_common_attrs)){
+		dev_err(dev, "failed to create sysfs");
+	}
+	if (HAS_HDMI_SYNC(adev)){
+		if (sysfs_create_files(&dev->kobj, hdmi_sync_attrs)){
+			dev_err(dev, "failed to create sysfs HDMI");
+		}
+	}
+	if (IS_AXI64(adev)){
+		if (sysfs_create_files(&dev->kobj, axi64_attrs)){
+			dev_err(dev, "failed to create sysfs axi64");
+		}
+	}
+
+	if (IS_ACQ2X06SC(adev)){
+		specials[nspec++] = acq2006sc_attrs;
+		if (IS_ACQ2106_WR(adev)) {
+			specials[nspec++] = acq2106_wr_attrs;
+		}
+		if (IS_ACQ2106_TIGA(adev)){
+			specials[nspec++] = acq2106_tiga_attrs;
+		}
+	}else if (IS_ACQ1001SC(adev)){
+		if (IS_ACQ1014(adev)){
+			dev_info(dev, "ACQ1014: loading extra knobs");
+			specials[nspec++] = acq1014sc_attrs;
+		}else{
+			specials[nspec++] = acq1001sc_attrs;
+		}
+	}else if (IS_Z7IO_SC(adev)){
+		dev_warn(dev, "IS_Z7IO_SC using kmcx attrs");
+		specials[nspec++] = kmcx_sc_attrs;
+	}else if (IS_KMCx_SC(adev)){
+		specials[nspec++] = kmcx_sc_attrs;
+	}
+	specials[nspec++] = gpg_attrs;
+	specials[nspec++] = spadcop_attrs;
+	return nspec;
+}
+int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const struct attribute **specials[], int nspec)
+{
+	int has_device_attrs = 1;
+	if (HAS_AI(adev)){
+		if (sysfs_create_files(&dev->kobj, sysfs_adc_device_attrs)){
+			dev_err(dev, "failed to create sysfs");
+		}
+	}
+	if (HAS_RGM(adev)){
+		if (sysfs_create_files(&dev->kobj, rgm_attrs)){
+			dev_err(dev, "failed to create rgm sysfs");
+		}
+	}
+	if (HAS_ATD(adev)){
+		dev_info(dev, "HAS_ATD");
+		if (sysfs_create_files(&dev->kobj, atd_attrs)){
+			dev_err(dev, "failed to create atd sysfs");
+		}
+	}
+	if (HAS_DTD(adev)){
+		dev_info(dev, "HAS_DTD");
+		if (sysfs_create_files(&dev->kobj, dtd_attrs)){
+			dev_err(dev, "failed to create dtd sysfs");
+		}
+		acq400_clearDelTrg(adev);
+	}
+	if (IS_DIO482_PG(adev)) {
+		dev_info(dev, "IS_DIO482_PG");
+		specials[nspec++] = dio_attrs;
+		if (IS_DIO482TD_PG(adev)){
+			specials[nspec++] = dio482_pg_attrs;
+		}else{
+			specials[nspec++] = dio482_pg32_attrs;
+		}
+		specials[nspec++] = gpg_attrs;
+	}else if (IS_DIO422AQB(adev)){
+		dev_info(dev, "IS_DIO422AQB");
+		specials[nspec++] = sysfs_qen_attrs;
+		specials[nspec++] = es_enable_attrs;
+	}else if (IS_DIO482PPW(adev)){
+		specials[nspec++] = dio_attrs;
+		specials[nspec++] = dio482ppw_attrs;
+	}else if (IS_ACQ423(adev)){
+		specials[nspec++] = acq423_emulate_attrs;
+		specials[nspec++] = acq423_attrs;
+	}else if (IS_ACQ424(adev)){
+		specials[nspec++] = acq424_attrs;
+	}else if (IS_ACQ42X(adev)){
+		specials[nspec++] =
+			IS_ACQ425(adev) ? acq425_attrs: ACQ420_ATTRS;
+	}else if (IS_ACQ43X(adev)){
+		specials[nspec++] = acq435_attrs;
+	}else if (IS_ACQ465(adev)){
+		specials[nspec++] = acq465_attrs;
+	}else if (IS_ACQ494(adev)){
+		specials[nspec++] = acq494_attrs;
+	}else if (IS_AO420(adev)||IS_AO428(adev)){
+		specials[nspec++] = playloop_attrs;
+		specials[nspec++] = dacspi_attrs;
+		if (IS_AO420_HALF436(adev)){
+			specials[nspec++] = ((adev->mod_id&MOD_ID_IS_SLAVE) == 0)?
+					acq436_upper_half_attrs_master:
+					acq436_upper_half_attrs;
+			specials[nspec++] = ao420_half_436_attrs;
+		}else{
+			specials[nspec++] = IS_AO420(adev)? ao420_attrs: ao428_attrs;
+		}
+	}else if (IS_AO424(adev)){
+		specials[nspec++] = playloop_attrs;
+		specials[nspec++] = get_ao424_attrs();
+	}else if (IS_BOLO8(adev)){
+		specials[nspec++] = dacspi_attrs;
+		specials[nspec++] = bolo8_attrs;
+	}else if (IS_DIO432X(adev)){
+		specials[nspec++] = playloop_attrs;
+		specials[nspec++] = dio_attrs;
+		if (IS_DIO422ELF(adev)){
+			specials[nspec++] = dio422_attrs;
+		}else{
+			specials[nspec++] = dio432_attrs;
+			if (IS_DIO482FMC(adev) || IS_DIO482TD(adev)){
+				specials[nspec++] = dio482_attrs;
+				if (GET_MOD_IDV(adev)==MOD_IDV_PWM2){
+					specials[nspec++] = pwm2_attrs;
+				}
+			}
+		}
+	}else if (IS_ACQ400T(adev)){
+		specials[nspec++] = acq400t_attrs;
+	}else if (IS_ACQ480(adev)){
+		specials[nspec++] = HAS_FPGA_FIR(adev)?	acq480_ffir_attrs: acq480_attrs;
+	}else if (IS_PIG_CELF(adev)){
+		specials[nspec++] = pig_celf_attrs;
+	}else{
+		return -1;
+	}
+
+	if (has_device_attrs){
+		if (sysfs_create_files(&dev->kobj, sysfs_device_attrs)){
+			dev_err(dev, "failed to create sysfs");
+		}
+	}
+	return nspec;
 }
 
 void acq400_delSysfs(struct device *dev)

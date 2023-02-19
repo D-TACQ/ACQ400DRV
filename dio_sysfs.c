@@ -323,7 +323,8 @@ const unsigned PPW_REP_FIELDS[] = { PPW_REP_FIELD, 0 };
 #define PPW_FUNS(CH) \
 	KNOB_FUN_REG(ppw_trg, CH, PPW_TRG(CH), PPW_TRG_FIELDS, !ZERO_BASED); \
 	KNOB_FUN_REG(ppw_pwm, CH, PPW_PWM(CH), PPW_PWM_FIELDS, !ZERO_BASED); \
-	KNOB_FUN_REG(ppw_rep, CH, PPW_REP(CH), PPW_REP_FIELDS, ZERO_BASED)
+	KNOB_FUN_REG(ppw_rep, CH, PPW_REP(CH), PPW_REP_FIELDS, ZERO_BASED);  \
+	MAKE_DNUM(ppw_cnt##CH, PPW_STA(CH), 0x0000ffff);
 
 PPW_FUNS(1);
 PPW_FUNS(2);
@@ -332,15 +333,13 @@ PPW_FUNS(4);
 PPW_FUNS(5);
 PPW_FUNS(6);
 
+#define PDA(kb)  &dev_attr_##kb.attr
+#define PPW_KNOBS(ch) PDA(ppw_trg##ch), PDA(ppw_pwm##ch), PDA(ppw_rep##ch), PDA(ppw_cnt##ch)
+
 const struct attribute *dio482ppw_attrs[] = {
 	&dev_attr_DO32.attr,
 	&dev_attr_DO32_immediate_mask.attr,
-	&dev_attr_ppw_trg1.attr, &dev_attr_ppw_pwm1.attr, &dev_attr_ppw_rep1.attr,
-	&dev_attr_ppw_trg2.attr, &dev_attr_ppw_pwm2.attr, &dev_attr_ppw_rep2.attr,
-	&dev_attr_ppw_trg3.attr, &dev_attr_ppw_pwm3.attr, &dev_attr_ppw_rep3.attr,
-	&dev_attr_ppw_trg4.attr, &dev_attr_ppw_pwm4.attr, &dev_attr_ppw_rep4.attr,
-	&dev_attr_ppw_trg5.attr, &dev_attr_ppw_pwm5.attr, &dev_attr_ppw_rep5.attr,
-	&dev_attr_ppw_trg6.attr, &dev_attr_ppw_pwm6.attr, &dev_attr_ppw_rep6.attr,
+	PPW_KNOBS(1), PPW_KNOBS(2), PPW_KNOBS(3), PPW_KNOBS(4), PPW_KNOBS(5), PPW_KNOBS(6),
 	0
 };
 

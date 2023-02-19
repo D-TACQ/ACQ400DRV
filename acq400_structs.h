@@ -347,7 +347,6 @@ struct GPG_buffer {
 	unsigned gpg_dbgr;
 	unsigned gpg_used_bits;
 	unsigned gpg_final_state;
-	unsigned gpg_timescaler;		/* scale STL TIMES by this factor (default=1) */
 };
 struct acq400_sc_dev {
 	char id[16];

@@ -517,7 +517,9 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 	int sites =
 		IS_ACQ2X06SC(adev)? 6:
 		IS_ACQ1001SC(adev)? 6:	/* special case counters eg RADCELF */
-		IS_KMCx_SC(adev)  ? 2: 0;
+		IS_KMCx_SC(adev)  ? 2:
+		IS_Z7IO_SC(adev)  ? 2:  /* @@todo potentially 3 with front side FMC */
+				    0;
 
 	unsigned* dev_rc_cache_data = dev_rc_alloc_cache();
 	dev_rc_init(adev, &adev->clk_reg_cache,

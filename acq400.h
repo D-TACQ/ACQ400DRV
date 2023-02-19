@@ -409,6 +409,10 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_ACQ430(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ430FMC)
 #define IS_ACQ436(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ436ELF)
 #define IS_ACQ437(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ437ELF)
+
+#define IS_BOLO8(adev) \
+	(GET_MOD_ID(adev)==MOD_ID_BOLO8 || GET_MOD_ID(adev)== MOD_ID_BOLO8B)
+
 #define IS_TIMBUS(adev) (GET_MOD_ID(adev) == MOD_ID_TIMBUS)
 
 #define IS_ACQ43X(adev)	\
@@ -416,7 +420,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 
 #define IS_ACQ480(adev)	(GET_MOD_ID(adev) == MOD_ID_ACQ480FMC)
 
-#define IS_ADC(adev)	(IS_ACQ43X(adev)||IS_ACQ42X(adev)||IS_ACQ480(adev)||IS_ACQ465(adev)||IS_ACQ494(adev))
+#define IS_ADC(adev)	(IS_ACQ43X(adev)||IS_ACQ42X(adev)||IS_ACQ480(adev)||IS_ACQ465(adev)||IS_ACQ494(adev)||IS_BOLO8(adev))
 
 #define IS_AO420(adev)  \
 	(GET_MOD_ID(adev)==MOD_ID_AO420FMC || GET_MOD_ID(adev)==MOD_ID_AO420FMC_CS2)
@@ -432,10 +436,14 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_ACQ2006B(adev) \
 	(IS_ACQ2006SC(adev) && GET_MOD_ID_VERSION(adev) != 0)
 #define IS_ACQ2106SC(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ2106SC)
+#define IS_ACQ2206SC(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ2206SC)
+#define IS_ACQ2X06SC(adev) (IS_ACQ2006SC(adev) || IS_ACQ2106SC(adev) || IS_ACQ2206SC(adev))
+
 #define IS_ACQ2106_AXI64(adev)  \
-	(IS_ACQ2106SC(adev) && (GET_MOD_ID_VERSION(adev)&0x2) != 0)
+	(IS_ACQ2X06SC(adev) && (GET_MOD_ID_VERSION(adev)&0x2) != 0)
 #define IS_ACQ2106_STACK(adev) \
-	(IS_ACQ2106SC(adev) && (GET_MOD_ID_VERSION(adev)&0x3) == 0x3)
+	(IS_ACQ2X06SC(adev) && (GET_MOD_ID_VERSION(adev)&0x3) == 0x3)
+
 
 #define IS_ACQ2106_STAGGER(adev) \
 	(IS_ACQ2106_STACK(adev) && (GET_MOD_ID_VERSION(adev)&0x4) != 0)
@@ -443,7 +451,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_AXI64_AGG32(adev)	((GET_MOD_ID_VERSION(adev)&0x10) != 0)
 #define IS_ACQ2106_TIGA(adev) 	((GET_MOD_ID_VERSION(adev)&0x20) != 0)
 
-#define IS_ACQ2X06SC(adev) (IS_ACQ2006SC(adev) || IS_ACQ2106SC(adev))
+#define IS_ACQ2X06SC(adev) (IS_ACQ2006SC(adev) || IS_ACQ2106SC(adev) || IS_ACQ2206SC(adev))
 #define IS_ACQ1001SC(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ1001SC)
 
 #define IS_KMCU_SC(dev)		(GET_MOD_ID(adev) == MOD_ID_KMCU)
@@ -451,15 +459,22 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 
 #define IS_KMCx_SC(dev)		(IS_KMCU_SC(dev)||IS_KMCU30_SC(dev))
 
+#define IS_Z7IO_SC(dev)		(GET_MOD_ID(adev) == MOD_ID_Z7IO)
+
+#define IS_MTCA_AMC_SC(dev)	(IS_KMCx_SC(dev)||IS_Z7IO_SC(dev))
+
 #define IS_ACQ1001_AXI64(adev) \
 	(IS_ACQ1001SC(adev) && (GET_MOD_ID_VERSION(adev)&0x2) != 0)
 
 #define IS_KMCx_AXI64(adev) \
 	(IS_KMCx_SC(adev) && (GET_MOD_ID_VERSION(adev)&0x2) != 0)
 
+#define IS_Z7IO_AXI64(adev) \
+	(IS_Z7IO_SC(dev) && (GET_MOD_ID_VERSION(adev)&0x2) != 0)
+
 
 #define IS_AXI64(adev) \
-	(IS_ACQ2106_AXI64(adev) || IS_ACQ1001_AXI64(adev) || IS_KMCx_AXI64(adev))
+	(IS_ACQ2106_AXI64(adev) || IS_ACQ1001_AXI64(adev) || IS_KMCx_AXI64(adev) || IS_Z7IO_AXI64(adev))
 
 #define IS_AXI64_DUALCHAN_CAPABLE(adev)	\
 	(IS_AXI64(adev) && (GET_MOD_ID_VERSION(adev)&0x3) == 0x3)
@@ -468,13 +483,12 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 	(IS_AXI64(adev) && adev->dma_chan[0] && adev->dma_chan[1])
 
 #define IS_SC(adev) \
-	(IS_ACQ2X06SC(adev)||IS_ACQ1001SC(adev)||IS_KMCx_SC(dev))
+	(IS_ACQ2X06SC(adev)||IS_ACQ1001SC(adev)||IS_KMCx_SC(dev)||IS_Z7IO_SC(adev))
 
 #define IS_ACQ1014(adev) \
 	(IS_ACQ1001SC(adev) && (GET_MOD_ID_VERSION(adev)&0x4) != 0)
 
-#define IS_BOLO8(adev) \
-	(GET_MOD_ID(adev)==MOD_ID_BOLO8 || GET_MOD_ID(adev)== MOD_ID_BOLO8B)
+
 
 
 #define IS_DIO432FMC(adev)	(GET_MOD_ID(adev) == MOD_ID_DIO432FMC)
@@ -498,7 +512,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_ACQ400T(adev) \
 	(GET_MOD_ID(adev) == MOD_ID_ACQ400T_FMC || GET_MOD_ID(adev) == MOD_ID_ACQ400T_ELF)
 
-#define HAS_HDMI_SYNC(adev)	(IS_ACQ1001SC(adev)||IS_ACQ2006B(adev)||IS_ACQ2106SC(adev))
+#define HAS_HDMI_SYNC(adev)	(IS_ACQ1001SC(adev)||IS_ACQ2006B(adev)||IS_ACQ2106SC(adev)||IS_ACQ2206SC(adev))
 #define IS_DUMMY(adev) 	((adev)->mod_id>>MOD_ID_TYPE_SHL == MOD_ID_DUMMY)
 
 #define IS_DIO_BISCUIT_GENERIC(adev)  (GET_MOD_ID(adev) == MOD_ID_DIO_BISCUIT)
@@ -980,7 +994,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #endif
 #define V2F_FREQ_SLO_MAX	((1<<27) - 1)
 
-
+#define ACQ480_FIRCO_CSR_BIST	(1<<31)
 #define ACQ480_FIRCO_CSR_RESET	(1<<24)
 #define ACQ480_FIRCO_CSR_CTR	(0x00ff0000)
 #define ACQ480_FIRCO_CSR_CTR_SHL 16

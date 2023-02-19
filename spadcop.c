@@ -39,9 +39,28 @@ enum hrtimer_restart _spadCopTime(struct hrtimer* hrt, ktime_t _kt)
 	hrtimer_forward_now(hrt, sc->kt_period);
 	return HRTIMER_RESTART;
 }
+
+enum hrtimer_restart _spadCopSec(struct hrtimer* hrt, ktime_t _kt)
+{
+	uint64_t kt = (uint64_t)_kt;	// do not use before 1970!
+	struct SpadCop *sc = container_of(hrt, struct SpadCop, timer);
+	unsigned secs;
+	do_div(kt, 1000000000);
+	secs = kt;
+
+	*sc->dst = secs;
+	hrtimer_forward_now(hrt, sc->kt_period);
+	return HRTIMER_RESTART;
+}
+
 enum hrtimer_restart spadCopTimeRealAction(struct hrtimer* hrt)
 {
 	return _spadCopTime(hrt, ktime_get_real_ns());
+}
+
+enum hrtimer_restart spadCopTimeRealSecondsAction(struct hrtimer* hrt)
+{
+	return _spadCopSec(hrt, ktime_get_real_ns());
 }
 
 enum hrtimer_restart spadCopTimeTAIAction(struct hrtimer* hrt)
@@ -91,7 +110,8 @@ enum hrtimer_restart spadCopReadClear(struct hrtimer* hrt)
 void spadCopStart(struct SpadCop *sc)
 {
 	hrtimer_init(&sc->timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
-	sc->timer.function = sc->reg==0xcafe? spadCopMsecAction:
+	sc->timer.function = sc->reg==0x5555? spadCopTimeRealSecondsAction:
+			     sc->reg==0xcafe? spadCopMsecAction:
 			     sc->reg==0xfeed? spadCopTimeRealAction:
 			     sc->reg==0xd0d0? spadCopTimeTAIAction:
 			     sc->reg==0xcccc? spadCopRampAction:

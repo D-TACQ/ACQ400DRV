@@ -19,7 +19,7 @@ do
 	s_root=/etc/acq400/$site	
 	if [ -e ${s_root}/data32 ]; then
 		echo $ncc > ${s_root}/AGIX
-		site_d32=$(cat /dev/acq400.${site}.knobs/data32)
+		site_d32=$(get.site $site data32)
 		active_chan=$(cat ${s_root}/active_chan)
 		ncc=$(($ncc+$active_chan))
 		if [ $site_d32 -eq 2 ]; then

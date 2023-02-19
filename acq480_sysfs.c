@@ -505,6 +505,7 @@ static ssize_t store_ffir_coeff(
 }
 static DEVICE_ATTR(ffir_coeff, S_IWUSR, 0, store_ffir_coeff);
 
+MAKE_BITS(ffir_bist, ACQ480_FIRCO_CSR, MAKE_BITS_FROM_MASK, ACQ480_FIRCO_CSR_BIST);
 MAKE_BITS(mr_sel1, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_MRSEL1);
 MAKE_BITS(mr_sel0, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_MRSEL0);
 MAKE_BITS(mr_10dec,ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_MR10_DEC);
@@ -514,6 +515,7 @@ const struct attribute *acq480_ffir_attrs[] = {
 	&dev_attr_ffir_reset.attr,
 	&dev_attr_ffir_counter.attr,
 	&dev_attr_ffir_coeff.attr,
+	&dev_attr_ffir_bist.attr,
 
 	&dev_attr_train.attr,
 	&dev_attr_train_states.attr,
