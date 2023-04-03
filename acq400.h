@@ -256,6 +256,7 @@
 
 #define ACQ465_LCS		(ADC_BASE+0x2c)
 #define ACQ465_BANK_MODE	(ADC_BASE+0x44)
+#define ACQ465_DEBUG		(ADC_BASE+0x58)
 
 #define ACQ465_LCS_MASK		0x000000ff
 
@@ -725,6 +726,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define AGGSTA_FIFO_ANYSKIP	0x00000800
 #define AGGSTA_FIFO_EMPTY	0x00000100
 #define AGGSTA_FIFO_STAT	0x00000f00
+#define AGGSTA_BACKPRESSURE	0x00008000
 #define AGGSTA_ENGINE_STAT	0x000f0000
 
 #define DISSTA_FIFO_ANYSKIP	AGGSTA_FIFO_ANYSKIP
@@ -1117,9 +1119,14 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 /* PPW */
 #define PPW_CHANNEL(n)		(0xa0+(0x10*(n-1)))
 #define PPW_TRG(n)		(PPW_CHANNEL(n)+0x0)
-#define PPW_PWM(n)		(PPW_CHANNEL(n)+0x4)
+//#define PPW_PWM(n)		(PPW_CHANNEL(n)+0x4)
 #define PPW_REP(n)		(PPW_CHANNEL(n)+0x8)
 #define PPW_STA(n)		(PPW_CHANNEL(n)+0xc)
+
+#define _PPW_PWM_CH(n)        (0x100+(n-1)*0x10)
+#define PPW_PWM_GP(n)        (_PPW_PWM_CH(n)+0x0)
+#define PPW_PWM_IC(n)        (_PPW_PWM_CH(n)+0x4)
+#define PPW_PWM_OC(n)        (_PPW_PWM_CH(n)+0x8)
 
 #define PPW_MIN	1
 #define PPW_MAX 6
@@ -1128,10 +1135,10 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define PPW_TRG_BIT   		0x70U
 #define PPW_TRG_RISING		0x80U
 
-#define PPW_PWM_ICOUNT		0x000003ffU
-#define PPW_PWM_OCOUNT		0x000ffc00U
-#define PPW_PWM_PRD		0x7ff00000U
+#define PPW_PWM_ICOUNT		0x7fffffffU
 #define PPW_PWM_IS		0x80000000U
+#define PPW_PWM_OCOUNT		0x7fffffffU
+#define PPW_PWM_PRD		0xffffffffU
 
 #define PPW_REP_FIELD		0x0000ffffU
 #define PPW_REP_SINGLE		0

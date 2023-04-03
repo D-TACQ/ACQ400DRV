@@ -1,5 +1,5 @@
 # Cross compiler makefile for FIFO DMA example
-KERN_SRC=~/PROJECTS/ACQ400/linux-xlnx
+#KERN_SRC=~/PROJECTS/ACQ400/linux-xlnx
 obj-m += xilinx_devcfg.o
 obj-m += dmaengine314.o
 obj-m += pl330.o
@@ -38,6 +38,10 @@ SEQ=10
 
 CPPFLAGS += -O3 -Wall
 CXXFLAGS += -std=c++11
+
+LDFLAGS += -L../lib
+LDFLAGS += -L../acq400_buildroot/output/target/lib/
+LDFLAGS += -L../acq400_buildroot/output/target/usr/lib/
 
 acq420fmc-objs := acq400_drv.o  acq400_ui.o acq400_fs.o dma_shims.o \
 	acq400_core.o acq400_init_defaults.o \
@@ -166,110 +170,110 @@ clean:
 		Module.symvers modules.order *.so *.so.1*
 	
 mmap: mmap.o
-	$(CC) -o $@ $^ -L../lib -lpopt
+	$(CC) -o $@ $^ $(LDFLAGS) -lpopt
 
 dsp_coprocessor: dsp_coprocessor.o
-	$(CC) -o $@ $^ -L../lib -lpopt -lrt -lm
+	$(CC) -o $@ $^ $(LDFLAGS) -lpopt -lrt -lm
 
 mmaptest: mmaptest.o
-	$(CC) -o $@ $^ -L../lib -lpopt
+	$(CC) -o $@ $^ $(LDFLAGS) -lpopt
 
 acq400_sls: acq400_sls.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt	-lacq
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt	-lacq
 
 watchdog_PIL: watchdog_PIL.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 			
 udp_client: udp_client.o
-	$(CC) -o $@ $^ -L../lib -lpopt
+	$(CC) -o $@ $^ $(LDFLAGS) -lpopt
 	
 acq400_stream: acq400_stream.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lpthread -lrt
+	$(CXX) -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 
 bb: bb.o tcp_server.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lpthread -lrt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 
 bb_stream: bb_stream.o tcp_server.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lpthread -lrt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 
 multi_event: multi_event.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lpthread -lrt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 
 wr_reset: wr_reset.o Env.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 	
 bbq_send_ai: bbq_send_ai.o Socket.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lpthread -lrt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 data_sink: data_sink.o Socket.o
-	$(CXX) -O3 -o $@ $^ -L../lib  -lpopt -lpthread -lrt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS)  -lpopt -lpthread -lrt
 	
 subr: subr.o
-	$(CXX) -O3 -o $@ $^ -L../lib  -lpopt -lpthread -lrt
-	#$(CXX) -O3 -o $@ $^ -L../lib  -lpopt -lpthread -lrt -lacq
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS)  -lpopt -lpthread -lrt
+	#$(CXX) -O3 -o $@ $^ $(LDFLAGS)  -lpopt -lpthread -lrt -lacq
 		
 phased_array: phased_array.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lpthread -lrt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 	
 dawg: dawg.o
-	$(CXX) -O3 -o dawg dawg.o -L../lib -lacq -lpopt -lrt	
+	$(CXX) -O3 -o dawg dawg.o $(LDFLAGS) -lacq -lpopt -lrt
 	
 tblock2file: tblock2file.o 
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt -lacq -lpthread -lrt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lacq -lpthread -lrt
 
 is_ramp: is_ramp.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 	
 acq400_knobs: acq400_knobs.o tcp_server.o Env.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lacq  -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lacq  -lpopt
 
 anatrg: anatrg.o 
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt -lacq
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt -lacq
 
 soft_atd: soft_atd.o 
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt -lacq
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt -lacq
 	
 multisitecheckramp: multisitecheckramp.cpp
-	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -std=c++11 -O3 -o $@ $^ $(LDFLAGS) -lpopt
 	
 acq480_knobs: acq480_knobs.o ads5294.o  knobs.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 	
 acq465_knobs: acq465_knobs.o knobs.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 		
 wavegen: wavegen.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt -lacq -lm
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt -lacq -lm
 	
 acq435_decode: acq435_decode.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt -lpthread
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt -lpthread
 	
 acq400_axi_dma_test_harness: acq400_axi_dma_test_harness.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt -lpthread	
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt -lpthread
 
 acq435_rtm_trim: acq435_rtm_trim.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt -lpthread
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt -lpthread
 	
 bigmac: bigmac.o
 	$(CXX) -mcpu=cortex-a9 -mfloat-abi=softfp -mfpu=neon \
 		-DHASNEON \
-		-O3 -o bigmac bigmac.o -L../lib -lpopt
+		-O3 -o bigmac bigmac.o $(LDFLAGS) -lpopt
 bigcat: bigcat.cpp
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt -lpthread
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt -lpthread
 
 lilmac: lilmac.o
-	$(CXX) -O3 -o lilmac lilmac.o -L../lib -lpopt
+	$(CXX) -O3 -o lilmac lilmac.o $(LDFLAGS) -lpopt
 
 hudp_config: hudp_config.o knobs.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 
 mr_offload: mr_offload.o knobs.o connect_to.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 
 channel_mapping: channel_mapping.o knobs.o 
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 	
 muxdec: muxdec.o
-	$(CXX) -O3 -o muxdec muxdec.o -L../lib -lacq
+	$(CXX) -O3 -o muxdec muxdec.o $(LDFLAGS) -lacq
 
 bpaste: bpaste.o
 	$(CXX) -O3 -o bpaste bpaste.o
@@ -278,13 +282,13 @@ bigmac.x86: bigmac.o
 	$(CXX) -O3 -o $@ $^ -lpopt	
 	
 mgtdram_descgen: 	mgtdram_descgen.o
-	$(CXX) -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -O3 -o $@ $^ $(LDFLAGS) -lpopt
 
 wrtd: 	wrtd.o Multicast.o  knobs.o
-	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt -lacq -lrt
+	$(CXX) -std=c++11 -O3 -o $@ $^ $(LDFLAGS) -lpopt -lacq -lrt
 	
 soft_wrtd: 	soft_wrtd.o Multicast.o  knobs.o
-	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt -lacq -lrt	
+	$(CXX) -std=c++11 -O3 -o $@ $^ $(LDFLAGS) -lpopt -lacq -lrt
 	
 soft_wrtd_x86: 	soft_wrtd.cpp Multicast.cpp  knobs.cpp -lrt
 	$(CXX) -std=c++11 -O3 -o $@ $^ -lpopt
@@ -293,13 +297,13 @@ soft_wrtd_x86_clean:
 	rm -f soft_wrtd_x86 soft_wrtd.o Multicast.o  knobs.o
 		
 multicast: 	multicast.o Multicast.o
-	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -std=c++11 -O3 -o $@ $^ $(LDFLAGS) -lpopt
 		
 trigger_at: trigger_at.o knobs.o
-	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -std=c++11 -O3 -o $@ $^ $(LDFLAGS) -lpopt
 	
 slowmon_hw: slowmon_hw.o knobs.o
-	$(CXX) -std=c++11 -O3 -o $@ $^ -L../lib -lpopt
+	$(CXX) -std=c++11 -O3 -o $@ $^ $(LDFLAGS) -lpopt
 			
 rtpackage:
 	tar cvzf dmadescfs-$(DC).tgz dmadescfs* scripts/load.dmadescfs

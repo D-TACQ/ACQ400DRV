@@ -3,12 +3,13 @@
 VRANGE=7
 
 get_vr() {
+	# if a {vmax}V exists in PN, return {vmax}+2 as a reasonable value for the rail
 	echo $1 | tr \- \\n | while read xx; do
 		v1=${xx%V*}
 		if [ "$v1" != "$xx" ]; then
 			vdec=${xx##*V}
 			if [ ! -z $vdec ]; then
-				v1=$((v1+1))
+				v1=$(echo $v1 | awk '{ print $1+2 }')
 			fi
 			echo $v1
 			return
@@ -30,9 +31,20 @@ do
 		ACQ481*)
 			echo "# ACQ481 DETECTED set VRANGE 6V"
 			VRANGE=6;;
+		ACQ482*)
+			if echo $FRU_PART_NUM | grep -q H; then
+				echo "# ACQ482H DETECTED set VRANGE 5.6V"
+				VRANGE=5.6
+			else
+				echo "# ACQ482 REGULAR DETECTED set VRANGE 13V"
+				VRANGE=13
+			fi;;
 		ACQ424*)
 			echo "# ACQ424 DETECTED set VRANGE HI"
 			VRANGE=13;;
+		ACQ465*)
+			echo "# ACQ465 DETECTED set VRANGE 10"
+			VRANGE=10;;
 		BOLO*)
 			echo "# BOLO DETECTED set VRANGE 12"
 			VRANGE=12;;
@@ -40,8 +52,8 @@ do
 			VSPEC=${PN##*-}
 			VSPEC=$(get_vr $PN)
 			if [ $VSPEC -gt 0 ]; then
-				VRANGE=$((VSPEC+2))
-				echo "# Setting VRANGE:$VRANGE detected VSPEC:$VSPEC from $PN"
+				VRANGE=$VSPEC
+				echo "# Setting VRANGE:$VRANGE detected from $PN"
 			fi;;
 		esac
 		break

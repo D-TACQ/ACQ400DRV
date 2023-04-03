@@ -2067,9 +2067,14 @@ static DEVICE_ATTR(adc_reset, S_IWUSR, 0, store_adc_reset);
 
 MAKE_BITS(filter_sel, ACQ465_BANK_MODE, MAKE_BITS_FROM_MASK, ACQ465_BANK_FILTER_MASK);
 
+MAKE_BITS(adc_status, ACQ465_DEBUG, MAKE_BITS_FROM_MASK, 0xffff0000);
+MAKE_BITS(_adc_hax,   ACQ465_DEBUG, MAKE_BITS_FROM_MASK, 0x000000ff);
+
 static const struct attribute *acq465_attrs[] = {
 	&dev_attr_filter_sel.attr,
 	&dev_attr_adc_reset.attr,
+	&dev_attr_adc_status.attr,
+	&dev_attr__adc_hax.attr,
 	NULL
 };
 

@@ -44,6 +44,8 @@ vset_sys ${KNOBS}/dac_enable ${EN}
 
 [ ! -e /etc/acq400/$SITE/wavegen ] && ln -s /usr/local/bin/wavegen /etc/acq400/$SITE
 
+[ ! -e /etc/acq400/${SITE}/awg_seg ] && ln -s ${MODP}/awg_seg /etc/acq400/${SITE}/awg_seg
+
 for gx in ${KNOBS}/G?; do
 	[ -e $gx ] && set.sys $gx 32767
 done

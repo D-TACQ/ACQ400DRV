@@ -9,11 +9,11 @@ set COEFFS 	{}
 
 
 if { [info exists ::env(VERBOSE) ] } {
-	set VERBOSE ::env(VERBOSE)
+	set VERBOSE $::env(VERBOSE)
 }
 
 if { [info exists ::env(SITE) ] } {
-	set SITE ::env(SITE)
+	set SITE $::env(SITE)
 }
 
 proc vprint {lvl txt} {
@@ -37,7 +37,7 @@ proc readCoeffs {fp} {
 if { $::argc > 0 } {
 	set cfile [lindex $::argv 0]
 	if { $::argc == 1 && [file exists $cfile] } {
-		puts "using file $cfile"
+		puts "site $SITE using file $cfile"
 		readCoeffs [open $cfile r]
 	} else {
 		puts "using args immediate $::argv"
@@ -51,6 +51,7 @@ if { $::argc > 0 } {
 proc set_knob {knob value} {
 	global SITE
 	set kpath "/dev/acq400.$SITE.knobs/$knob"
+        vprint  1 "set_knob $kpath $value"
 	if {[catch {
 		set fp [open $kpath w]
 		puts $fp $value

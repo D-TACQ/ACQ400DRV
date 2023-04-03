@@ -2316,24 +2316,24 @@ public:
 		evA((G::find_event_mask&3)==3? evX: (G::find_event_mask&2)==2? ev1: ev0),
 		sob_count(0), sob_buffer(0), buffer_count(0),
 		MAX_BACKTRACK(getenv_default("MAX_BACKTRACK", 3)),
-		MAX_FORTRACK(getenv_default("MAX_FORTRACK", 4)) {
-			verbose = getenv_default("StreamHeadImplVerbose");
-			buffer_id_verbose = getenv_default("StreamHeadImplBufferIdVerbose");
+		MAX_FORTRACK(getenv_default("MAX_FORTRACK", 4))
+	{
+		verbose = getenv_default("StreamHeadImplVerbose");
+		buffer_id_verbose = getenv_default("StreamHeadImplBufferIdVerbose");
 
-                        if (G::stream_sob_sig){
-                        	if (verbose) fprintf(stderr, "StreamHeadImpl::StreamHeadImpl() : G::stream_sob_sig %d\n", G::stream_sob_sig);
-                        	sob_count = sample_size()/sizeof(unsigned);
-			        sob_buffer = new unsigned[sob_count];
-			        for (unsigned ii = 0; ii < sob_count/2; ++ii){
-			        	sob_buffer[ii] = SOB_MAGIC;
-			        }
+		if (G::stream_sob_sig){
+			if (verbose) fprintf(stderr, "StreamHeadImpl::StreamHeadImpl() : G::stream_sob_sig %d\n", G::stream_sob_sig);
+			sob_count = sample_size()/sizeof(unsigned);
+			sob_buffer = new unsigned[sob_count];
+			for (unsigned ii = 0; ii < sob_count/2; ++ii){
+				sob_buffer[ii] = SOB_MAGIC;
 			}
+		}
 
-                        stop_on_fail = getenv_default("StreamHeadImplStopOnFail");
-			if (verbose) fprintf(stderr, "StreamHeadImpl() pid %d progress: %s\n", getpid(), actual.name);
-			memset(FE_HISTO, 0, sizeof(FE_HISTO));
-			reportFindEvent(0, FE_IDLE);
-
+		stop_on_fail = getenv_default("StreamHeadImplStopOnFail");
+		if (verbose) fprintf(stderr, "StreamHeadImpl() pid %d progress: %s\n", getpid(), actual.name);
+		memset(FE_HISTO, 0, sizeof(FE_HISTO));
+		reportFindEvent(0, FE_IDLE);
 	}
 	virtual void startStream() {
 		fc = open_feed();

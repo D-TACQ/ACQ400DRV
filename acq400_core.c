@@ -588,6 +588,15 @@ int fifo_monitor(void* data)
 				dev_warn(DEVP(adev), message_from_active[1]);
 			}
 		}
+		if (aggsta&AGGSTA_BACKPRESSURE){
+			snprintf(sc_dev->status_message, MAX_RT_STATUS_MESSAGE, "%s BACKPRESSURE DETECTED: AGGSTA:%08x AXI wakeups:%d",
+								__FUNCTION__, aggsta, sc_dev->adev.rt.axi64_wakeups);
+			if (adev->task_active && !IS_ERR_OR_NULL(adev->w_task)){
+				adev->rt.please_stop = 1;
+			}else{
+				dev_err(DEVP(adev), "%s unable to stop work adev: s:%d ta:%d", __FUNCTION__, adev->of_prams.site, adev->task_active);
+			}
+		}
 		msleep(histo_poll_ms);
 	}
 	if (enable_adc_ctrl_trap) _enable_adc_ctrl_trap = 0;

@@ -1,5 +1,4 @@
 #!/bin/bash
 
-STUFF=${*:-all}
-export CROSS_COMPILE=arm-linux-gnueabihf-
-CC=${CROSS_COMPILE}gcc CXX=${CROSS_COMPILE}g++ make ARCH=arm ${STUFF}
+source ./setenv.zynq
+make ${*:-all}

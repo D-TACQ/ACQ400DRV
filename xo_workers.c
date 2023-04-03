@@ -195,7 +195,7 @@ int xo_data_loop(void *data)
 //	static const unsigned nflags[2] = { 0, 0 };
 
 	struct acq400_dev *adev = (struct acq400_dev *)data;
-	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+	struct XO_dev *xo_dev = container_of(adev, struct XO_dev, adev);
 	struct acq400_dev *adev0 = acq400_devices[0];
 	struct HBM** hbm0 = adev0->hb;
 
@@ -291,6 +291,9 @@ int xo_data_loop(void *data)
 		}
 		if (adev->stats.xo.dma_buffers_out >= shot_buffer_count){
 			xo_dev->AO_playloop.cycles++;
+
+			dev_dbg(DEVP(adev), "%s completed cycle %d if %d||%d", __FUNCTION__, xo_dev->AO_playloop.cycles,
+					AO_CONTINUOUS, xo_dev->AO_playloop.repeats);
 
 			if (AO_CONTINUOUS || xo_dev->AO_playloop.repeats > 0){
 				shot_buffer_count += shot_buffer_count0;

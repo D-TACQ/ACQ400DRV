@@ -293,6 +293,24 @@ void acq480_onStart(struct acq400_dev *adev)
 	//acq420_enable_interrupt(adev);
 }
 
+void acq465_onStart(struct acq400_dev *adev)
+{
+	u32 status = acq400rd32(adev, ADC_FIFO_STA);
+
+	dev_dbg(DEVP(adev), "acq465_onStart()");
+
+	if ((status&ADC_FIFO_STA_ACTIVE) != 0){
+		dev_err(DEVP(adev), "ERROR: ADC_FIFO_STA_ACTIVE set %08x", status);
+		acq420_disable_fifo(adev);
+	}
+
+	acq400wr32(adev, ADC_HITIDE, 	adev->hitide);
+	acq420_enable_fifo(adev);
+	acq420_reset_fifo(adev);
+	adev->fifo_isr_done = 0;
+	//acq420_enable_interrupt(adev);
+}
+
 
 void acq420_disable_fifo(struct acq400_dev *adev)
 {
@@ -570,7 +588,7 @@ static void acq465_init_defaults(struct acq400_dev *adev)
 	adev->lotide = adev->hitide - 4;
 	acq400wr32(adev, ADC_CLKDIV, 16);
 	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
-	adev->onStart = acq420_onStart;
+	adev->onStart = acq465_onStart;
 	adev->onStop = acq420_disable_fifo;
 }
 

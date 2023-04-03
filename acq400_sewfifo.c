@@ -40,25 +40,9 @@ MODULE_PARM_DESC(sew_stats, "payload per fifo_work update entries in [0] mean th
 
 #define SEW_FIFO_LEN	4096
 
-#define buf_empty(cb)	((cb)->head == (cb)->tail)
-#define buf_count(cb)   CIRC_CNT((cb)->head, (cb)->tail, SEW_FIFO_LEN)
-#define buf_space(cb)	CIRC_SPACE((cb)->head, (cb)->tail, SEW_FIFO_LEN)
-#define incr(p)		(((p)+1)&(SEW_FIFO_LEN-1))
 
 #define PAYLOAD_EMPTY	' '
 
-static inline void buf_put(struct circ_buf* cb, u8 xx)
-{
-	cb->buf[cb->head] = xx;
-	cb->head = incr(cb->head);
-}
-
-static inline u8 buf_get(struct circ_buf* cb)
-{
-	unsigned char xx = cb->buf[cb->tail];
-	cb->tail = incr(cb->tail);
-	return xx;
-}
 
 int acq400_sew_fifo_work(void *data)
 /* runs at fixed interval sew_fifo_msec
@@ -85,11 +69,11 @@ int acq400_sew_fifo_work(void *data)
 
 		if (wait_event_interruptible_timeout(
 			local_waitq, false, msecs_to_jiffies(sew_fifo_msec)) == 0){
-			int payload_count = min(buf_count(&sf->sf_buf), 3);
+			int payload_count = min(buf_count(&sf->sf_buf, SEW_FIFO_LEN), 3);
 			int ipay;
 			xx.bytes[0] = modulo_count<<2 | payload_count;
 			for (ipay = 1; ipay <= payload_count; ++ipay){
-				xx.bytes[ipay] = buf_get(&sf->sf_buf);
+				xx.bytes[ipay] = buf_get(&sf->sf_buf, SEW_FIFO_LEN);
 			}
 			acq400wr32(adev, sf->regoff, xx.lw);
 			sew_stats[payload_count]++;
@@ -143,12 +127,12 @@ int acq400_sew_fifo_write_bytes(
 
 		rc = wait_event_interruptible_timeout(
 				sf->sf_waitq,
-				buf_space(&sf->sf_buf),
+				buf_space(&sf->sf_buf, SEW_FIFO_LEN),
 				20*msecs_to_jiffies(sew_fifo_msec));
 		if (rc < 0){
 			return -ERESTARTSYS;
 		}
-		buf_put(&sf->sf_buf, tmp);
+		buf_put(&sf->sf_buf, tmp, SEW_FIFO_LEN);
 	}
 	return iwrite;
 }

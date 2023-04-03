@@ -238,6 +238,7 @@ void acq465_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(ACQ465_LCS);
 	DBG_REG_CREATE(ACQ465_BANK_MODE);
 	DBG_REG_CREATE(ADC_TRANSLEN);
+	DBG_REG_CREATE(ACQ465_DEBUG);
 }
 
 void acq494_createDebugfs(struct acq400_dev* adev, char* pcursor)
@@ -288,9 +289,14 @@ void dio432_createDebugfs(struct acq400_dev* adev, char* pcursor)
 		DBG_REG_CREATE(DIO482_PG_IMM_MASK);
 		for (px = PPW_MIN; px <= PPW_MAX; ++px){
 			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "TRG", PPW_TRG(px));
-			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM", PPW_PWM(px));
+
 			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "REP", PPW_REP(px));
 			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "STA", PPW_STA(px));
+		}
+		for (px = PPW_MIN; px <= PPW_MAX; ++px){
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_GP", PPW_PWM_GP(px));
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_IC", PPW_PWM_IC(px));
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_OC", PPW_PWM_OC(px));
 		}
 		DBG_REG_CREATE(DIO482_PG_IMM_DO);
 		return;

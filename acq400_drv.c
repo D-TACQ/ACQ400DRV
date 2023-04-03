@@ -23,7 +23,7 @@
 #include "dmaengine.h"
 
 
-#define REVID 			"3.756"
+#define REVID 			"3.768"
 #define MODULE_NAME             "acq420"
 
 /* Define debugging for use during our driver bringup */
@@ -244,9 +244,23 @@ module_param(axi_oneshot, int, 0644);
 MODULE_PARM_DESC(axi_oneshot, "one-shot: don't poison recycled buffers");
 
 
+int awg_seg_bufs = 100;
+module_param(awg_seg_bufs, int, 0644);
+MODULE_PARM_DESC(awg_seg_bufs, "awg abcde segments: number of buffers in segment");
+
+char awg_seg[2] = { '0' };
+module_param_string(awg_seg, awg_seg, 2, 0444);
+MODULE_PARM_DESC(awg_seg, "current awg_segment: 0..5");
+
+static char species[2];
+module_param_string(specifies, species, 2, 0);
+
+
 int firstDistributorBuffer(void)
 {
-	return distributor_first_buffer + reserve_buffers;
+	int rc = distributor_first_buffer + reserve_buffers;
+	dev_dbg(DEVP(acq400_devices[0]), "%s return %d", __FUNCTION__, rc);
+	return rc;
 }
 int lastDistributorBuffer(void)
 {
@@ -655,21 +669,61 @@ int over_open_backlog(struct acq400_dev *adev)
 }
 
 
+void _acq400_continuous_read_update_hb0(struct acq400_dev *adev, struct HBM *hbm)
+{
+	/* update every hb0 or at least once per second */
+	unsigned long now = get_seconds();
+	/* rate-limited to 1Hz - client gets current and previous hbm
+	 * set hb0_no_rate_limit negative to increase this ..
+	 */
+	if (adev->rt.hbm_m1 != 0 && (now + hb0_no_ratelimit) > adev->rt.hb0_last){
+		adev->rt.hb0_count++;
+		adev->rt.hb0_ix[0] = adev->rt.hbm_m1->ix;
+		adev->rt.hb0_ix[1] = hbm->ix;
+		adev->rt.hb0_last = now;
+		dev_dbg(DEVP(adev), "hb0 %d now:%lu", adev->rt.hb0_count, now);
+		dma_sync_single_for_cpu(DEVP(adev), hbm->pa, hbm->len, hbm->dir);
+		wake_up_interruptible(&adev->hb0_marker);
+	}else if (sync_continuous){
+		/* this operation is surprisingly expensive. Use sparingly */
+		dma_sync_single_for_cpu(DEVP(adev), hbm->pa, hbm->len, hbm->dir);
+	}
+	adev->rt.hbm_m1 = hbm;
+}
+
+ssize_t _acq400_continuous_read(struct acq400_dev *adev,
+		char* lbuf, char __user *buf, size_t count, struct HBM *hbm)
+{
+
+	int rc = 0;
+	int nread = sprintf(lbuf, "%02d\n", hbm->ix);
+
+	_acq400_continuous_read_update_hb0(adev, hbm);
+	acq400_bq_notify(adev, hbm);
+#if 0
+	/* pick off any other queued buffers ..
+	 * enable only when acq400_stream can handle multiple responses..
+	 */
+	while(getFull(adev, &hbm, GF_NOWAIT) == GET_FULL_OK){
+		acq400_bq_notify(adev, hbm);
+		nread += sprintf(lbuf+nread, "%02d\n", hbm->ix);
+		if (nread + 10 > MAXLBUF){
+			break;
+		}
+	}
+#endif
+	rc = copy_to_user(buf, lbuf, nread);
+	return rc? -rc: nread;
+}
 ssize_t acq400_continuous_read(struct file *file, char __user *buf, size_t count,
         loff_t *f_pos)
 /* NB: waits for a full buffer to ARRIVE, but only returns the 2 char ID */
 {
 	struct acq400_dev *adev = ACQ400_DEV(file);
-	char* lbuf = PD(file)->lbuf;
 	int rc = 0;
-	struct HBM *hbm;
-	int nread;
-	unsigned long now;
-
+	struct HBM *hbm = 0;
 
 	adev->stats.reads++;
-
-	set_continuous_reader(adev);
 
 	if (adev->rt.please_stop){
 		return -1;		/* EOF ? */
@@ -694,50 +748,17 @@ ssize_t acq400_continuous_read(struct file *file, char __user *buf, size_t count
 		return rc;
 	}
 
+	if (hbm == 0){
+		dev_err(DEVP(adev), "acq400_continuous_read() null hbm");
+		return -1;
+	}
 	if (list_empty(&adev->OPENS)){
 		dev_warn(DEVP(adev), "no buffer available");
 		return -1;
 	}
 
-
 	dev_dbg(DEVP(adev), "acq400_continuous_read():getFull() : %d", hbm->ix);
-
-	/* update every hb0 or at least once per second */
-	now = get_seconds();
-	/* ratelimited to 1Hz - client gets current and previous hbm
-	 * set hb0_no_rate_limit negative to increase this ..
-	 */
-	if (adev->rt.hbm_m1 != 0 && (now + hb0_no_ratelimit) > adev->rt.hb0_last){
-		adev->rt.hb0_count++;
-		adev->rt.hb0_ix[0] = adev->rt.hbm_m1->ix;
-		adev->rt.hb0_ix[1] = hbm->ix;
-		adev->rt.hb0_last = now;
-		dev_dbg(DEVP(adev), "hb0 %d now:%lu", adev->rt.hb0_count, now);
-		dma_sync_single_for_cpu(DEVP(adev), hbm->pa, hbm->len, hbm->dir);
-		wake_up_interruptible(&adev->hb0_marker);
-	}else if (sync_continuous){
-		/* this operation is surprisingly expensive. Use sparingly */
-		dma_sync_single_for_cpu(DEVP(adev), hbm->pa, hbm->len, hbm->dir);
-	}
-
-	nread = sprintf(lbuf, "%02d\n", hbm->ix);
-	adev->rt.hbm_m1 = hbm;
-
-	acq400_bq_notify(adev, hbm);
-#if 0
-	/* pick off any other queued buffers ..
-	 * enable only when acq400_stream can handle multiple responses..
-	 */
-	while(getFull(adev, &hbm, GF_NOWAIT) == GET_FULL_OK){
-		acq400_bq_notify(adev, hbm);
-		nread += sprintf(lbuf+nread, "%02d\n", hbm->ix);
-		if (nread + 10 > MAXLBUF){
-			break;
-		}
-	}
-#endif
-	rc = copy_to_user(buf, lbuf, nread);
-	return rc? -rc: nread;
+	return _acq400_continuous_read(adev, PD(file)->lbuf, buf, count, hbm);
 }
 
 
@@ -895,6 +916,7 @@ int acq420_open_continuous(struct inode *inode, struct file *file)
 	if (rc){
 		return rc;
 	}
+	set_continuous_reader(adev);
 	if (IS_SC(adev)){
 		file->f_op = &acq2006_fops_continuous;
 	}else{
@@ -1029,7 +1051,7 @@ int acq400_init_descriptor(struct acq400_path_descriptor** pd)
 {
 	struct acq400_path_descriptor* pdesc = kzalloc(PDSZ, GFP_KERNEL);
 	init_waitqueue_head(&pdesc->waitq);
-
+	pdesc->pid = task_pid_nr(current);
 	*pd = pdesc;
 	return 0;
 }
@@ -1218,6 +1240,30 @@ void xo_check_fiferr(struct acq400_dev* adev, unsigned fsr)
 	}
 }
 
+
+void _update_abcde_status(struct XO_dev *xo_dev){
+	char bx = buf_get(&xo_dev->awg_abcde.new_queue, AWG_ABCDE_LEN);
+	char obx = *awg_seg;
+	if (VALID_ABCDE(bx)){
+		distributor_first_buffer = (bx-'A')*awg_seg_bufs;
+		*awg_seg = bx;
+		dev_dbg(DEVP(&xo_dev->adev), "%s seg:%c", __FUNCTION__, bx);
+	}else{
+		dev_err(DEVP(&xo_dev->adev), "%s REJECT:%c %02x", __FUNCTION__, bx, bx);
+	}
+	wake_up_interruptible(&xo_dev->awg_abcde.new_waitq);
+	buf_put(&xo_dev->awg_abcde.ret_queue, obx, AWG_ABCDE_LEN);
+	wake_up_interruptible(&xo_dev->awg_abcde.ret_waitq);
+}
+void update_abcde_status(struct XO_dev *xo_dev)
+{
+	dev_dbg(DEVP(&xo_dev->adev), "%s count:%d", __FUNCTION__, buf_count(&xo_dev->awg_abcde.new_queue, AWG_ABCDE_LEN));
+	if (buf_count(&xo_dev->awg_abcde.new_queue, AWG_ABCDE_LEN)){
+		_update_abcde_status(xo_dev);
+	}
+}
+
+
 int ao_auto_rearm(void *clidat)
 /* poll for AWG complete, then rearm it */
 {
@@ -1245,6 +1291,7 @@ int ao_auto_rearm(void *clidat)
 	if (xo_dev->AO_playloop.length > 0 &&
 		xo_dev->AO_playloop.oneshot == AO_oneshot_rearm){
 		dev_dbg(DEVP(adev), "ao_auto_rearm() reset %d", xo_dev->AO_playloop.length);
+		update_abcde_status(xo_dev);
 		xo_dev->AO_playloop.cursor = 0;
 		xo400_reset_playloop(adev, xo_dev->AO_playloop.length);
 	}
@@ -2309,6 +2356,10 @@ acq400_allocate_module_device(struct acq400_dev* adev)
 	}else if (IS_XO(adev)){
 		struct XO_dev *xo_dev;
 		SPECIALIZE(xo_dev, adev, struct XO_dev, "XO");
+		init_cb_empty(&xo_dev->awg_abcde.new_queue, AWG_ABCDE_LEN);
+		init_cb_empty(&xo_dev->awg_abcde.ret_queue, AWG_ABCDE_LEN);
+		init_waitqueue_head(&xo_dev->awg_abcde.new_waitq);
+		init_waitqueue_head(&xo_dev->awg_abcde.ret_waitq);
 	}else if (IS_BOLO8(adev)){
 		struct acq400_bolo_dev *b8_dev;
 		SPECIALIZE(b8_dev, adev, struct acq400_bolo_dev, "bolo8");

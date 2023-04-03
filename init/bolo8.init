@@ -120,6 +120,17 @@ do
 	init_one_b8 $site $(get_gpiochip $site 0022) $(get_gpiochip $site 0020)
 	init_b8_hardware $site
 	ln -s /sys/kernel/debug/acq400/acq400.${site}/current/ /etc/acq400/${site}/current
+
+	cat - >/etc/acq400/${site}/PULSE_OS_DAC_RESET <<EOF
+#!/bin/sh
+if [ -n "\$1" ]; then
+	echo 1 > /dev/bolo8/${site}/OS_DAC_RESETn
+	echo 0 > /dev/bolo8/${site}/OS_DAC_RESETn
+else
+	echo /dev/bolo8/${site}/OS_DAC_RESETn
+fi
+EOF
+	chmod a+rx /etc/acq400/${site}/PULSE_OS_DAC_RESET
 done
 
 

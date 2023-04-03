@@ -6,15 +6,15 @@ echo Building $PKO
 rm -Rf modules_output
 mkdir -p modules_output
 
+
+
+
 handle_ext_modules() {
-	(cd $1; ./make.zynq all)
-	cp $1/*.ko modules_output
+	(cd $1; echo KERN_SRC:$KERN_SRC; make all)
+	cp -v $(find $1 -name \*.ko) modules_output
 }
 
-handle_ext_modules ../DRIVERS/ISL22313
-handle_ext_modules ../DRIVERS/SI5326
-handle_ext_modules ../DRIVERS/AD5686
-handle_ext_modules ../DRIVERS/emlog
+handle_ext_modules ../DRIVERS-OOK
 
 
 cp $(find ../linux-xlnx -name \*.ko) modules_output

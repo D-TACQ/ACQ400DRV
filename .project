@@ -3,6 +3,7 @@
 	<name>ACQ420FMC</name>
 	<comment></comment>
 	<projects>
+		<project>linux-xlnx</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

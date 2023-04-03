@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ -z $1 ]; then
+	echo PRESET1 getter stub
+else
+	echo PRESET1 setter $1 stub
+fi
+
+

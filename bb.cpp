@@ -103,6 +103,7 @@ namespace G {
 
 	char* port = 0;				// 0 no server (inetd), else make a server
 	char* host = 0;
+	char *abcde = 0;				// set start of segment
 };
 
 using namespace std;
@@ -137,6 +138,9 @@ struct poptOption opt_table[] = {
 	},
 	{
 	  "host", 'H', POPT_ARG_STRING, &G::host, 0, "server host 0: allow any host"
+	},
+	{
+	  "abcde", 'A', POPT_ARG_STRING, &G::abcde, 'A', "awg segment to load"
 	},
 	{
 	  "verbose", 'v', POPT_ARG_INT, &G::verbose, 0, "debug"
@@ -405,12 +409,11 @@ int fill() {
 	printf("DONE %d\n", nsamples);
 	return nsamples;
 }
+
 int load() {
 	fprintf(stderr, "LOAD NEW\n");
 	openlog("bb", LOG_PID, LOG_USER);
 	set_playloop_length(0);
-
-
 
 	if (G::concurrent){
 		_load_concurrent();
@@ -462,13 +465,31 @@ unsigned getSpecificBufferlen(int ibuf)
 	pclose(pp);
 	return bl;
 }
-#define MODPRAMS "/sys/module/acq420fmc/parameters/"
-#define DFB	 "/dev/acq400.0.knobs/first_distributor_buffer"
-#define BUFLEN	 MODPRAMS "bufferlen"
-#define NBUF	 MODPRAMS "nbuffers"
+#define MODPRAMS 	"/sys/module/acq420fmc/parameters/"
+#define DFB	 	"/dev/acq400.0.knobs/first_distributor_buffer"
+#define BUFLEN	 	MODPRAMS "bufferlen"
+#define NBUF	 	MODPRAMS "nbuffers"
+#define AWG_SEG_BUFS	MODPRAMS "awg_seg_bufs"
+#define DFB_SET		MODPRAMS "distributor_first_buffer"
 
 #define PAGESZ	 4096
 #define PAGEM    (PAGESZ-1)
+
+
+void set_segment_start(int seg)
+{
+	unsigned seg_bufs;
+
+	getKnob(-1, AWG_SEG_BUFS, &seg_bufs);
+
+	G::buffer0 = seg * seg_bufs;
+	setKnob(-1, DFB_SET, G::buffer0);
+	if (G::verbose){
+		unsigned check;
+		getKnob(-1, DFB, &check);
+		fprintf(stderr, "seg_segment_start(%d) set G::buffer0:%u knob %u\n", seg, G::buffer0, check);
+	}
+}
 
 void set_dist_awg(unsigned dist_s1)
 {
@@ -494,6 +515,13 @@ RUN_MODE ui(int argc, const char** argv)
 
 	while ( (rc = poptGetNextOpt( opt_context )) >= 0 ){
 		switch(rc){
+		case 'A':
+			if (!(*G::abcde >= 'A' && *G::abcde <= 'E')){
+				fprintf(stderr, "ERROR bad pram abcde must be A..E \%s\"\n", G::abcde);
+				exit(1);
+			}
+			set_segment_start(*G::abcde - 'A');
+			break;
 		default:
 			;
 		}

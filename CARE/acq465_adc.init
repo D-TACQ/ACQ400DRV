@@ -4,7 +4,6 @@
 CHIPS=${CHIPS:-ABCDEFGH}
 VERBOSE=${VERBOSE:-0}
 LIVE=${LIVE:-1}
-DATA32=${DATA32:-1}
 
 if [ "x$1" == "--all" ]; then
 	export args="--all"
@@ -46,6 +45,9 @@ acq465_filter_all() {
 
 ### ACTION
 
+logger -t acq465_adc.init 01
+caput  $(hostname):0:ACQ465:POLL 0
+
 [ $reset -eq 1 ] && set.site ${SITE} adc_reset 1
 # Read all the registers, this initial read seems to ensure the first writes are successful
 acq465_readall
@@ -71,10 +73,19 @@ echo $FILTER > /dev/acq400.${SITE}.knobs/filter_sel
 
 
 # Data bitwidth
-acq465_reg 0x11 0x20;set.site 1 data32 $DATA32; # 24-bit:1, 16-bit:0
+if [ $DATA32 -eq 1 ]; then
+#	REG11=0x20    # no status bits
+	REG11=0x30
+else
+#	REG11=0x00    # no status bits
+	REG11=0x10
+fi
 
+set.site $SITE data32 $DATA32 
+logger -t acq465_adc.init acq465_reg 0x11 $REG11
+acq465_reg 0x11 $REG11
 
-sleep 1
+usleep 100000
 
 # Read all the registers
 acq465_knobs readall
@@ -96,8 +107,28 @@ acq465_reg 0x42
 echo
 
 echo "++ acq465_adc.init SITE:$SITE 99"
-# MCLK Monitor
-#echo -e "\n"
-#acq465_mclkmon
+
+# adc_status == ffff is good
+adc_status=0
+set retry=0
+while [ "$adc_status" != "ffff" ]; do 
+        retry=$((retry+1))
+        logger -t acq465_adc.init retry $retry
+        if [ $retry -gt 3 ]; then
+        	logger -t acq465_adc.init retry $retry BIG HAMMER
+		exec /usr/local/CARE/acq465_adc.init
+	fi
+	set.site $SITE _adc_hax  0x40   # set FPGA to include status bits in ADC word
+	set.site $SITE _adc_hax  0x60   # + disable ODR
+	set.site $SITE _adc_hax  0x40   # enable ODR
+	usleep 100000
+	adc_status=$(get.site $SITE adc_status)
+        logger -t acq465_adc.init adc_status $adc_status
+done
+
+
+logger -t acq465_adc.init 99
+
+
 
 

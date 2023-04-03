@@ -4,18 +4,25 @@ log_user 0
 set timeout 1
 
 if { $argc < 2 } {
-	puts "wait_until PV VALUE"
+	puts "wait_until PV VALUE [1=FALLTHRU]"
 	exit 1
 }
 set HN [exec hostname]
 set PV $HN:[lindex $argv 0]
 set VALUE [lindex $argv 1]
+# FALLTHRU: drop out if ALEADY at state
+set FALLTHRU 0
+if { $::argc > 2 } {
+	set FALLTHRU [lindex $argv 2]
+}
 
 #puts "$PV $VALUE"
 
 spawn camonitor $PV
 
 set state INIT
+
+set v0 \?
 
 while { $state != "FINI" } {
 	expect {
@@ -27,13 +34,20 @@ while { $state != "FINI" } {
 			set v1 [lindex [split $vx " "] 1]	
 		}
 	}
+#	puts "$state $v0 $v1"
+
 	if { $state == "INIT" } {
-		set v0 $v1
-		set state WAIT4
+		if { $FALLTHRU } {
+			if { $v1 == $VALUE } {
+				set state FINI
+			}
+		} else {
+			set v0 $v1
+			set state WAIT4
+		}
 	} else {
 		if { $v1 != $v0 } {
 			if { $v1 == $VALUE } {
-				set finished 1
 				set state FINI
 			}
 			puts "$v0 => $v1 $state"

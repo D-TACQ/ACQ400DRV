@@ -11,8 +11,18 @@
 	<SerialNum>BE4010000</SerialNum>
     </Info>
      <Data AICHAN="8" code_min="-32768" code_max="32767" SW="default">
-	<Range name="10" sw="default">
-			<Nominal min="-10" max="10" eoff="0" eslo="76.293945e-06" roff="0"/>
+
+        <Range name="1V2" sw="3">
+			<Nominal min="-1.25" max="1.25" eoff="0" eslo="38.146972e-6"/>
+        </Range>
+		<Range name="2V5" sw="2">
+			<Nominal min="-2.5" max="2.5" eoff="0" eslo="76.293945e-6" />
+		</Range>
+        <Range name="5V0" sw="1">
+            <Nominal min="-5" max="5" eoff="0" eslo="152.58789e-6" />
+        </Range>
+        <Range name="10V" sw="0">
+            <Nominal min="-10" max="10" eoff="0" eslo="305.17578e-6" />
         </Range>
     </Data>
 </AcqCalibration>

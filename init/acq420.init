@@ -20,6 +20,9 @@ DROOT=/sys/kernel/debug
 
 SYSCONF=/mnt/local/sysconfig
 ULB=/usr/local/bin
+ULC=/usr/local/CARE
+
+export MODP=/sys/module/acq420fmc/parameters
 
 HAS_MGTDRAM=none
 
@@ -129,7 +132,11 @@ build_nodes() {
                 mknod /dev/${NAME}.awg c  ${MAJOR} 9
                 mknod /dev/${NAME}.awgc c ${MAJOR} 10
                 mknod /dev/${NAME}.awgr c ${MAJOR} 14
-                mknod /dev/${NAME}.aoi  c ${MAJOR} 38;;
+                mknod /dev/${NAME}.aoi  c ${MAJOR} 38
+                mknod /dev/${NAME}.abcde c ${MAJOR} 41
+                if [ ! -e /dev/acq400.0.abcde ]; then
+					ln -s /dev/${NAME}.abcde /dev/acq400.0.abcde
+                fi;;
             60|64)
                 mknod /dev/${NAME}.awg c ${MAJOR} 8;;
             61|62|6B)
@@ -413,7 +420,7 @@ build_knobs_device() {
             ACQ437_SITES="${ACQ437_SITES}$site";;
         esac
         echo WORKAROUND: clear FIFERR
-        echo 0 >/sys/module/acq420fmc/parameters/FIFERR
+        echo 0 >${MODP}/FIFERR
         echo 4 >${ek}/SAMPLE_SIZE
         set_max_min_khz ${site} 128 4
         CLKDIV=8;;
@@ -511,7 +518,7 @@ build_knobs_device() {
         CLKDIV=200;;
     esac
     if [ -e ${ek}/is_adc ] && [ "$(cat ${ek}/is_adc)" != "0" ];then
-        ln -s /usr/local/CARE/get_data_size ${ek}/ch_data_size
+        ln -s ${ULC}/get_data_size ${ek}/ch_data_size
     fi
     if [ "$CLKDIV" != "noset" ] && [ -e $dk/clkdiv ]; then
         set.sys $dk/clkdiv $CLKDIV
@@ -574,16 +581,17 @@ build_site0() {
 	${ek}
 
     ln -s /proc/driver/acq400/0/stats /proc/driver/acq400/0/Qstats ${ek}
-    ln -s /sys/module/acq420fmc/parameters/xo_distributor_sample_size ${ek}/dssb
-    ln -s /usr/local/CARE/est_buf_size.sh ${ek}/optimise_bufferlen_burst
+    ln -s ${MODP}/xo_distributor_sample_size ${ek}/dssb
+    ln -s ${ULC}/est_buf_size.sh ${ek}/optimise_bufferlen_burst
     ln -s /usr/local/bin/channel_mapping ${ek}
+    ln -s ${ULC}/preset? ${ek}
     echo $HAS_MGTDRAM > ${ek}/has_mgtdram
     IS_TIGA=none
     [ -e /dev/acq400.0.knobs/wr_ts_s1_count ] && IS_TIGA=1
     echo $IS_TIGA > ${ek}/is_tiga
     
     
-    lck=/sys/module/acq420fmc/parameters/TIM_CTRL_LOCK
+    lck=${MODP}/TIM_CTRL_LOCK
     [ -e $lck ] && ln -s $lck ${ek}
     
     for k in live_post live_pre live_mode; do
@@ -602,21 +610,21 @@ build_site0() {
     for knob in NCHAN data32 shot shot_complete; do
         echo 0 > /etc/acq400/0/$knob
     done
-    ln -s /usr/local/CARE/get_data_size ${ek}/raw_data_size
+    ln -s ${ULC}/get_data_size ${ek}/raw_data_size
     
     echo "+++ build_site0 model $MODEL"
     case $MODEL in
     acq2?06*)
-        [ "x$ETH1_E1000X" = "xy" ] && /usr/local/CARE/load.acq2106_1000X
+        [ "x$ETH1_E1000X" = "xy" ] && ${ULC}/load.acq2106_1000X
         rm /etc/acq400/0/sync_out_cable_det
         ln -s /dev/gpio/SYNC_CABLE_DET /etc/acq400/0/sync_out_cable_det
         ls -l /etc/acq400/0/sync_out_cable_det
         ln -s $ULB/load.si5326 /etc/acq400/0
         ln -s $ULB/si5326_tune_phase /etc/acq400/0/
         if [ -e ${dk}/has_axi_dma_stack ] && [ $(cat ${dk}/has_axi_dma_stack) != "0" ]; then
-           ln -s /usr/local/CARE/stack_480 /etc/acq400/0
+           ln -s ${ULC}/stack_480 /etc/acq400/0
         fi 
-        ln -s /usr/local/CARE/LLC_instrument_latency ${ek};;
+        ln -s ${ULC}/LLC_instrument_latency ${ek};;
     z7io)
         /usr/local/init/z7io_late_init;;
     esac
@@ -668,11 +676,13 @@ build_mgt400() {
             let mtyp=${dtsn#CE*}/10000
             case $mtyp in
             416)
-                echo set.sys $knobs/ident 0x21${name##*.}6${snx}
-                set.sys $knobs/ident 0x21${name##*.}6${snx}  ;;
+                set.sys $knobs/ident 0x21${name##*.}6${snx};;
+            426)
+                set.sys $knobs/ident 0x22${name##*.}6${snx};;
             *)
                 set.sys $knobs/ident 0x${mtyp}${name##*.}${snx};;
             esac
+            echo set ident $(cat $knobs/ident)
             echo "aggregator sites=none off" >$knobs/aggregator;;
         93)
 			HN=$(hostname)
@@ -944,7 +954,7 @@ if [ $has_acq48x -ne 0 ]; then
         echo ACQ480 using user preselect buffers $BLEN $NBUF
     fi
 fi
-source /usr/local/CARE/choose_vap
+source ${ULC}/choose_vap
 
 GS="${GS}${vsites}"
 
@@ -966,11 +976,11 @@ load_mgt() {
     COMMS4=$(grep filename /tmp/fpga_status | awk '{ print $5 } ' | awk -F _ '{ print $9 }')
     case $COMMS4 in
     909*)
-        /usr/local/CARE/load.acq2106_quadcomms;;
+        ${ULC}/load.acq2106_quadcomms;;
     *)
         grep -q UDP /tmp/fpga_status
         if [ $? -eq 0 ]; then
-            /usr/local/CARE/load.acq2106_hudp
+            ${ULC}/load.acq2106_hudp
             HAS_HUDP=y
         fi;;
     esac
@@ -1052,7 +1062,7 @@ if [ -e  /dev/acq400.0.knobs/has_axi_dma ]; then
         done
 
         if [ "x$ACQ480_SITES" != "x" ]; then
-            cp /usr/local/CARE/streamtonowhere.480 $ULB/streamtonowhere 
+            cp ${ULC}/streamtonowhere.480 $ULB/streamtonowhere 
             SO="STREAM_OPTS=--null-copy"
         else
             SO="STREAM_OPTS=--fill-scale"
@@ -1068,7 +1078,7 @@ fi
 
 echo ++ Enable counter monitors
 CACHE_SITES_MASK=${CACHE_SITES_MASK:-0}
-set.sys /sys/module/acq420fmc/parameters/cache_sites_mask $CACHE_SITES_MASK
+set.sys ${MODP}/cache_sites_mask $CACHE_SITES_MASK
 
 echo ++ Enable analog power..
 
@@ -1093,11 +1103,11 @@ if [ "x${ACQ480_SITES}" != "x" ]; then
     do
         web_append acq480.$site nomon
         if [ "x$ACQ480_4CH_TWO_LANE" = "xy" ]; then
-            /usr/local/CARE/acq480_init_two_lane $site
+            ${ULC}/acq480_init_two_lane $site
         elif [ $AXI_COUNT -gt 1 ]; then
             case $MODEL in
                 acq1014|acq1001)
-                    /usr/local/CARE/acq480_init_two_lane $site;;
+                    ${ULC}/acq480_init_two_lane $site;;
             esac
         fi
     done
@@ -1115,7 +1125,7 @@ fi
 [ -e /mnt/local/sysconfig/acq400_streamd.conf ] && \
     cp /mnt/local/sysconfig/acq400_streamd* /etc/sysconfig/
 
-case $(/usr/local/CARE/get-fpga-extra) in
+case $(${ULC}/get-fpga-extra) in
 9802)
     /usr/local/init/anatrg.init 14;;
 9804)

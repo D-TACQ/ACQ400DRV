@@ -128,7 +128,6 @@ proc build_jitter_cleaner {site} {
 
 	exec ln -s $jcpath/LOL /etc/acq400/$site/JC_LOL
 	exec ln -s $jcpath/LOS /etc/acq400/$site/JC_LOS
-	exec ln -s /usr/local/CARE/load.ffir etc/acq400/$site/load.ffir
 
 	set_acq480_knob $site JC/DBL2_BY
 	set_acq480_knob $site JC/RESETn
@@ -191,6 +190,7 @@ if { $::argc > 0 } {
 		}
 	}
 	foreach site $::argv {
+		exec ln -s /usr/local/CARE/load.ffir /etc/acq400/$site/load.ffir
 		device_init $site
 	}
 } else {
