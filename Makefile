@@ -136,11 +136,12 @@ opkgcp:
 	rm -f opkg/usr/local/bin/mgt_offload
 	ln -s /usr/local/CARE/mgt_offload_groups opkg/usr/local/bin/mgt_offload
 	
-			
+
+EMLOGD=../DRIVERS-OOK/emlog
+
 emlog:
-	(cd ../DRIVERS/emlog;./make.zynq all)
-	cp ../DRIVERS/emlog/nbcat  opkg/usr/local/bin
-	cp ../DRIVERS/emlog/mkemlog opkg/usr/local/bin
+	(cd $(EMLOGD);make all)
+	cp $(EMLOGD)/nbcat  $(EMLOGD)/mkemlog opkg/usr/local/bin
 	$(CROSS_COMPILE)strip --strip-debug opkg/usr/local/bin/nbcat opkg/usr/local/bin/mkemlog
 
 	
