@@ -873,8 +873,6 @@ GROUP_FIRST_N_TRIGGERS(3);
 GROUP_FIRST_N_TRIGGERS(4);
 GROUP_FIRST_N_TRIGGERS(5);
 GROUP_FIRST_N_TRIGGERS(6);
-#error DONE
-
 
 static ssize_t store_group_status_mode(
 	struct device * dev,
@@ -904,13 +902,31 @@ static ssize_t show_group_status_mode(
 
 static DEVICE_ATTR(group_status_mode, S_IRUGO|S_IWUSR, show_group_status_mode, store_group_status_mode);
 
+
 static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_status.attr,
 	&dev_attr_status_latch.attr,
-	&dev_attr_group_status_latch.attr,
-	&dev_attr_group_trigger_mask.attr,
 	&dev_attr_group_status_mode.attr,
-	&dev_attr_group_first_n_triggers.attr,
+	&dev_attr_group_status_latch_1.attr,
+	&dev_attr_group_status_latch_2.attr,
+	&dev_attr_group_status_latch_3.attr,
+	&dev_attr_group_status_latch_4.attr,
+	&dev_attr_group_status_latch_5.attr,
+	&dev_attr_group_status_latch_6.attr,
+
+	&dev_attr_group_trigger_mask_1.attr,
+	&dev_attr_group_trigger_mask_2.attr,
+	&dev_attr_group_trigger_mask_3.attr,
+	&dev_attr_group_trigger_mask_4.attr,
+	&dev_attr_group_trigger_mask_5.attr,
+	&dev_attr_group_trigger_mask_6.attr,
+
+	&dev_attr_group_first_n_triggers_1.attr,
+	&dev_attr_group_first_n_triggers_2.attr,
+	&dev_attr_group_first_n_triggers_3.attr,
+	&dev_attr_group_first_n_triggers_4.attr,
+	&dev_attr_group_first_n_triggers_5.attr,
+	&dev_attr_group_first_n_triggers_6.attr,
 	NULL
 };
 
