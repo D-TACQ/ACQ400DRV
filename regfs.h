@@ -51,8 +51,8 @@ struct REGFS_DEV {
 	wait_queue_head_t w_waitq;
 
 	unsigned ints;
-	unsigned status;
-	unsigned status_latch;
+	unsigned status[ATD_TRG_MAXREG];
+	unsigned status_latch[ATD_TRG_MAXREG];
 	unsigned group_status_latch[ATD_TRG_MAXREG];
 	unsigned group_trigger_mask[ATD_TRG_MAXREG];
 	unsigned group_first_n_triggers[ATD_TRG_MAXREG];      /* trigger if N in the group are set. N=0 -> ALL */

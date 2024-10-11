@@ -1,21 +1,28 @@
 #!/bin/sh
 # custom_qds.init
 
-
 cat /usr/local/CARE/ATD-DSP/atd-dsp-regdef >/dev/dsp1/.create
 mkdir -p /etc/acq400/14/
 ln -s /dev/dsp1/* /etc/acq400/14/
-for file in status status_latch group_*; do
-	ln -s /sys/bus/platform/devices/80000000.dsp1/$file /etc/acq400/14
-# temporary: locate in site 1	
-	ln -s /sys/bus/platform/devices/80000000.dsp1/$file /etc/acq400/1
+
+DRVROOT=/sys/bus/platform/devices/80000000.dsp1
+
+ln -s $DRVROOT/status /etc/acq400/14/status
+
+for dir in /dev/sites/[123456]; do
+        site=$(basename $dir)
+        for file in $DRVROOT/*_${site}; do
+                fn=$(basename $file)
+                ln -s $file /etc/acq400/${site}/${fn%_*}
+        done
 done
 
 grep dsp /proc/devices | /usr/local/CARE/ATD-DSP/build_dsp_nodes
 ls -l /dev/dsp1.*
 
-# MODULE ENABLE
+# MODULE ENABLE, INTEN.
 echo 0x11 > /dev/dsp1/ATD_CSR
+echo 1 > /dev/dsp1/ATD_INTSCR
 
 echo "DSP sites 14, 15 active on 4224, 4225"
 /usr/local/init/acq400_knobs.init start

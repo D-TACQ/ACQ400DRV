@@ -428,7 +428,7 @@ ssize_t regfs_event_read(struct file *file, char __user *buf, size_t count,
 			PD(file)->int_count,
                         eventInfo.hbm0? eventInfo.hbm0->ix: -1,
                         eventInfo.hbm1? eventInfo.hbm1->ix: -1, timeout? "TO": "OK",
-			rdev->status,
+			rdev->status[0],    /* @@TODO */
 			rdev->sample_count,
 			rdev->latch_count,
 			rdev->sample_count-rdev->latch_count,
@@ -552,31 +552,44 @@ static int is_group_trigger(struct REGFS_DEV* rdev)
 	}
 }
 
-#if 0
+
 static irqreturn_t acq400_regfs_atd9802_isr(int irq, void *dev_id)
 {
 	struct REGFS_DEV* rdev = (struct REGFS_DEV*)dev_id;
 	const int ready = rdev->client_ready;
 	u32 irq_stat;
-	u32 fun_stat;
+	u32 fun_stat = 0;
+	u32 all_stat[ATD_TRG_MAXREG] = {};
+	int ix;
 
 	if (ready){
 		rdev->sample_count = acq400_agg_sample_count();
 	}
 
-	irq_stat = ioread32(rdev->va + DSP_IRQ_STAT);
-	fun_stat = ioread32(rdev->va + DSP_FUN_STAT);
+	irq_stat = ioread32(rdev->va + ATD_TRG_SITE_ID);
 
-	rdev->status_latch |= fun_stat;
-	if (rdev->gsmode == GS_NOW){
-		rdev->group_status_latch = fun_stat;
-	}else{
-		rdev->group_status_latch |= fun_stat;
+	for (ix = 0; irq_stat && ix < ATD_TRG_MAXREG; ++ix, irq_stat >>= 1){
+		if (irq_stat&1){
+			unsigned site = ix+1;
+			u32 site_state = ioread32(rdev->va + ATD_TRG_LATCH(site));
+			iowrite32(site_state, rdev->va + ATD_TRG_LATCH(site));     /* RORA */
+
+			all_stat[ix] = site_state;
+			rdev->status_latch[ix] |= site_state;
+			if (rdev->gsmode == GS_NOW){
+				rdev->group_status_latch[ix] = site_state;
+			}else{
+				rdev->group_status_latch[ix] |= site_state;
+			}
+		}
 	}
+
 	rdev->ints++;
+	fun_stat = all_stat[0];
+
 	if (ready){
 		rdev->client_ready = 0;
-		rdev->status = irq_stat;
+		memcpy(rdev->status, all_stat, ATD_TRG_MAXREG*sizeof(u32));
 		rdev->latch_count = acq400_adc_latch_count();
 		wake_up_interruptible(&rdev->w_waitq);
 
@@ -585,21 +598,20 @@ static irqreturn_t acq400_regfs_atd9802_isr(int irq, void *dev_id)
 		atd_enable_mod_event(rdev, 0);
 	}
 
-	iowrite32(irq_stat, rdev->va + DSP_IRQ_STAT);
-
 	if (atd_suppress_mod_event_nsec){
 		hrtimer_start(&rdev->atd.timer, ktime_set(0, atd_suppress_mod_event_nsec), HRTIMER_MODE_REL);
 	}
 
 	if (is_group_trigger(rdev)){
 		acq400_soft_trigger(1);
-		rdev->group_status_latch = 0;
+		rdev->group_status_latch[0] = 0;
 		hrtimer_start(&rdev->soft_trigger.timer, ktime_set(0, soft_trigger_nsec), HRTIMER_MODE_REL);
 		dev_dbg(&rdev->pdev->dev, "GROUP_STATUS CONDITION MET: soft trigger");
 	}
 
 	if (ready){
-		dev_dbg(&rdev->pdev->dev, "acq400_regfs_hack_isr acq400_agg_sample_count %5d sc %08x %s lc %08x diff %d  irq:%08x fun:%08x\n",
+		dev_dbg(&rdev->pdev->dev, "%s acq400_agg_sample_count %5d sc %08x %s lc %08x diff %d  irq:%08x fun:%08x\n",
+			__FUNCTION__,
 			rdev->ints, rdev->sample_count, rdev->sample_count>rdev->latch_count? ">": "<", rdev->latch_count,
 			rdev->sample_count>rdev->latch_count? rdev->sample_count-rdev->latch_count: rdev->latch_count-rdev->sample_count,
 					irq_stat, fun_stat);
@@ -607,7 +619,7 @@ static irqreturn_t acq400_regfs_atd9802_isr(int irq, void *dev_id)
 
 	return IRQ_HANDLED;
 }
-#endif
+
 static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
 {
 	struct REGFS_DEV* rdev = (struct REGFS_DEV*)dev_id;
@@ -622,7 +634,7 @@ static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
 	irq_stat = ioread32(rdev->va + DSP_IRQ_STAT);
 	fun_stat = ioread32(rdev->va + DSP_FUN_STAT);
 
-	rdev->status_latch |= fun_stat;
+	rdev->status_latch[0] |= fun_stat;
 	if (rdev->gsmode == GS_NOW){
 		rdev->group_status_latch[0] = fun_stat;
 	}else{
@@ -631,7 +643,7 @@ static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
 	rdev->ints++;
 	if (ready){
 		rdev->client_ready = 0;
-		rdev->status = irq_stat;
+		rdev->status[0] = irq_stat;
 		rdev->latch_count = acq400_adc_latch_count();
 		wake_up_interruptible(&rdev->w_waitq);
 
@@ -663,7 +675,10 @@ static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#ifdef PGMCOMOUT
 irqreturn_t (*regfs_isr)(int irq, void *dev_id) = acq400_regfs_hack_isr;
+#endif
+irqreturn_t (*regfs_isr)(int irq, void *dev_id) = acq400_regfs_atd9802_isr;
 
 static int init_event(struct REGFS_DEV* rdev)
 {
@@ -704,6 +719,7 @@ static struct file_operations regfs_fops = {
 	.release = regfs_release,
 };
 
+/* split u32 into u16,u16 : convenient for EPICS mbbi */
 static int sprintf_split_words(char* buf, unsigned lw)
 {
 	return sprintf(buf, "%04x,%04x\n", lw>>16, lw&0x0000ffff);
@@ -711,32 +727,62 @@ static int sprintf_split_words(char* buf, unsigned lw)
 
 
 
-static ssize_t show_status_latch(
+static ssize_t _show_status_latch(
 	struct device * dev,
 	struct device_attribute *attr,
-	char * buf)
+	char * buf,
+	const int ix)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
-	int rc = sprintf_split_words(buf, rdev->status_latch);
+	int rc = sprintf_split_words(buf, rdev->status_latch[ix]);
 
-	rdev->status_latch = 0;
+	rdev->status_latch[ix] = 0;
 	return rc;
 }
 
-static DEVICE_ATTR(status_latch, S_IRUGO, show_status_latch, 0);
+#define STATUS_LATCH(SITE) \
+static int show_status_latch_##SITE(						\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	char * buf)								\
+{										\
+	return _show_status_latch(dev, attr, buf, SITE-1);			\
+}										\
+static DEVICE_ATTR(status_latch_##SITE, S_IRUGO, show_status_latch_##SITE, 0);
 
-static ssize_t show_status(
+STATUS_LATCH(1);
+STATUS_LATCH(2);
+STATUS_LATCH(3);
+STATUS_LATCH(4);
+STATUS_LATCH(5);
+STATUS_LATCH(6);
+
+static ssize_t _show_status(
 	struct device * dev,
 	struct device_attribute *attr,
-	char * buf)
+	char * buf,
+	const int ix)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
-	unsigned fun_stat = ioread32(rdev->va + DSP_FUN_STAT);
-	return sprintf_split_words(buf, fun_stat);
+	return sprintf_split_words(buf, rdev->status[ix]);
 }
 
-static DEVICE_ATTR(status, S_IRUGO, show_status, 0);
+#define STATUS(SITE) \
+static int show_status_##SITE(							\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	char * buf)								\
+{										\
+	return _show_status(dev, attr, buf, SITE-1);				\
+}										\
+static DEVICE_ATTR(status_##SITE, S_IRUGO, show_status_##SITE, 0);
 
+STATUS(1);
+STATUS(2);
+STATUS(3);
+STATUS(4);
+STATUS(5);
+STATUS(6);
 
 static ssize_t _show_group_status_latch(
 	struct device * dev,
@@ -904,9 +950,22 @@ static DEVICE_ATTR(group_status_mode, S_IRUGO|S_IWUSR, show_group_status_mode, s
 
 
 static const struct attribute *sysfs_base_attrs[] = {
-	&dev_attr_status.attr,
-	&dev_attr_status_latch.attr,
 	&dev_attr_group_status_mode.attr,
+
+	&dev_attr_status_1.attr,
+	&dev_attr_status_2.attr,
+	&dev_attr_status_3.attr,
+	&dev_attr_status_4.attr,
+	&dev_attr_status_5.attr,
+	&dev_attr_status_6.attr,
+
+	&dev_attr_status_latch_1.attr,
+	&dev_attr_status_latch_2.attr,
+	&dev_attr_status_latch_3.attr,
+	&dev_attr_status_latch_4.attr,
+	&dev_attr_status_latch_5.attr,
+	&dev_attr_status_latch_6.attr,
+
 	&dev_attr_group_status_latch_1.attr,
 	&dev_attr_group_status_latch_2.attr,
 	&dev_attr_group_status_latch_3.attr,
