@@ -89,10 +89,12 @@
 #define ATD_MASK_AND		(ADC_BASE+0x64)
 #define ATD_MASK_OR		(ADC_BASE+0x68)
 
+#define ATD_MULTISITE_MIN_REV	5
 #define ATD_TRG_SITE_ID		(ADC_BASE+0x70)
-
-#define ATD_TRG_LATCH(s)	(ADC_BASE+0x100+((s1)-1)*0x10)
+#define ATD_TRG_MAXREG		6
+#define ATD_TRG_LATCH(s)	(ADC_BASE+0x100+((s)-1)*0x10)
 #define ATD_TRG_LIVE(s)		(ATD_TRG_LATCH(s)+sizeof(u32))
+
 #define ACQ423_SPAN_A		(ADC_BASE+0x60)
 #define ACQ423_SPAN_B		(ADC_BASE+0x64)
 #define ACQ423_SPAN_C		(ADC_BASE+0x68)

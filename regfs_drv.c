@@ -494,6 +494,12 @@ int regfs_page_mmap(struct file* file, struct vm_area_struct* vma)
 #define DSP_IRQ_STAT	0x60
 #define DSP_FUN_STAT	0x64
 
+/* new 9802 DSP ATD */
+#define DSP_ATD_TRG_STATUS	0x70
+
+#define DSP_ATD_TRG_LATCH(n)	(0x100+(n-1)*0x10)
+
+
 void atd_enable_mod_event(struct REGFS_DEV *rdev, int enable)
 {
 	unsigned cr = ioread32(rdev->va + ATD_CR);
@@ -536,16 +542,18 @@ static int is_group_trigger(struct REGFS_DEV* rdev)
 	if (!rdev->group_trigger_mask){
 		return 0;
 	}else{
-		unsigned active = rdev->group_status_latch&rdev->group_trigger_mask;
+		unsigned active = rdev->group_status_latch[0]&rdev->group_trigger_mask[0];
 
 		if (rdev->group_first_n_triggers == GROUP_FIRST_N_TRIGGERS_ALL){
-			return active == rdev->group_trigger_mask;
+			return active == rdev->group_trigger_mask[0];
 		}else{
-			return count_set_bits(active) >= rdev->group_first_n_triggers;
+			return count_set_bits(active) >= rdev->group_first_n_triggers[0];
 		}
 	}
 }
-static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
+
+#if 0
+static irqreturn_t acq400_regfs_atd9802_isr(int irq, void *dev_id)
 {
 	struct REGFS_DEV* rdev = (struct REGFS_DEV*)dev_id;
 	const int ready = rdev->client_ready;
@@ -586,6 +594,61 @@ static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
 	if (is_group_trigger(rdev)){
 		acq400_soft_trigger(1);
 		rdev->group_status_latch = 0;
+		hrtimer_start(&rdev->soft_trigger.timer, ktime_set(0, soft_trigger_nsec), HRTIMER_MODE_REL);
+		dev_dbg(&rdev->pdev->dev, "GROUP_STATUS CONDITION MET: soft trigger");
+	}
+
+	if (ready){
+		dev_dbg(&rdev->pdev->dev, "acq400_regfs_hack_isr acq400_agg_sample_count %5d sc %08x %s lc %08x diff %d  irq:%08x fun:%08x\n",
+			rdev->ints, rdev->sample_count, rdev->sample_count>rdev->latch_count? ">": "<", rdev->latch_count,
+			rdev->sample_count>rdev->latch_count? rdev->sample_count-rdev->latch_count: rdev->latch_count-rdev->sample_count,
+					irq_stat, fun_stat);
+	}
+
+	return IRQ_HANDLED;
+}
+#endif
+static irqreturn_t acq400_regfs_hack_isr(int irq, void *dev_id)
+{
+	struct REGFS_DEV* rdev = (struct REGFS_DEV*)dev_id;
+	const int ready = rdev->client_ready;
+	u32 irq_stat;
+	u32 fun_stat;
+
+	if (ready){
+		rdev->sample_count = acq400_agg_sample_count();
+	}
+
+	irq_stat = ioread32(rdev->va + DSP_IRQ_STAT);
+	fun_stat = ioread32(rdev->va + DSP_FUN_STAT);
+
+	rdev->status_latch |= fun_stat;
+	if (rdev->gsmode == GS_NOW){
+		rdev->group_status_latch[0] = fun_stat;
+	}else{
+		rdev->group_status_latch[0] |= fun_stat;
+	}
+	rdev->ints++;
+	if (ready){
+		rdev->client_ready = 0;
+		rdev->status = irq_stat;
+		rdev->latch_count = acq400_adc_latch_count();
+		wake_up_interruptible(&rdev->w_waitq);
+
+	}
+	if (atd_suppress_mod_event_nsec){
+		atd_enable_mod_event(rdev, 0);
+	}
+
+	iowrite32(irq_stat, rdev->va + DSP_IRQ_STAT);
+
+	if (atd_suppress_mod_event_nsec){
+		hrtimer_start(&rdev->atd.timer, ktime_set(0, atd_suppress_mod_event_nsec), HRTIMER_MODE_REL);
+	}
+
+	if (is_group_trigger(rdev)){
+		acq400_soft_trigger(1);
+		rdev->group_status_latch[0] = 0;
 		hrtimer_start(&rdev->soft_trigger.timer, ktime_set(0, soft_trigger_nsec), HRTIMER_MODE_REL);
 		dev_dbg(&rdev->pdev->dev, "GROUP_STATUS CONDITION MET: soft trigger");
 	}
@@ -675,71 +738,143 @@ static ssize_t show_status(
 static DEVICE_ATTR(status, S_IRUGO, show_status, 0);
 
 
-static ssize_t show_group_status_latch(
+static ssize_t _show_group_status_latch(
 	struct device * dev,
 	struct device_attribute *attr,
-	char * buf)
+	char * buf,
+	const int ix)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
-	int rc = sprintf_split_words(buf, rdev->group_status_latch);
+	int rc = sprintf_split_words(buf, rdev->group_status_latch[ix]);
 	return rc;
 }
 
-static DEVICE_ATTR(group_status_latch, S_IRUGO, show_group_status_latch, 0);
+#define GROUP_STATUS_LATCH(SITE) \
+static int show_group_status_latch_##SITE(					\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	char * buf)								\
+{										\
+	return _show_group_status_latch(dev, attr, buf, SITE-1);		\
+}										\
+static DEVICE_ATTR(group_status_latch_##SITE, S_IRUGO, show_group_status_latch_##SITE, 0);
 
-static ssize_t store_group_trigger_mask(
+GROUP_STATUS_LATCH(1);
+GROUP_STATUS_LATCH(2);
+GROUP_STATUS_LATCH(3);
+GROUP_STATUS_LATCH(4);
+GROUP_STATUS_LATCH(5);
+GROUP_STATUS_LATCH(6);
+
+static ssize_t _store_group_trigger_mask(
 	struct device * dev,
 	struct device_attribute *attr,
 	const char * buf,
-	size_t count)
+	size_t count,
+	const int ix)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
 	unsigned eh, el;
 
 	if (sscanf(buf, "%x,%x", &eh, &el) == 2){
-		rdev->group_trigger_mask = eh<<16 | el;
+		rdev->group_trigger_mask[ix] = eh<<16 | el;
 		return count;
 	}else{
 		return -1;
 	}
 }
-static ssize_t show_group_trigger_mask(
+static ssize_t _show_group_trigger_mask(
 	struct device * dev,
 	struct device_attribute *attr,
-	char * buf)
+	char * buf,
+	const int ix)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
-	int rc = sprintf_split_words(buf, rdev->group_trigger_mask);
+	int rc = sprintf_split_words(buf, rdev->group_trigger_mask[ix]);
 	return rc;
 }
 
-static DEVICE_ATTR(group_trigger_mask, S_IRUGO|S_IWUSR, show_group_trigger_mask, store_group_trigger_mask);
+#define GROUP_TRIGGER_MASK(SITE) 						\
+static ssize_t store_group_trigger_mask_##SITE(				\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	const char * buf,							\
+	size_t count)								\
+{										\
+	return _store_group_trigger_mask(dev, attr, buf, count, SITE-1);	\
+}										\
+static ssize_t show_group_trigger_mask_##SITE(					\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	char * buf)								\
+{										\
+	return _show_group_trigger_mask(dev, attr, buf, SITE-1);		\
+}										\
+static DEVICE_ATTR(group_trigger_mask_##SITE, S_IRUGO|S_IWUSR, 			\
+		show_group_trigger_mask_##SITE, store_group_trigger_mask_##SITE);
 
-static ssize_t store_group_first_n_triggers(
+GROUP_TRIGGER_MASK(1);
+GROUP_TRIGGER_MASK(2);
+GROUP_TRIGGER_MASK(3);
+GROUP_TRIGGER_MASK(4);
+GROUP_TRIGGER_MASK(5);
+GROUP_TRIGGER_MASK(6);
+
+
+static ssize_t _store_group_first_n_triggers(
 	struct device * dev,
 	struct device_attribute *attr,
 	const char * buf,
-	size_t count)
+	size_t count,
+	const int ix)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
 
-	if (sscanf(buf, "%u", &rdev->group_first_n_triggers) == 1){
+	if (sscanf(buf, "%u", &rdev->group_first_n_triggers[ix]) == 1){
 		return count;
 	}else{
 		return -1;
 	}
 }
-static ssize_t show_group_first_n_triggers(
+static ssize_t _show_group_first_n_triggers(
 	struct device * dev,
 	struct device_attribute *attr,
-	char * buf)
+	char * buf,
+	const int ix)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
-	int rc = sprintf(buf, "%d\n", rdev->group_first_n_triggers);
+	int rc = sprintf(buf, "%d\n", rdev->group_first_n_triggers[ix]);
 	return rc;
 }
 
-static DEVICE_ATTR(group_first_n_triggers, S_IRUGO|S_IWUSR, show_group_first_n_triggers, store_group_first_n_triggers);
+#define GROUP_FIRST_N_TRIGGERS(SITE) 						\
+static ssize_t _store_group_first_n_triggers_##SITE(				\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	const char * buf,							\
+	size_t count)								\
+{										\
+	return _store_group_first_n_triggers(dev, attr, buf, count, SITE-1);	\
+}										\
+static ssize_t _show_group_first_n_triggers_##SITE(				\
+	struct device * dev,							\
+	struct device_attribute *attr,						\
+	char * buf)								\
+{										\
+	return _show_group_first_n_triggers(dev, attr, buf, SITE-1);		\
+}										\
+static DEVICE_ATTR(group_first_n_triggers_##SITE, S_IRUGO|S_IWUSR, 		\
+		_show_group_first_n_triggers_##SITE, 				\
+		_store_group_first_n_triggers_##SITE);
+
+GROUP_FIRST_N_TRIGGERS(1);
+GROUP_FIRST_N_TRIGGERS(2);
+GROUP_FIRST_N_TRIGGERS(3);
+GROUP_FIRST_N_TRIGGERS(4);
+GROUP_FIRST_N_TRIGGERS(5);
+GROUP_FIRST_N_TRIGGERS(6);
+#error DONE
+
 
 static ssize_t store_group_status_mode(
 	struct device * dev,
