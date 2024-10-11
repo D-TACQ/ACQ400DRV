@@ -568,11 +568,14 @@ static irqreturn_t acq400_regfs_atd9802_isr(int irq, void *dev_id)
 
 	irq_stat = ioread32(rdev->va + ATD_TRG_SITE_ID);
 
+	dev_dbg(&rdev->pdev->dev, "%s ATD_TRG_SITE_ID: %02x", __FUNCTION__, irq_stat);
 	for (ix = 0; irq_stat && ix < ATD_TRG_MAXREG; ++ix, irq_stat >>= 1){
 		if (irq_stat&1){
 			unsigned site = ix+1;
 			u32 site_state = ioread32(rdev->va + ATD_TRG_LATCH(site));
 			iowrite32(site_state, rdev->va + ATD_TRG_LATCH(site));     /* RORA */
+
+			dev_dbg(&rdev->pdev->dev, "%s ATD_TRG_LATCH[%d] 0x%08x", __FUNCTION__, ix, site_state);
 
 			all_stat[ix] = site_state;
 			rdev->status_latch[ix] |= site_state;
