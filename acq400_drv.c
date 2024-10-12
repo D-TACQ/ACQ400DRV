@@ -875,9 +875,10 @@ ssize_t acq400_continuous_read(struct file *file, char __user *buf, size_t count
 void _acq420_continuous_dma_stop(struct acq400_dev *adev)
 {
 	unsigned long work_task_wait = 0;
+        unsigned long last_alive, alive;
 
 	while(mutex_lock_interruptible(&adev->mutex)) {
-		;
+		continue;
 	}
 	if (adev->task_active && !IS_ERR_OR_NULL(adev->w_task)){
 		kthread_stop(adev->w_task);
@@ -891,7 +892,7 @@ void _acq420_continuous_dma_stop(struct acq400_dev *adev)
 
 	wake_up_interruptible(&adev->DMA_READY);
 	wake_up_interruptible(&adev->w_waitq);
-
+        last_alive = adev->task_alive;
 	while(adev->task_active){
 		work_task_wait = jiffies + msecs_to_jiffies(1000);
 		while (adev->task_active){
@@ -901,6 +902,12 @@ void _acq420_continuous_dma_stop(struct acq400_dev *adev)
 				break;
 			}
 		}
+                alive = adev->task_alive;
+                if (alive == last_alive){
+                        adev->task_active = 0;
+                        break;
+                }
+                last_alive = alive;
 	}
 	mutex_lock(&adev->mutex);
 	adev->w_task = 0;
@@ -1688,6 +1695,7 @@ void null_put_empty(struct acq400_dev *adev, struct HBM* hbm) {}
 int axi64_data_loop(void* data)
 {
 	struct acq400_dev *adev = (struct acq400_dev *)data;
+        adev->task_alive = 0;
 	/* wait for event from OTHER channel */
 	int nloop = 0;
 	struct HBM* hbm;
@@ -1720,6 +1728,10 @@ int axi64_data_loop(void* data)
 
 	for(; !kthread_should_stop(); ++nloop){
 		int ddone = 0;
+                if (adev->task_active == 0){
+                        goto quit;
+                }
+                adev->task_alive += 1;
 		dev_dbg(DEVP(adev), "axi64_data_loop() 10");
 
 		if (wait_event_interruptible_timeout(

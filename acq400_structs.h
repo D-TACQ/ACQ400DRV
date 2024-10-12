@@ -167,6 +167,7 @@ struct acq400_dev {
 	struct task_struct* h_task;	/* creates fifo histogram */
 	wait_queue_head_t w_waitq;
 	int task_active;
+        unsigned long task_alive;
 
 	wait_queue_head_t event_waitq;
 
