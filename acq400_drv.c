@@ -23,7 +23,7 @@
 #include "dmaengine.h"
 
 
-#define REVID 			"3.857"
+#define REVID 			"3.859"
 #define MODULE_NAME             "acq420"
 
 /* Define debugging for use during our driver bringup */
@@ -186,6 +186,9 @@ module_param(ao424_buffer_length, int, 0644);
 MODULE_PARM_DESC(ao424_buffer_length, "AWG buffer length");
 
 
+int data_loop_rate_limit_ms = 0;
+module_param(data_loop_rate_limit_ms, int, 0644);
+MODULE_PARM_DESC(data_loop_rate_limit_ms, "set non-zero to limit rate");
 
 int is_acq2106B = 0;
 module_param(is_acq2106B, int, 0444);
@@ -1692,7 +1695,8 @@ int axi64_data_loop(void* data)
 	int nloop = 0;
 	struct HBM* hbm;
 	int rc;
-
+	unsigned long report_time = jiffies;
+	unsigned updates_since_report = 0;
 	dev_dbg(DEVP(adev), "axi64_data_loop() 01");
 
 	adev->onPutEmpty = axi_oneshot? null_put_empty: poison_one_buffer_fastidious;
@@ -1720,8 +1724,6 @@ int axi64_data_loop(void* data)
 
 	for(; !kthread_should_stop(); ++nloop){
 		int ddone = 0;
-		dev_dbg(DEVP(adev), "axi64_data_loop() 10");
-
 		if (wait_event_interruptible_timeout(
 			adev->DMA_READY,
 			(ddone = dma_done(adev, hbm)) || kthread_should_stop(),
@@ -1729,6 +1731,13 @@ int axi64_data_loop(void* data)
 			if (kthread_should_stop()){
 				goto quit;
 			}
+		}
+		updates_since_report += 1;
+
+		if (data_loop_rate_limit_ms && time_after_eq(jiffies, report_time)){
+			dev_dbg(DEVP(adev), "axi64_data_loop() updates:%u 10", updates_since_report);
+			report_time = jiffies + msecs_to_jiffies(data_loop_rate_limit_ms);
+			updates_since_report = 0;
 		}
 		if (adev->rt.axi64_firstups) adev->rt.axi64_wakeups++;
 		if (!ddone){
