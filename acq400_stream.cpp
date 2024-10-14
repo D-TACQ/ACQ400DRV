@@ -2028,8 +2028,8 @@ protected:
         unsigned* sob_buffer;
         unsigned buffer_count;
 
-	const int MAX_BACKTRACK;
-	const int MAX_FORTRACK;
+	int MAX_BACKTRACK;
+	int MAX_FORTRACK;
 
         void insertStartOfBufferSignature(int ib){
         	if (verbose) fprintf(stderr, "StreamHeadImpl::insertStartOfBufferSignature() %d ib:%d bc:%d\n",
@@ -2616,12 +2616,14 @@ class StreamHeadLivePP : public StreamHeadHB0 {
 
 	void waitPost() {
 		int siu = 100;	/* assume min SR=10kHz, ensure data has arrived before read .. */
+		int wait_us;
 		if (sample_interval_usecs){
 			siu = *sample_interval_usecs;
 		}
-		if (siu < 1000000){	/* Live PP should never sleep > 1s */
-			usleep(post*siu);
-		}
+		wait_us = siu*post;
+		wait_us = min(wait_us, 500000); /* Live PP should never sleep > 1s */
+		if (verbose) fprintf(stderr, "%s usleep %d\n", _PFN, wait_us);
+		usleep(wait_us);
 	}
 	static bool event0_enabled(int site){
 		char event_line[80];
@@ -2643,19 +2645,19 @@ public:
 			sample_size(G::nchan*G::wordsize),
 			es_size(::es_size()){
 
-		if (verbose) fprintf(stderr, "StreamHeadLivePP() verbose=%d\n", verbose);
+		if (verbose) fprintf(stderr, "%s pid:%d %s verbose=%d\n",
+				_PFN, getpid(), actual.name, verbose);
 
-		if (verbose) fprintf(stderr, "StreamHeadLivePP() pid:%d\n", getpid());
 		startEventWatcher();
 		startSampleIntervalWatcher();
 
-
-		if (verbose) fprintf(stderr, "StreamHeadLivePP() pid %d progress: %s\n", getpid(), actual.name);
-
-		if (verbose) fprintf(stderr, "StreamHeadLivePP: buffer[0] : %p\n",
-				Buffer::the_buffers[0]->getBase());
-		if (verbose) fprintf(stderr, "StreamHeadLivePP: buffer[1] : %p\n",
+		if (verbose) fprintf(stderr, "%s: buffer[0] : %p, [1]: %p\n",
+				_PFN,
+				Buffer::the_buffers[0]->getBase(),
 				Buffer::the_buffers[1]->getBase());
+
+		MAX_BACKTRACK = 0;
+		MAX_FORTRACK = 0;
 	}
 
 	static bool hasPP() {
@@ -2786,6 +2788,10 @@ int StreamHeadLivePP::_stream() {
 			if (verbose) fprintf(stderr, "%s 390\n", _PFN);
 			continue;	// silently drop it. there will be more
 		}
+		if ((unsigned)ibuf+MAX_FORTRACK >= Buffer::nbuffers-1){
+			if (verbose) fprintf(stderr, "%s 391\n", _PFN);
+			continue;
+		}
 
 		ev_num += 1;
 
@@ -2842,7 +2848,7 @@ int StreamHeadLivePP::_stream() {
 			if (verbose) fprintf(stderr, "%s 59 wb %d, %d => %d\n", _PFN, start_off, len, nb);
 		}
 	}
-
+	if (verbose) fprintf(stderr, "%s 99 rc %d\n", _PFN, rc);
 	return rc;
 }
 
