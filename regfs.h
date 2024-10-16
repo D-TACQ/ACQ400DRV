@@ -55,7 +55,7 @@ struct REGFS_DEV {
 	unsigned status_latch[ATD_TRG_MAXREG];
 	unsigned group_status_latch[ATD_TRG_MAXREG];
 	unsigned group_trigger_mask[ATD_TRG_MAXREG];
-	unsigned group_first_n_triggers[ATD_TRG_MAXREG];      /* trigger if N in the group are set. N=0 -> ALL */
+	unsigned group_first_n_triggers;      /* trigger if N in the group are set. N=0 -> ALL */
 	enum GSMODE { GS_NOW, GS_HISTORIC } gsmode;
 	unsigned sample_count;
 	unsigned latch_count;

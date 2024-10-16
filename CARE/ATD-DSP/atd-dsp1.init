@@ -9,13 +9,28 @@ DRVROOT=/sys/bus/platform/devices/80000000.dsp1
 
 ln -s $DRVROOT/status /etc/acq400/14/status
 
+msite=
+active_sites=0
 for dir in /dev/sites/[123456]; do
         site=$(basename $dir)
-        for file in $DRVROOT/*_${site}; do
-                fn=$(basename $file)
-                ln -s $file /etc/acq400/${site}/${fn%_*}
-        done
+        if grep -q ^1 /dev/acq400.$site.knobs/is_adc; then
+                [ -z $msite ] && msite=$site
+                for file in $DRVROOT/*_${site}; do
+                        fn=$(basename $file)
+                        ln -s $file /etc/acq400/${site}/${fn%_*}
+                done
+                active_sites=$((active_sites+1))
+        fi
 done
+
+echo $active_sites >/sys/module/regfs/parameters/active_sites
+
+if [ -z $msite ]; then
+        echo "WARNING: atd-dsp1.init msite not found"
+else
+        ln -s $DRVROOT/group_first_n_triggers \
+                $DRVROOT/group_status_mode /etc/acq400/$msite/
+fi
 
 grep dsp /proc/devices | /usr/local/CARE/ATD-DSP/build_dsp_nodes
 ls -l /dev/dsp1.*

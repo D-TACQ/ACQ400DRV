@@ -79,10 +79,6 @@ PEX_INT                         0x00c           0xffffffff      r       %08x
 #include "regfs.h"
 
 
-
-
-#define MBPS	96	/* data rate ACQ424+DIO+3SPAD * 2M */
-#define BS	4	/* block size, MB */
 int atd_suppress_mod_event_nsec = 0;
 module_param(atd_suppress_mod_event_nsec, int, 0644);
 MODULE_PARM_DESC(atd_suppress_mod_event_nsec, "hold off mod_event at least one buffer");
@@ -90,6 +86,10 @@ MODULE_PARM_DESC(atd_suppress_mod_event_nsec, "hold off mod_event at least one b
 int soft_trigger_nsec = NSEC_PER_MSEC * 10;
 module_param(soft_trigger_nsec, int, 0644);
 MODULE_PARM_DESC(soft_trigger_nsec, "high hold time for soft trigger pulse");
+
+int active_sites = 6;
+module_param(active_sites, int, 0644);
+MODULE_PARM_DESC(active_sites, "number of sites in set");
 
 #define MINOR_P0	0
 #define MINOR_PMAX	63	/* 64 pages max */
@@ -486,10 +486,10 @@ int regfs_page_mmap(struct file* file, struct vm_area_struct* vma)
 	}
 }
 
-#define ATD_CR		0x4
+#define ATD_CR			0x4
 #define ATD_MOD_EVENT_EN	(1<<5)
-#define INT_CSR_OFFSET	0x18
-#define INT_CSR_ATD	(1<<8)
+#define INT_CSR_OFFSET		0x18
+#define INT_CSR_ATD		(1<<8)
 
 #define DSP_IRQ_STAT	0x60
 #define DSP_FUN_STAT	0x64
@@ -539,17 +539,25 @@ static int count_set_bits(unsigned xx)
 }
 static int is_group_trigger(struct REGFS_DEV* rdev)
 {
-	if (!rdev->group_trigger_mask){
-		return 0;
-	}else{
-		unsigned active = rdev->group_status_latch[0]&rdev->group_trigger_mask[0];
+	unsigned set_bits = 0;
+	unsigned is_active = 0;
+	unsigned ii;
 
+	for (ii = 0; ii < active_sites; ++ii){
+		unsigned active = rdev->group_status_latch[ii]&rdev->group_trigger_mask[ii];
 		if (rdev->group_first_n_triggers == GROUP_FIRST_N_TRIGGERS_ALL){
-			return active == rdev->group_trigger_mask[0];
+			if (active == rdev->group_trigger_mask[ii]){
+				is_active = 1;
+			}else{
+				is_active = 0;
+				break;
+			}
 		}else{
-			return count_set_bits(active) >= rdev->group_first_n_triggers[0];
+			set_bits += count_set_bits(active);
 		}
 	}
+
+	return is_active || set_bits >= rdev->group_first_n_triggers;
 }
 
 
@@ -599,15 +607,16 @@ static irqreturn_t acq400_regfs_atd9802_isr(int irq, void *dev_id)
 	}
 	if (atd_suppress_mod_event_nsec){
 		atd_enable_mod_event(rdev, 0);
-	}
-
-	if (atd_suppress_mod_event_nsec){
 		hrtimer_start(&rdev->atd.timer, ktime_set(0, atd_suppress_mod_event_nsec), HRTIMER_MODE_REL);
 	}
 
 	if (is_group_trigger(rdev)){
+		int ii;
 		acq400_soft_trigger(1);
-		rdev->group_status_latch[0] = 0;
+
+		for (ii = 0; ii < active_sites; ++ii){
+			rdev->group_status_latch[0] = 0;
+		}
 		hrtimer_start(&rdev->soft_trigger.timer, ktime_set(0, soft_trigger_nsec), HRTIMER_MODE_REL);
 		dev_dbg(&rdev->pdev->dev, "GROUP_STATUS CONDITION MET: soft trigger");
 	}
@@ -870,58 +879,32 @@ GROUP_TRIGGER_MASK(5);
 GROUP_TRIGGER_MASK(6);
 
 
-static ssize_t _store_group_first_n_triggers(
+static ssize_t store_group_first_n_triggers(
 	struct device * dev,
 	struct device_attribute *attr,
 	const char * buf,
-	size_t count,
-	const int ix)
+	size_t count)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
 
-	if (sscanf(buf, "%u", &rdev->group_first_n_triggers[ix]) == 1){
+	if (sscanf(buf, "%u", &rdev->group_first_n_triggers) == 1){
 		return count;
 	}else{
 		return -1;
 	}
 }
-static ssize_t _show_group_first_n_triggers(
+static ssize_t show_group_first_n_triggers(
 	struct device * dev,
 	struct device_attribute *attr,
-	char * buf,
-	const int ix)
+	char * buf)
 {
 	struct REGFS_DEV *rdev = (struct REGFS_DEV *)dev_get_drvdata(dev);
-	int rc = sprintf(buf, "%d\n", rdev->group_first_n_triggers[ix]);
+	int rc = sprintf(buf, "%d\n", rdev->group_first_n_triggers);
 	return rc;
 }
 
-#define GROUP_FIRST_N_TRIGGERS(SITE) 						\
-static ssize_t _store_group_first_n_triggers_##SITE(				\
-	struct device * dev,							\
-	struct device_attribute *attr,						\
-	const char * buf,							\
-	size_t count)								\
-{										\
-	return _store_group_first_n_triggers(dev, attr, buf, count, SITE-1);	\
-}										\
-static ssize_t _show_group_first_n_triggers_##SITE(				\
-	struct device * dev,							\
-	struct device_attribute *attr,						\
-	char * buf)								\
-{										\
-	return _show_group_first_n_triggers(dev, attr, buf, SITE-1);		\
-}										\
-static DEVICE_ATTR(group_first_n_triggers_##SITE, S_IRUGO|S_IWUSR, 		\
-		_show_group_first_n_triggers_##SITE, 				\
-		_store_group_first_n_triggers_##SITE);
-
-GROUP_FIRST_N_TRIGGERS(1);
-GROUP_FIRST_N_TRIGGERS(2);
-GROUP_FIRST_N_TRIGGERS(3);
-GROUP_FIRST_N_TRIGGERS(4);
-GROUP_FIRST_N_TRIGGERS(5);
-GROUP_FIRST_N_TRIGGERS(6);
+static DEVICE_ATTR(group_first_n_triggers, S_IRUGO|S_IWUSR,
+		 show_group_first_n_triggers, store_group_first_n_triggers);
 
 static ssize_t store_group_status_mode(
 	struct device * dev,
@@ -954,6 +937,7 @@ static DEVICE_ATTR(group_status_mode, S_IRUGO|S_IWUSR, show_group_status_mode, s
 
 static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_group_status_mode.attr,
+	&dev_attr_group_first_n_triggers.attr,
 
 	&dev_attr_status_1.attr,
 	&dev_attr_status_2.attr,
@@ -983,12 +967,6 @@ static const struct attribute *sysfs_base_attrs[] = {
 	&dev_attr_group_trigger_mask_5.attr,
 	&dev_attr_group_trigger_mask_6.attr,
 
-	&dev_attr_group_first_n_triggers_1.attr,
-	&dev_attr_group_first_n_triggers_2.attr,
-	&dev_attr_group_first_n_triggers_3.attr,
-	&dev_attr_group_first_n_triggers_4.attr,
-	&dev_attr_group_first_n_triggers_5.attr,
-	&dev_attr_group_first_n_triggers_6.attr,
 	NULL
 };
 
