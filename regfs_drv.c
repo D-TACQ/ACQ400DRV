@@ -559,7 +559,7 @@ static int is_group_trigger(struct REGFS_DEV* rdev)
 			}
 		}
 	}
-	rc = is_active || set_bits >= rdev->group_first_n_triggers;
+	rc = is_active || (set_bits && set_bits >= rdev->group_first_n_triggers);
 
 	dev_dbg(&rdev->pdev->dev, "%s %d || %d >= %d %s",
 			__FUNCTION__, is_active, set_bits,
