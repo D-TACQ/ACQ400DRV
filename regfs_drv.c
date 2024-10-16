@@ -542,22 +542,29 @@ static int is_group_trigger(struct REGFS_DEV* rdev)
 	unsigned set_bits = 0;
 	unsigned is_active = 0;
 	unsigned ii;
+	int rc;
 
 	for (ii = 0; ii < active_sites; ++ii){
 		unsigned active = rdev->group_status_latch[ii]&rdev->group_trigger_mask[ii];
-		if (rdev->group_first_n_triggers == GROUP_FIRST_N_TRIGGERS_ALL){
-			if (active == rdev->group_trigger_mask[ii]){
-				is_active = 1;
+		if (active){
+			if (rdev->group_first_n_triggers == GROUP_FIRST_N_TRIGGERS_ALL){
+				if (active == rdev->group_trigger_mask[ii]){
+					is_active = 1;
+				}else{
+					is_active = 0;
+					break;
+				}
 			}else{
-				is_active = 0;
-				break;
+				set_bits += count_set_bits(active);
 			}
-		}else{
-			set_bits += count_set_bits(active);
 		}
 	}
+	rc = is_active || set_bits >= rdev->group_first_n_triggers;
 
-	return is_active || set_bits >= rdev->group_first_n_triggers;
+	dev_dbg(&rdev->pdev->dev, "%s %d || %d >= %d %s",
+			__FUNCTION__, is_active, set_bits,
+			rdev->group_first_n_triggers, rc? "TRUE": "FALSE");
+	return rc;
 }
 
 
@@ -618,7 +625,7 @@ static irqreturn_t acq400_regfs_atd9802_isr(int irq, void *dev_id)
 			rdev->group_status_latch[0] = 0;
 		}
 		hrtimer_start(&rdev->soft_trigger.timer, ktime_set(0, soft_trigger_nsec), HRTIMER_MODE_REL);
-		dev_dbg(&rdev->pdev->dev, "GROUP_STATUS CONDITION MET: soft trigger");
+		dev_dbg(&rdev->pdev->dev, "%s GROUP_STATUS CONDITION MET: soft trigger", __FUNCTION__);
 	}
 
 	if (ready){
