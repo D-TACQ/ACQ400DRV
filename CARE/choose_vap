@@ -87,7 +87,7 @@ do
 			VRANGE=13.5;;
 		ACQ400TEST*)
 			echo "# ACQ400TEST DETECTED set VRANGE 13"
-			VRANGE=13;
+			VRANGE=13;;
 		*)
 			VSPEC=${PN##*-}
 			VSPEC=$(get_vr "$PN")
