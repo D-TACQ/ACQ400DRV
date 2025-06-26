@@ -49,14 +49,8 @@ if [ "x${EBREAK}" = "xyes" ]; then
     echo acq420.init 1: BREAK to emergency shell ^D when done
     PS1="${PS1%>*} EBREAK ${PS1#*>}" /bin/sh
 fi
-MODEL=${devicetree_image%*.dtb}; 
-MODEL=${MODEL#*/}
-export MODEL
 
-if [ "x$MODEL" = "x" ]; then
-    HN=$(hostname)
-    MODEL=${HN%_*}
-fi
+export MODEL=$(acq400_compatible_model)
 
 SN=${dtsn}
 
