@@ -164,7 +164,7 @@ void adc_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE_NAME_N(ADC_CLK_CTR);
 	DBG_REG_CREATE_NAME_N(ADC_SAMPLE_CTR);
 	DBG_REG_CREATE_NAME_N(ADC_SAMPLE_CLK_CTR);
-	if (IS_ACQ465(adev)){
+	if (IS_ACQ465(adev)||IS_ACQ426(adev)){
 		DBG_REG_CREATE(ACQ465_LCS);
 	}
 	DBG_REG_CREATE(ADC_CLKDIV);
