@@ -33,7 +33,7 @@ else
 	MODFILE=/usr/local/lib/modules/acq426.ko
 fi
 
-/sbin/insmod $MODFILE acq426_sites=${SITES} HW=1
+/sbin/insmod $MODFILE acq426_sites=${SITES} HW=1  ${ACQ426_PARAMS}
 
 MODFILE=/mnt/local/ad485x.ko
 if [ -e /mnt/local/ad485x.ko ]; then
