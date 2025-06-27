@@ -85,7 +85,30 @@ for site in $*; do
         echo 
 done
 
-cat - >/tmp/acq426_init.job <<EOF
+
+for site in $*; do
+        ek=/etc/acq400/${site}
+        dk=/dev/acq400.${site}.knobs
+
+        echo ${ACQ426_DATA32:-0} > $dk/data32
+        rm -f $ek/data32
+        cat - >$ek/data32 <<EOF
+#!/bin/sh
+if [ "x\$1" = "x" ]; then
+        cat $dk/data32
+else
+        echo \$1 > $dk/data32
+        echo set data32
+fi
+EOF
+        chmod a+rx $ek/data32
+        ln -s /usr/local/CARE/acq426_adc.init ${ek}
+#       (cd ${ek};source /tmp/makeLinks)
+done
+
+# makes post-boot-job file
+(
+cat - <<EOF
 #!/bin/sh
 while [ ! -e  /var/www/d-tacq/rc-user-complete ]; do
 	sleep 3
@@ -93,29 +116,18 @@ done
 echo acq426_init.job \$(cat /var/www/d-tacq/rc-user-complete)
 EOF
 
-for site in $*; do	
-	ek=/etc/acq400/${site}
-	dk=/dev/acq400.${site}.knobs
-
-        echo ${ACQ426_DATA32:-0} > $dk/data32
-	rm -f $ek/data32
-	cat - >$ek/data32 <<EOF
-#!/bin/sh
-if [ "x\$1" = "x" ]; then
-	cat $dk/data32
-else
-	echo \$1 > $dk/data32
-        echo set data32
-fi
-EOF
-	chmod a+rx $ek/data32
-	ln -s /usr/local/CARE/acq426_adc.init ${ek} 
-#	(cd ${ek};source /tmp/makeLinks)
-	echo "SITE=$site /usr/local/CARE/acq426_adc.init" >>/tmp/acq426_init.job
+for site in $*; do
+	echo "SITE=$site /usr/local/CARE/acq426_adc.init"
 done
 
+echo run link calibration..
+/usr/local/CARE/acq426_calibrate_links
+echo acq426_init.job 99
+
+) >/tmp/acq426_init.job
 chmod a+rx /tmp/acq426_init.job
-nice /tmp/acq426_init.job $* &
+
+nice /tmp/acq426_init.job &
 
 echo acq426.init 99
 

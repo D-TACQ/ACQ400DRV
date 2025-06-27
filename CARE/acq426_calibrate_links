@@ -1,6 +1,7 @@
 #!/bin/sh
 
 SITES=""
+FIRST=""
 
 
 hexquad() {
@@ -14,15 +15,31 @@ hexquad() {
 }
 # set pattern
 for dev in /dev/acq426/[123456]; do
-        if [ -d $dev ]; then        
+        if [ -d $dev ]; then
+		site=$(basename $dev)
+
                 for chip in A B C D; do
                         echo 0xaaaaaaaa >$dev/$chip/in_voltage0_test_pattern32
                         echo 0x33333333 >$dev/$chip/in_voltage7_test_pattern32
                         echo ON > $dev/$chip/test_pattern_enable   
                 done
                 
-                SITES="$SITES $(basename $dev)"
+		[ -z $FIRST ] && FIRST=$site
+                SITES="$SITES $site"
         fi
+done
+
+FS0=0
+FS=0
+ERRPC=100
+
+while [ $FS -gt 1000 -o $FS -lt 1000000 ] && [ $ERRPC -gt 10 ]; do
+	FS0=$FS
+	sleep 1
+	FS=$(get.site 0 SIG:CLK_S${FIRST}:FREQ | awk '{ print int($2) }')
+	ERRPC=$(echo $FS $FS0 | awk '{ ad=sqrt(($1-$2)*($1-$2)); err=int(ad/$1*100); print err }')
+
+	echo "acq426_calibrate_links waiting for CLK to settle $FS0 .. $FS drift $ERRPC %"
 done
 
 # set cal
