@@ -120,9 +120,11 @@ for site in $*; do
 	echo "SITE=$site /usr/local/CARE/acq426_adc.init"
 done
 
+cat - <<EOF
 echo run link calibration..
 /usr/local/CARE/acq426_calibrate_links
 echo acq426_init.job 99
+EOF
 
 ) >/tmp/acq426_init.job
 chmod a+rx /tmp/acq426_init.job
