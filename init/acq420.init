@@ -50,7 +50,18 @@ if [ "x${EBREAK}" = "xyes" ]; then
     PS1="${PS1%>*} EBREAK ${PS1#*>}" /bin/sh
 fi
 
-export MODEL=$(acq400_compatible_model)
+if [ -x /usr/bin/acq400_compatible_model ]; then
+        export MODEL=$(acq400_compatible_model)
+else
+        MODEL=${devicetree_image%*.dtb}
+        MODEL=${MODEL#*/}
+        if [ "x$MODEL" = "x" ]; then
+            HN=$(hostname)
+            MODEL=${HN%_*}
+        fi
+        export MODEL
+        echo "DEPRECATION WARNING: running with OLD acq400_buildroot please make a full upgrade MODEL:$MODEL"
+fi
 
 SN=${dtsn}
 
