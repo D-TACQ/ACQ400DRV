@@ -3,6 +3,7 @@
 SITES=""
 FIRST=""
 
+source /mnt/local/sysconfig/acq400.sh
 
 hexquad() {
         cat $1 | awk '{
@@ -32,14 +33,21 @@ done
 FS0=0
 FS=0
 ERRPC=100
+CTRIES=0
+ACQ426_BOOT_CLK_TIMEOUT=${ACQ426_BOOT_CLK_TIMEOUT:-10}
 
 while [ $FS -gt 1000 -o $FS -lt 1000000 ] && [ $ERRPC -gt 10 ]; do
+	if [ $CTRIES -gt $ACQ426_BOOT_CLK_TIMEOUT ]; then
+		echo "acq426_calibrate_links timeout .. please run $0 when there is a valid clock"
+		exit 1
+	fi
 	FS0=$FS
 	sleep 1
 	FS=$(get.site 0 SIG:CLK_S${FIRST}:FREQ | awk '{ print int($2) }')
 	ERRPC=$(echo $FS $FS0 | awk '{ ad=sqrt(($1-$2)*($1-$2)); err=int(ad/$1*100); print err }')
 
 	echo "acq426_calibrate_links waiting for CLK to settle $FS0 .. $FS drift $ERRPC %"
+	CTRIES=$((CTRIES+1))
 done
 
 # set cal
