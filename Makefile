@@ -22,6 +22,7 @@ obj-m += dsp_atd_9802.o
 obj-m += acq400_dspfs.o
 
 obj-m += pigcelf.o
+obj-m += acq400_hook_spi_cs.o
 obj-m += dmadescfs.o
 obj-m += radcelf.o
 obj-m += ad9854.o
