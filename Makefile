@@ -87,6 +87,8 @@ pigcelf-objs := pigcelf_drv.o zynq_peripheral_spi_shim.o
 
 radcelf-objs := radcelf_drv.o zynq_peripheral_spi_shim.o
 
+acq400_hook_spi_cs-objs := acq400_hook_spi_cs_drv.o zynq_peripheral_spi_shim.o
+
 ao428-objs := ao428_drv.o
 
 acq400t-objs := acq400t_drv.o
