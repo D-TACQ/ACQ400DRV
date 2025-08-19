@@ -23,6 +23,7 @@ if [ "x$1" = "x" ]; then
 else
 	sitelist=$1
 	pad=${2:-0}
+	shift; shift
 fi
 sites="$(echo $sitelist | tr , \ )"
 
@@ -36,7 +37,9 @@ echo $SSB > /etc/acq400/0/dssb
 set.sys /dev/acq400.0.knobs/distributor 0
 set.sys /dev/acq400.0.knobs/data_engine_1 0
 set.sys /dev/acq400.0.knobs/data_engine_1 distributor=1 
-set.sys /dev/acq400.0.knobs/distributor threshold=16384 pad=${pad} sites=${sitelist} on
+
+extra_args=${*:-on}
+set.sys /dev/acq400.0.knobs/distributor threshold=16384 pad=${pad} sites=${sitelist} $extra_args
 echo $sites | awk 'BEGIN { FS="," } ; { print $1 }' > /etc/acq400/0/play0_ready
 
 
