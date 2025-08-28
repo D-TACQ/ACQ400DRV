@@ -579,6 +579,8 @@ void acq400_createDebugfs(struct acq400_dev* adev)
 				return acq1014_createDebugfs(adev, pcursor);
 			}
 			break;
+		case MOD_ID_OCTOBEE:
+			return qen_createDebugfs(adev, pcursor);
 		case MOD_ID_PIG_CELF:
 			pig_celf_createDebugfs(adev, pcursor);
 			break;

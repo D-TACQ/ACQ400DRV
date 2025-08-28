@@ -1195,6 +1195,9 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 				break;
 			}
 			break;
+		case MOD_ID_OCTOBEE:
+			qen_init_defaults(adev);
+			break;
 		case MOD_ID_PIG_CELF:
 			pig_celf_init_defaults(adev);
 			break;

@@ -1756,6 +1756,7 @@ static const char* _lookup_id(struct acq400_dev *adev)
 		{ MOD_ID_DIO482TD,      "dio482td"      },
 		{ MOD_ID_DI460ELF,      "di460elf"      },
 		{ MOD_ID_TIMBUS,        "timbus"        },
+		{ MOD_ID_OCTOBEE,       "octobee"       },
 	};
 #define NID	(sizeof(idlut)/sizeof(struct IDLUT_ENTRY))
 	int ii;
@@ -3656,6 +3657,10 @@ void acq400_createSysfs(struct device *dev)
 			specials[nspec++] = sysfs_qen_attrs;
 			specials[nspec++] = es_enable_attrs;
 		}
+	}else if (IS_OCTOBEE(adev)){
+		dev_info(dev, "IS_OCTOBEE include QEN (single channel, @@worktodo)");
+		specials[nspec++] = sysfs_qen_attrs;
+		specials[nspec++] = es_enable_attrs;
 	}else if IS_SC(adev){
 		nspec = _acq400_createSysfsSC(dev, adev, specials, nspec);
 	}else{

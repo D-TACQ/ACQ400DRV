@@ -58,6 +58,7 @@
 #define MOD_ID_DI460ELF		0x72
 
 #define MOD_ID_FMC_DIO_5CHTTLA  0x73    //https://ohwr.org/project/fmc-dio-5chttla/wikis/home
+#define MOD_ID_OCTOBEE		0x74
 
 #define MOD_ID_DIO482TD		0x7a	// Vanilla DIO version
 #define MOD_ID_DIO482TD_PG	0x7b
