@@ -57,6 +57,11 @@ int legacy_emulate_acq196 = 0;
 module_param(legacy_emulate_acq196, int, 0644);
 MODULE_PARM_DESC(legacy_emulate_acq196, "enable legacy acq196 emulation DEPRECATED: may be removed from FPGA");
 
+int distributor_has_extended_pad;
+module_param(distributor_has_extended_pad, int, 0644);
+MODULE_PARM_DESC(distributor_has_extended_pad, "allow distributor PAD (TCAN) extension above 16LW to 64LW");
+
+
 MAKE_BITS(gate_sync,    ADC_CTRL,      MAKE_BITS_FROM_MASK,	ADC_CTRL_435_GATE_SYNC);
 MAKE_BITS(sync_in_clk,  HDMI_SYNC_DAT, HDMI_SYNC_IN_CLKb, 	0x1);
 MAKE_BITS(sync_in_sync, HDMI_SYNC_DAT, HDMI_SYNC_IN_SYNCb, 	0x1);
@@ -2896,6 +2901,13 @@ static ssize_t show_dist_reg(
 
 	if ((regval&AGG_SPAD_EN) != 0){
 		pad = ((regval>>AGG_SPAD_LEN_SHL)&DIST_TRASH_LEN_MASK) + 1;
+
+		if (distributor_has_extended_pad && offset==DISTRIBUTOR){
+			u32 regval = acq400rd32(adev, DIST_TCAN_OVLY);
+			if (regval){
+				pad = regval&0xff;
+			}
+		}
 	}
 	sprintf(mod_group+strlen(mod_group), " pad=%d", pad);
 
@@ -3005,8 +3017,14 @@ static ssize_t store_dist_reg(
 	}
 	if ((match = strstr(buf, "pad")) != 0){
 		int padlen;
+
 		if (sscanf(match, "pad=%d", &padlen) == 1){
 			regval &= ~DIST_TRASH_LEN_MASK << AGG_SPAD_LEN_SHL;
+
+			if (distributor_has_extended_pad && offset==DISTRIBUTOR){
+				acq400wr32(adev, DIST_TCAN_OVLY, padlen);
+				// if ext_pad non-zero, replace with ext_pad setting
+			}
 			if (padlen){
 				regval |= AGG_SPAD_EN;
 				regval |= ((padlen-1)&DIST_TRASH_LEN_MASK) <<

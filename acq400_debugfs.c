@@ -677,6 +677,7 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 	if (IS_MULTIPATH(adev)){
 		DBG_REG_CREATE(AGG_FIFO_WMASK);
 	}
+	DBG_REG_CREATE(DIST_TCAN_OVLY);
 
 
 	DBG_REG_CREATE_NAME("CLK_EXT", ACQ2006_CLK_COUNT(EXT_DX));

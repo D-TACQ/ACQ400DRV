@@ -659,7 +659,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define AXI_DMA_DEBUG_2		(0x0068)
 #define AXI_DMA_DEBUG_3		(0x006C)
 #define AGG_FIFO_WMASK          (0x0070)	/* aka AFWM */
-
+#define DIST_TCAN_OVLY		(0x0074)
 #define WR_CTRL			(0x0200)
 #define WR_CLK_GEN		(0x0204)
 #define WR_TAI_CUR_L		(0x0208)
