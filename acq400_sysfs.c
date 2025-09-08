@@ -2904,8 +2904,8 @@ static ssize_t show_dist_reg(
 
 		if (distributor_has_extended_pad && offset==DISTRIBUTOR){
 			u32 regval = acq400rd32(adev, DIST_TCAN_OVLY);
-			if (regval){
-				pad = regval&0xff;
+			if (regval >= 0x10){
+				pad = (regval&0xff)  + 1;
 			}
 		}
 	}
@@ -3022,8 +3022,9 @@ static ssize_t store_dist_reg(
 			regval &= ~DIST_TRASH_LEN_MASK << AGG_SPAD_LEN_SHL;
 
 			if (distributor_has_extended_pad && offset==DISTRIBUTOR){
-				acq400wr32(adev, DIST_TCAN_OVLY, padlen);
-				// if ext_pad non-zero, replace with ext_pad setting
+				u32 tcan = padlen <= 0x10? 0: padlen-1;
+				acq400wr32(adev, DIST_TCAN_OVLY, tcan);
+				// if ext_pad >regular, replace with ext_pad setting
 			}
 			if (padlen){
 				regval |= AGG_SPAD_EN;
