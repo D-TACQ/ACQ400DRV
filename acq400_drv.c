@@ -11,7 +11,7 @@
  *                                                                           *
  *  You should have received a copy of the GNU General Public License        *
  *  along with this program; if not, write to the Free Software              *
- *  Foundation, Inc., 675 Mass Ave,mbridge, MA 02139, USA.                */
+ *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                */
 /* ------------------------------------------------------------------------- */
 
 #include "acq400.h"
@@ -23,7 +23,7 @@
 #include "dmaengine.h"
 
 
-#define REVID 			"3.930"
+#define REVID 			"3.934"
 #define MODULE_NAME             "acq420"
 
 /* Define debugging for use during our driver bringup */
@@ -249,7 +249,7 @@ MODULE_PARM_DESC(axi_oneshot, "one-shot: don't poison recycled buffers");
 
 
 int awg_seg_bufs = 100;                  /* default checked on load by set_awg_seg_bufs() */
-module_param(awg_seg_bufs, int, 0644);
+module_param(awg_seg_bufs, int, 0444);
 MODULE_PARM_DESC(awg_seg_bufs, "awg abcde segments: number of buffers in segment");
 
 char awg_seg[2] = { 'A', '\0' };
@@ -2821,16 +2821,14 @@ void _set_awg_seg_bufs(void) {
 		_max_seg = 1;
 	}
 
-	_awg_seg_bufs = total_distributor_buffers/_max_seg/10*10;
+	_awg_seg_bufs = total_distributor_buffers/_max_seg/4*4;
 
 	printk("%s total:%d = %d - %d awg_seg_bufs %d => %d \n",
 		__FUNCTION__,
 		total_distributor_buffers, nbuffers, firstDistributorBuffer(),
 		awg_seg_bufs, _awg_seg_bufs);
 
-	if (awg_seg_bufs == 0 || _awg_seg_bufs < awg_seg_bufs){
-		awg_seg_bufs = _awg_seg_bufs;
-	}
+	awg_seg_bufs = _awg_seg_bufs;
 }
 
 void set_awg_seg_bufs(void) {

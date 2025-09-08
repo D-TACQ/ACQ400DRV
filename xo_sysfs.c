@@ -293,6 +293,41 @@ static ssize_t store_playloop_repeats(
 static DEVICE_ATTR(playloop_repeats,
 		S_IRUGO|S_IWUSR, show_playloop_repeats, store_playloop_repeats);
 
+extern char max_seg[];
+extern char awg_seg[];
+extern void set_awg_seg_bufs(void);
+
+static ssize_t show_awg_max_seg(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	return sprintf(buf, "%c\n", max_seg[0]);
+}
+
+
+static ssize_t store_awg_max_seg(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+	char _max_seg;
+	if (sscanf(buf, "%c", &_max_seg) == 1 && _max_seg >= 'A' && _max_seg <= 'Z'){
+		max_seg[0] = _max_seg;
+		awg_seg[0] = 'A';
+		set_awg_seg_bufs();
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+static DEVICE_ATTR(awg_max_seg,
+		S_IRUGO|S_IWUSR, show_awg_max_seg, store_awg_max_seg);
+
 
 static ssize_t show_xo_buffers(
 	struct device * dev,
@@ -444,6 +479,7 @@ const struct attribute *playloop_attrs[] = {
 	&dev_attr_awg_state_arm.attr,
 	&dev_attr_dac_fifo_sta.attr,
 	&dev_attr_dwg_status.attr,
+	&dev_attr_awg_max_seg.attr,
 	&dev_attr___reset_fifo.attr,
 	NULL
 };

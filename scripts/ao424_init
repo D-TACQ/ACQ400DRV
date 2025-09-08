@@ -22,7 +22,8 @@ do
 done
 
 ln -s /etc/acq400/${SITE}/dacreset_device /etc/acq400/${SITE}/range99
-ln -s ${MODP}/awg_seg /etc/acq400/${SITE}/awg_seg
+[ ! -e /etc/acq400/${SITE}/awg_seg ] && ln -s ${MODP}/awg_seg /etc/acq400/${SITE}
+[ ! -e /etc/acq400/${SITE}/awg_seg_bufs ] && ln -s ${MODP}/awg_seg_bufs /etc/acq400/${SITE}
 
 cat - <<EOF >>/etc/acq400/$SITE/groups
 range=range[0-9]*
