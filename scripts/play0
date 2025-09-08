@@ -34,6 +34,8 @@ nspad=$pad
 source get_site_total_size
 echo $SSB > /etc/acq400/0/dssb
 
+# normally set by run0, but if no agg sites, set them from here..
+[ -f $ETC0/sites ] || set.sys $ETC0/sites     ${sitelist}
 set.sys /dev/acq400.0.knobs/distributor 0
 set.sys /dev/acq400.0.knobs/data_engine_1 0
 set.sys /dev/acq400.0.knobs/data_engine_1 distributor=1 
