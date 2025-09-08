@@ -57,9 +57,9 @@ int legacy_emulate_acq196 = 0;
 module_param(legacy_emulate_acq196, int, 0644);
 MODULE_PARM_DESC(legacy_emulate_acq196, "enable legacy acq196 emulation DEPRECATED: may be removed from FPGA");
 
-int distributor_has_extended_pad;
+int distributor_has_extended_pad = -1;
 module_param(distributor_has_extended_pad, int, 0644);
-MODULE_PARM_DESC(distributor_has_extended_pad, "allow distributor PAD (TCAN) extension above 16LW to 64LW");
+MODULE_PARM_DESC(distributor_has_extended_pad, "allow distributor PAD (TCAN) extension above 16LW to 64LW, [-1 = auto]");
 
 
 MAKE_BITS(gate_sync,    ADC_CTRL,      MAKE_BITS_FROM_MASK,	ADC_CTRL_435_GATE_SYNC);
@@ -2868,6 +2868,20 @@ static u32 toDistCommsFudge(enum DistComms dc)
 		return DIST_COMMS_UDP;
 	}
 }
+
+static int check_distributor_has_extended_pad(struct acq400_dev *adev)
+{
+	if (distributor_has_extended_pad == -1){
+		u32 regval = acq400rd32(adev, DIST_TCAN_OVLY);
+		int has_pad = (regval & 0xffffff00) == 0;
+		dev_info(DEVP(adev), "%s auto detect distributor_has_extended_pad=%d",
+					__FUNCTION__, has_pad);
+
+		return distributor_has_extended_pad = has_pad;
+	}else{
+		return distributor_has_extended_pad;
+	}
+}
 static ssize_t show_dist_reg(
 	struct device * dev,
 	struct device_attribute *attr,
@@ -2902,7 +2916,7 @@ static ssize_t show_dist_reg(
 	if ((regval&AGG_SPAD_EN) != 0){
 		pad = ((regval>>AGG_SPAD_LEN_SHL)&DIST_TRASH_LEN_MASK) + 1;
 
-		if (distributor_has_extended_pad && offset==DISTRIBUTOR){
+		if (offset==DISTRIBUTOR && check_distributor_has_extended_pad(adev)){
 			u32 regval = acq400rd32(adev, DIST_TCAN_OVLY);
 			if (regval >= 0x10){
 				pad = (regval&0xff)  + 1;
@@ -3021,7 +3035,7 @@ static ssize_t store_dist_reg(
 		if (sscanf(match, "pad=%d", &padlen) == 1){
 			regval &= ~DIST_TRASH_LEN_MASK << AGG_SPAD_LEN_SHL;
 
-			if (distributor_has_extended_pad && offset==DISTRIBUTOR){
+			if (offset==DISTRIBUTOR && check_distributor_has_extended_pad(adev)){
 				u32 tcan = padlen <= 0x10? 0: padlen-1;
 				acq400wr32(adev, DIST_TCAN_OVLY, tcan);
 				// if ext_pad >regular, replace with ext_pad setting
