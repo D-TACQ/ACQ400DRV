@@ -65,8 +65,9 @@ vset_sys() {
 
 
 # done for EARLY and LATE
-[ ! -e /etc/acq400/$SITE/wavegen ] && ln -s /usr/local/bin/wavegen /etc/acq400/$SITE
-[ ! -e /etc/acq400/${SITE}/awg_seg ] && ln -s ${MODP}/awg_seg /etc/acq400/${SITE}
+[ ! -e ${EK}/wavegen ] && ln -s /usr/local/bin/wavegen ${EK}
+[ ! -e ${EK}/awg_seg ] && ln -s ${MODP}/awg_seg ${EK}
+[ ! -e ${EK}/awg_seg_bufs ] && ln -s ${MODP}/awg_seg_bufs ${EK}
 
 if [ "x$4" = "xEARLY" ]; then
         [ -z $AO422_NO_RANGE_DACSPI ] && make_ao422_range_knobs
