@@ -30,19 +30,24 @@ sites="$(echo $sitelist | tr , \ )"
 echo sitelist: $sitelist
 echo sites: $sites
 
+DK=/dev/acq400.0.knobs
+EK=/etc/acq400/0
+
 nspad=$pad
 source get_site_total_size
-echo $SSB > /etc/acq400/0/dssb
+echo $SSB > ${EK}/dssb
 
 # normally set by run0, but if no agg sites, set them from here..
-[ -f $ETC0/sites ] || set.sys $ETC0/sites     ${sitelist}
-set.sys /dev/acq400.0.knobs/distributor 0
-set.sys /dev/acq400.0.knobs/data_engine_1 0
-set.sys /dev/acq400.0.knobs/data_engine_1 distributor=1 
+[ -f ${EK}/sites ] || set.sys ${EK}/sites ${sitelist}
+set.sys ${DK}/distributor 0
+set.sys ${DK}/data_engine_1 0
+set.sys ${DK}/data_engine_1 distributor=1
 
 extra_args=${*:-on}
-set.sys /dev/acq400.0.knobs/distributor threshold=16384 pad=${pad} sites=${sitelist} $extra_args
-echo $sites | awk 'BEGIN { FS="," } ; { print $1 }' > /etc/acq400/0/play0_ready
+set.sys ${DK}/distributor threshold=16384 pad=${pad} sites=${sitelist} $extra_args
+echo distributor set $(get.sys ${DK}/distributor)
+echo dist_s1     set $(get.sys ${DK}/dist_s1)
+echo $sites > /etc/acq400/0/play0_ready
 
 
 
