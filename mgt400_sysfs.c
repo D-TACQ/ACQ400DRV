@@ -945,6 +945,7 @@ MAKE_DNUM(rx_pkt_count, HUDP_RX_PKT_COUNT, 0xffffffff);
 MAKE_DNUM(rx_pkt_len,   HUDP_RX_PKT_LEN,   0x000003ff);
 
 MAKE_BITS(ctrl, 	HUDP_CON, 0, 0xffffffff);
+MAKE_BITS(ctrl_rst_sta, HUDP_CON, 0, 0x0000000f);
 
 MAKE_BITS(hudp_bigendian,   HUDP_CON,      MAKE_BITS_FROM_MASK, (1<<30));
 
@@ -1014,6 +1015,7 @@ static const struct attribute *sysfs_hudp_attrs[] = {
 	&dev_attr_tx_sample_sz.attr,
 	&dev_attr_tx_calc_pkt_sz.attr,
 	&dev_attr_ctrl.attr,
+	&dev_attr_ctrl_rst_sta.attr,
 	&dev_attr_tx_reset.attr,
 	&dev_attr_rx_reset.attr,
 
