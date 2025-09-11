@@ -2311,7 +2311,6 @@ static ssize_t show_acq426_cal_win(
 }
 static DEVICE_ATTR(acq426_cal_win, S_IRUGO, show_acq426_cal_win, 0);
 
-ADC_CTRL_426_16_N20
 static ssize_t store_acq426_adc_resolution(
 	struct device * dev,
 	struct device_attribute *attr,
@@ -2331,7 +2330,7 @@ static ssize_t store_acq426_adc_resolution(
 			ctrl &= ~ADC_CTRL_426_16_N20;
 			break;
 		default:
-			dev_err(PDEV(adev),
+			dev_err(DEVP(adev),
 				"ERROR %s failed to set valid opts: 16,20",
 				__FUNCTION__);
 			return -1;
