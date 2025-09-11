@@ -2311,6 +2311,51 @@ static ssize_t show_acq426_cal_win(
 }
 static DEVICE_ATTR(acq426_cal_win, S_IRUGO, show_acq426_cal_win, 0);
 
+ADC_CTRL_426_16_N20
+static ssize_t store_acq426_adc_resolution(
+	struct device * dev,
+	struct device_attribute *attr,
+	const char * buf,
+	size_t count)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	int adc_res;
+
+	if (sscanf(buf, "%u", &adc_res) == 1){
+		u32 ctrl = acq400rd32(adev, ADC_CTRL);
+		switch(adc_res){
+		case 16:
+			ctrl |= ADC_CTRL_426_16_N20;
+			break;
+		case 20:
+			ctrl &= ~ADC_CTRL_426_16_N20;
+			break;
+		default:
+			dev_err(PDEV(adev),
+				"ERROR %s failed to set valid opts: 16,20",
+				__FUNCTION__);
+			return -1;
+		}
+		acq400wr32(adev, ADC_CTRL, ctrl);
+		return count;
+	}else{
+		return -1;
+	}
+}
+
+static ssize_t show_acq426_adc_resolution(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	u32 ctrl = acq400rd32(adev, ADC_CTRL);
+
+	return sprintf(buf, "%u", ctrl&ADC_CTRL_426_16_N20? 16: 20);
+}
+
+static DEVICE_ATTR(acq426_adc_resolution, S_IRUGO|S_IWUSR, show_acq426_adc_resolution, store_acq426_adc_resolution);
+
 static const struct attribute *acq426_attrs[] = {
 	&dev_attr_va_en.attr,
 	&dev_attr_vset.attr,
@@ -2324,6 +2369,7 @@ static const struct attribute *acq426_attrs[] = {
 	&dev_attr_acq426_cal.attr,
 	&dev_attr_acq426_cal_point.attr,
 	&dev_attr_acq426_cal_win.attr,
+	&dev_attr_acq426_adc_resolution.attr,
 	NULL
 };
 
