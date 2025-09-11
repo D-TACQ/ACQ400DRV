@@ -312,8 +312,6 @@ static ssize_t store_awg_max_seg(
 	const char * buf,
 	size_t count)
 {
-	struct acq400_dev *adev = acq400_devices[dev->id];
-	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
 	char _max_seg;
 	if (sscanf(buf, "%c", &_max_seg) == 1 && _max_seg >= 'A' && _max_seg <= 'Z'){
 		max_seg[0] = _max_seg;

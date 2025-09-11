@@ -575,6 +575,13 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 
 #define IS_DI_CNTR(adev)	(IS_DIO482_CNTR(adev) || IS_DI460_HS_CNTR(adev) || IS_DIO_5CH_HS_CNTR(adev))
 
+#define IS_ACQ1102DIO4(adev)	(GET_MOD_ID(adev) == MOD_ID_ACQ1102DIO4)
+
+#define IS_DIO432X(adev)	(IS_DIO432FMC(adev)||IS_DIO432PMOD(adev)||IS_DIO482FMC(adev)||\
+				 IS_DIO482TD(adev)||IS_DIO422ELF(adev)||\
+				 IS_DI460ELF(adev)||IS_DIO_5CH(adev)||\
+				 IS_ACQ1102DIO4(adev))
+
 #define IS_DIO(adev)		(IS_DIO432X(adev))
 #define IS_XO(adev)		(IS_DIO432X(adev) || IS_AO42X(adev))
 
