@@ -2324,9 +2324,11 @@ static ssize_t store_acq426_adc_resolution(
 		u32 ctrl = acq400rd32(adev, ADC_CTRL);
 		switch(adc_res){
 		case 16:
+			adev->booleans.adc_18b = 1;  /* not strictly true but fits ACQ42x convention */
 			ctrl |= ADC_CTRL_426_16_N20;
 			break;
 		case 20:
+			adev->booleans.adc_18b = 0;  /* not strictly true but fits ACQ42x convention */
 			ctrl &= ~ADC_CTRL_426_16_N20;
 			break;
 		default:
