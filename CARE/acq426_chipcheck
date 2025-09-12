@@ -1,0 +1,33 @@
+#!/bin/sh
+
+SITE=${SITE:-1}
+SITE=${1:-$SITE}
+
+echo acq465_chipcheck SITE $SITE
+
+check_chip() {
+	reg=/dev/acq426/reg.$1.$2
+	echo 4 > $reg
+#	echo "$1.$2 " $(cat $reg)
+	cat $reg
+}
+
+CHIPS="${CHIPS:-0 1 2 3}"
+IDS=""
+for chip in $CHIPS; do
+	IDS="$IDS $(check_chip $SITE $chip)"
+done
+#echo $IDS
+case $(echo $IDS | tr \  ,) in
+0x61,0x61,0x61,0x61) 
+	RES=16;;
+0x60,0x60,0x60,0x60) 
+	RES=20;;
+*)
+	echo "ERROR SITE:$SITE ID:$IDS not supported. Contact D-TACQ"
+	exit 1
+esac
+
+echo $RES > /dev/acq400.$SITE.knobs/acq426_adc_resolution
+echo "selected acq426_adc_resolution $(cat /dev/acq400.$SITE.knobs/acq426_adc_resolution)"
+

@@ -108,6 +108,12 @@ done
 
 # makes post-boot-job file
 (
+ACC=/usr/local/CARE/acq426_chipcheck
+if [ -e /mnt/local/acq426_chipcheck ]; then
+	echo "Using override /mnt/local/acq426_chipcheck"
+	ACC=/mnt/local/acq426_chipcheck
+fi
+
 cat - <<EOF
 #!/bin/sh
 while [ ! -e  /var/www/d-tacq/rc-user-complete ]; do
@@ -118,6 +124,7 @@ EOF
 
 for site in $*; do
 	echo "SITE=$site /usr/local/CARE/acq426_adc.init"
+	echo "SITE=$site $ACC"
 done
 
 cat - <<EOF
