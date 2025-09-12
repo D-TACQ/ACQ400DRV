@@ -684,6 +684,7 @@ build_site0() {
     ln -s /dev/shm/role ${ek}/sync_role_status
     echo "default 0 ssb=0" >/var/log/run0.log
     ln -s /var/log/run0.log ${ek}/run0_log
+    ln -s /var/log/play0.log ${ek}/play0_log
 
     ln -s $ULB/set.site ${ek}/SS
 

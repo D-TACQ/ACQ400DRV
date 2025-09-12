@@ -48,6 +48,7 @@ set.sys ${DK}/distributor threshold=16384 pad=${pad} sites=${sitelist} $extra_ar
 echo distributor set $(get.sys ${DK}/distributor)
 echo dist_s1     set $(get.sys ${DK}/dist_s1)
 echo $sites > /etc/acq400/0/play0_ready
+echo $0 $* ssb=$SSB > /var/log/play0.log
 
 
 
