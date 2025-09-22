@@ -13,13 +13,14 @@ else
 	export args="--chips=$CHIPS"
 fi
 
+NCHIPS=$(echo -n $CHIPS | wc -c)
 args="$args -t1"
 
 export SITE=${SITE:-1}
 
 DATA32=$(cat /dev/acq400.${SITE}.knobs/data32)
 
-echo "++ acq465_adc.init SITE:$SITE 01"
+echo "++ acq465_adc.init SITE:$SITE 01 args=$args NCHIPS=$NCHIPS"
 
 reset=${2:-1}
 printf "Reset? = %d\n" $reset
@@ -98,13 +99,14 @@ write_regs(){
 
 test_regs() {
 	echo -e "    REG $1, look for $2"
-	acq465_knobs -t1 acq465_reg $1;echo ""
-	test=$(acq465_knobs acq465_reg $1 | grep -o "=00${2}" | wc -l);
+	acq465_knobs $args acq465_reg $1;echo ""
+	test=$(acq465_knobs $args acq465_reg $1 | grep -o "=00${2}" | wc -l);
 }
 
 check_regs() {
 	test_regs $1 $2
-	if [[ $test = "8" ]];then
+	echo test result $test
+	if [[ $test = "$NCHIPS" ]];then
 		echo -e "PASS!\n"
 	else
 		echo -e "FAIL! FAIL! FAIL!\n"
@@ -114,7 +116,7 @@ check_regs() {
 
 check_no_err() {
 	test_regs $1 $2
-	if [[ $test = "8" ]];then
+	if [[ $test = "$NCHIPS" ]];then
 		echo -e "PASS!\n"
 	else
 		if [[ $reg_check_fail == 0 ]]; then # Ignore OFUF reg whose error reporting cannot be switched off
@@ -128,7 +130,7 @@ check_no_err() {
 
 check_ofuf() {
 	test_regs 0x40 00
-	if [[ $test = "8" ]];then
+	if [[ $test = "$NCHIPS" ]];then
 		echo -e "PASS!\n"
 	else
 		echo -e "IGNORE OFUF ERR!\n"
@@ -147,7 +149,7 @@ check_pll() {
 
 check_fsettle() {
 	test_regs 0x41 0f
-	if [[ $test = "8" ]];then
+	if [[ $test = "$NCHIPS" ]];then
 		fsettle_fail=0
 	else
 		fsettle_fail=1
@@ -156,7 +158,7 @@ check_fsettle() {
 
 check_digif() {
 	test_regs 0x02 f1
-	if [[ $test = "8" ]];then
+	if [[ $test = "$NCHIPS" ]];then
 		digif_check_fail=0
 	else
 		digif_check_fail=1
