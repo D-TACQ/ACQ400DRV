@@ -140,7 +140,7 @@ check_ofuf() {
 
 check_pll() {
 	test_regs 0x15 01
-	if [[ $test = "8" ]];then
+	if [[ $test = "$NCHIPS" ]];then
 		pll_check_fail=0
 	else
 		pll_check_fail=1
