@@ -102,7 +102,7 @@ EOF
 	ln -s /usr/local/CARE/acq465_adc.init ${ek} 
 	echo $ACQ465_FILTER > ${ek}/acq465_filter_default
 	(cd ${ek};source /tmp/makeLinks)
-	echo "SITE=$site CHIPS=$CHIPS /usr/local/CARE/acq465_adc.init" >>/tmp/acq465_init.job
+	echo "SITE=$site CHIPS=$CHIPS /usr/local/CARE/acq465_adc.init | /usr/bin/logger -t acq465_init.job" >>/tmp/acq465_init.job
 done
 
 chmod a+rx /tmp/acq465_init.job
