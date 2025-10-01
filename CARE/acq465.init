@@ -74,6 +74,12 @@ EOF
 for site in $*; do	
 	ek=/etc/acq400/${site}	
 	dk=/dev/acq400.${site}.knobs
+	source /dev/sites/${site}/details
+        if echo $FRU_PART_NUM | grep -q 16; then
+		CHIPS=EFGH
+	else
+		CHIPS=ABCDEFGH
+	fi
 
     echo $ACQ465_DATA32 > $dk/data32
 	rm $ek/data32
@@ -88,7 +94,7 @@ else
 	else
 		kcode=0x00
 	fi
-	acq465_knobs --all reg 0x11 \$kcode
+	acq465_knobs --chips=$CHIPS reg 0x11 \$kcode
 fi
 EOF
 
@@ -96,7 +102,7 @@ EOF
 	ln -s /usr/local/CARE/acq465_adc.init ${ek} 
 	echo $ACQ465_FILTER > ${ek}/acq465_filter_default
 	(cd ${ek};source /tmp/makeLinks)
-	echo "SITE=$site /usr/local/CARE/acq465_adc.init" >>/tmp/acq465_init.job
+	echo "SITE=$site CHIPS=$CHIPS /usr/local/CARE/acq465_adc.init | /usr/bin/logger -t acq465_init.job" >>/tmp/acq465_init.job
 done
 
 chmod a+rx /tmp/acq465_init.job
