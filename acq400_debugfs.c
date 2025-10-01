@@ -299,7 +299,7 @@ void dio432_createDebugfs(struct acq400_dev* adev, char* pcursor)
 		DBG_REG_CREATE(DIO422_OE_CONFIG);
 	}else if (IS_DIO432FMC(adev)){
 		DBG_REG_CREATE( DIO432_DIO_CPLD_CTRL);
-	}else if (IS_DIO482FMC(adev)){
+	}else if (IS_DIO482FMC(adev)||IS_ACQ1102DIO4(adev)){
 		DBG_REG_CREATE(DIO482_DIRECTION_CTRL);
 	}
 
