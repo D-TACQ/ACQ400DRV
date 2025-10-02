@@ -53,7 +53,7 @@
 
 #include <syslog.h>
 
-#define VERID	"B1008"
+#define VERID	"B1010"
 
 #define NCHAN	4
 
@@ -68,6 +68,7 @@
 #include "File.h"
 
 #include "tcp_server.h"
+#include "split2.h"
 
 
 using namespace std;
@@ -107,6 +108,7 @@ namespace G {
 	char* host = 0;
 	char *abcde = 0;				// set start of segment
 	unsigned max_seg = 'D';
+	bool auto_soft_trigger;				// output trigger on load if set
 };
 
 using namespace std;
@@ -451,6 +453,9 @@ int load() {
 		set_playloop_length(fill());
 	}
 
+	if (G::auto_soft_trigger){
+		do_soft_trigger();
+	}
 	return 0;
 }
 
@@ -529,6 +534,27 @@ void set_dist_awg(unsigned dist_s1)
 	system(cmd);
 }
 
+typedef std::vector<std::string> VS;
+
+void init_auto_soft_trig(void)
+{
+	FILE *fp = fopen("/dev/shm/transient_settings", "r");
+	if (fp != 0){
+		char text_line[128];
+		int nc;
+		if ((nc = fread(text_line, 1, 128, fp)) > 0){
+			text_line[nc-1] = '\0';
+			VS args;
+			split2(text_line, args, ' ');
+			for (std::string st: args){
+				int enable = 0;
+				if (sscanf(st.c_str(), "SOFT_TRIGGER=%d", &enable) == 1){
+					G::auto_soft_trigger = enable==1;
+				}
+			}
+		}
+	}
+}
 RUN_MODE ui(int argc, const char** argv)
 {
 	poptContext opt_context =
@@ -537,12 +563,15 @@ RUN_MODE ui(int argc, const char** argv)
 	G::load_threshold 	= Env::getenv("BB_LOAD_THRESHOLD", G_LOAD_THRESHOLD_DEFAULT);
 	G::pad			= Env::getenv("BB_PAD",  G_PAD_LAST);
 
+	printf("bb %s\n", VERID);
+
 	getKnob(-1, NBUF,  &Buffer::nbuffers);
 	getKnob(-1, DFB, 	&G::buffer00);
 	G::buffer0 = G::buffer00;
 	getKnob(-1, BUFLEN, &Buffer::bufferlen);
 	getKnob(-1, "/etc/acq400/0/dist_bufferlen_play", &G::play_bufferlen);
 	getKnob(-1, "/etc/acq400/0/playloop_len_disable", &G::playloop_len_disable);
+	init_auto_soft_trig();
 
 	int rc;
 	int seg_bufs = 0;
