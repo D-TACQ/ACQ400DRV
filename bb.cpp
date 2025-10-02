@@ -157,6 +157,8 @@ struct poptOption opt_table[] = {
 
 enum RUN_MODE { M_NONE, M_FILL, M_LOAD, M_DUMP, M_INIT };
 
+const int RUNOFF_TO_REPEAT = 20;
+
 void set_playloop_length(int nsamples)
 {
 	char cmd[128];
@@ -166,8 +168,11 @@ void set_playloop_length(int nsamples)
 
 	if (nsamples == 0){
 		unsigned task_active = 1;
-		unsigned timeout = 20;
+		unsigned timeout = RUNOFF_TO_REPEAT;
 		while (task_active){
+			printf("bb waiting for task_active -> 0 %d/%d\n", RUNOFF_TO_REPEAT-timeout, RUNOFF_TO_REPEAT);
+			syslog(LOG_DEBUG, "bb waiting for task_active -> 0 %d/%d\n", RUNOFF_TO_REPEAT-timeout, RUNOFF_TO_REPEAT);
+
 			if (getKnob(G::play_site, "task_active", &task_active) != 1){
 				fprintf(stderr, "ERROR: failed to read knob task_active");
 				exit(1);
@@ -366,11 +371,16 @@ int _fread(void* buffer, size_t size, size_t nelems, FILE *fp)
 	return nelems;
 }
 int _load() {
+	printf("bb fread all in one go ..\n");
+	syslog(LOG_DEBUG,"bb fread all in one go ..\n");
 	unsigned nsamples = _fread(Buffer::the_buffers[0]->getBase(),
 			G::sample_size, G::max_samples, G::fp_in);
 
 	syslog(LOG_DEBUG, "bb fread returned %d feof:%d ferror:%d errno:%d",
 			nsamples, feof(G::fp_in), ferror(G::fp_in), ferror(G::fp_in)? errno: 0);
+	printf("bb fread returned %d feof:%d ferror:%d errno:%d\n",
+			nsamples, feof(G::fp_in), ferror(G::fp_in), ferror(G::fp_in)? errno: 0);
+
 	if (ferror(G::fp_in)){
 		syslog(LOG_DEBUG, "bb fread ERROR exit");
 		exit(1);
@@ -401,6 +411,8 @@ int _load_by_buffer() {
 			fprintf(stderr, "load_pad buffers:%u nsamples:%u\n", buf, nsamples);
 			return _load_pad(nsamples);
 		}
+		printf("%03d\n", buf);
+		syslog(LOG_DEBUG, "bb _load_by_buffer %03d", buf);
 	}
 	syslog(LOG_DEBUG, "bb hit the buffers, going with buffers=%u samples=%u", buf, nsamples);
 	return _load_pad(nsamples);
