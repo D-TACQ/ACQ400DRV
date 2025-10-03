@@ -563,7 +563,7 @@ RUN_MODE ui(int argc, const char** argv)
 	G::load_threshold 	= Env::getenv("BB_LOAD_THRESHOLD", G_LOAD_THRESHOLD_DEFAULT);
 	G::pad			= Env::getenv("BB_PAD",  G_PAD_LAST);
 
-	printf("bb %s\n", VERID);
+	fprintf(stderr, "bb %s\n", VERID);
 
 	getKnob(-1, NBUF,  &Buffer::nbuffers);
 	getKnob(-1, DFB, 	&G::buffer00);
