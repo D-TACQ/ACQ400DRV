@@ -369,7 +369,8 @@ int _fread(void* buffer, size_t size, size_t nelems, FILE *fp)
 		}
 	}
 	nelems = (bp - bp0)/size;
-	syslog(LOG_DEBUG, "_fread bp0:%p returns %d * %d = %08x\n", bp0, nelems, size, bp-bp0);
+	if (G::verbose)
+		syslog(LOG_DEBUG, "_fread bp0:%p returns %d * %d = %08x\n", bp0, nelems, size, bp-bp0);
 	return nelems;
 }
 int _load() {
