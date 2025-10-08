@@ -30,6 +30,11 @@ sites="$(echo $sitelist | tr , \ )"
 echo sitelist: $sitelist
 echo sites: $sites
 
+for s in $sites; do
+        s1=$s
+        break
+done
+
 DK=/dev/acq400.0.knobs
 EK=/etc/acq400/0
 
@@ -48,6 +53,7 @@ set.sys ${DK}/distributor threshold=16384 pad=${pad} sites=${sitelist} $extra_ar
 echo distributor set $(get.sys ${DK}/distributor)
 echo dist_s1     set $(get.sys ${DK}/dist_s1)
 echo $sites > /etc/acq400/0/play0_ready
+echo $s > /etc/acq400/0/play0_s1
 echo $0 $* ssb=$SSB > /var/log/play0.log
 
 
