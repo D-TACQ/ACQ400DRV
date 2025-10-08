@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<ACQ>
+  <AcqCalibration>
+    <Info>
+      <CalDate>20251008_123829</CalDate>
+      <Model>ACQ426ELF</Model>
+      <SerialNum>E42610000</SerialNum>
+    </Info>
+    <Data AICHAN="32" SW="gain%d" code_max="32767" code_min="-32768">
+      <Range name="+/- 10V" sw="M10-10">
+        <Nominal eoff="0" eslo="0.00030517578125" max="10" min="-10" roff="0"/>
+      </Range>
+      <Range name="+/- 5V" sw="M5-5">
+        <Nominal eoff="0" eslo="0.000152587" max="5" min="-5" roff="0"/>
+      </Range>
+      <Range name="+/- 2V5" sw="M2.5-2.5">
+        <Nominal eoff="0" eslo="0.000076293" max="2.5" min="-2.5" roff="0"/>
+      </Range>
+    </Data>
+  </AcqCalibration>
+  <ModelSpec>
+    <ChannelBlockMask>
+      <BlockWidth>32</BlockWidth>
+      <BlockSet>1</BlockSet>
+      <MaxDeviceRate>1000000 S/sec</MaxDeviceRate>
+    </ChannelBlockMask>
+  </ModelSpec>
+</ACQ>
