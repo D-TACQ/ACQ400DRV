@@ -192,7 +192,10 @@ namespace G {
 	int live_instance = 1;			// clear if live_instance NOT required
 };
 
-
+int aggregator_S1() {
+	assert(G::aggregator_sites[0] > '0' && G::aggregator_sites[0] < '6');
+	return G::aggregator_sites[0] - '0';
+}
 
 int verbose = getenv_default("VERBOSE");
 unsigned nb_cat =1;	/* number of buffers to concatenate */
@@ -1801,6 +1804,7 @@ void aggregator_init()
 		static char _sites[32];
 		getKnob(0, "/etc/acq400/0/sites", _sites);
 		G::aggregator_sites = _sites;
+
 		if (verbose) fprintf(stderr, "default sites:%s\n", G::aggregator_sites);
 	}
 	reserveBuffers();
@@ -2122,9 +2126,11 @@ protected:
 
 
 	void startEventWatcher() {
-		f_ev = open("/dev/acq400.1.ev", O_RDONLY);
+		char ev_src[80];
+		snprintf(ev_src, 80, "/dev/acq400.%d.ev", aggregator_S1());
+		f_ev = open(ev_src, O_RDONLY);
 		if (f_ev < 0){
-			perror("/dev/acq400.1.ev");
+			perror(ev_src);
 			exit(1);
 		}
 		if (f_ev > fc){
@@ -2630,7 +2636,7 @@ class StreamHeadLivePP : public StreamHeadHB0 {
 	}
 	static bool event0_enabled(int site){
 		char event_line[80];
-		if (getKnob(site, "event0", event_line) == 1){
+		if (getKnob(aggregator_S1(), "event0", event_line) == 1){
 			unsigned ena = 0;
 			if (sscanf(event_line, "event0=%u", &ena) == 1){
 				return ena != 0;
