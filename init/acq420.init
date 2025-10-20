@@ -22,6 +22,7 @@ SYSCONF=/mnt/local/sysconfig
 ULB=/usr/local/bin
 ULC=/usr/local/CARE
 DK0=/dev/acq400.0.knobs
+ETC0=/etc/acq400/0
 
 export MODP=/sys/module/acq420fmc/parameters
 
@@ -659,7 +660,7 @@ install_cal() {
 
 build_site0() {
     dk=${DK0}
-    ek=/etc/acq400/0/
+    ek=$ETC0/
     echo "MOTHERBOARD" > $ek/module_role
     ln -s $1 ${dk}
     web_append acq400.0 0
@@ -724,13 +725,13 @@ build_site0() {
     echo "+++ build_site0 model $MODEL"
     case $MODEL in
     acq1102)
-        rm /etc/acq400/0/sync_out_cable_det
+        rm $ETC0/sync_out_cable_det
         ln -s /dev/gpio/SYNC_CABLE_DET ${ek}/sync_out_cable_det
         ln -s $ULB/load.si5326 $ULB/si5326_tune_phase ${ek}
         ln -s ${ULC}/LLC_instrument_latency ${ek};;
     acq2?06*)
         [ "x$ETH1_E1000X" = "xy" ] && ${ULC}/load.acq2106_1000X
-        rm /etc/acq400/0/sync_out_cable_det
+        rm $ETC0/sync_out_cable_det
         ln -s /dev/gpio/SYNC_CABLE_DET ${ek}/sync_out_cable_det
         ln -s $ULB/load.si5326 $ULB/si5326_tune_phase ${ek}
 
@@ -1247,7 +1248,10 @@ build_knobs
 set_fans $FANSPEED
 grep acq400\.[0-9] /proc/devices | sort -r | build_nodes
 
-[ "x$WHITE_RABBIT" = "x1" ]  && /usr/local/init/wr.init
+if [ "x$WHITE_RABBIT" = "x1" ]; then
+        echo 1 > $ETC0/wr_fpga
+        /usr/local/init/wr.init
+fi
 
 if [ "x${EBREAK}" = "xyes" ]; then
     echo acq420.init 2: BREAK to emergency shell ^D when done
@@ -1333,7 +1337,7 @@ if [ "x${ACQ480_SITES}" != "x" ]; then
             esac
         fi
     done
-    echo 1 > /etc/acq400/0/acq480_force_training
+    echo 1 > $ETC0/acq480_force_training
 fi
 
 [ ! -z $HUDP_SITES ] && for site in $HUDP_SITES; do
