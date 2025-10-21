@@ -48,7 +48,8 @@ if { $::argc > 0 } {
                         [exec cat /dev/gpio/BV2/value] != 0} {
                         puts "FMC test"
                         acq400t_test $site 31 1 31 0
-                } elseif {$ctype == $MOD_ID_ACQ2106SC || $ctype == $MOD_ID_ACQ1102SC} {
+                } elseif {$ctype == $MOD_ID_ACQ2206SC ||
+                          $ctype == $MOD_ID_ACQ2106SC || $ctype == $MOD_ID_ACQ1102SC} {
                         puts "DULPC test"
                         acq400t_test $site 31 1 0 0
                 } else {
