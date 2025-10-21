@@ -1,5 +1,7 @@
 #!/usr/local/bin/expect
 
+source /usr/local/CARE/acq400_mod_id.tcl
+
 proc _test {site ax bx} {
 	set kb [open "/dev/acq400.$site.knobs/ACQ400T_out" w]
 	set wpat "[format "0x%08x 0x%08x" $ax $bx]"
@@ -34,19 +36,19 @@ set ctype [exec cat /dev/acq400.0.knobs/module_type]
 
 if { $::argc > 0 } {          
         foreach site $::argv {
-                if {$ctype == 81 && $site == 1 &&
-                        [exec cat /dev/gpio/BV_FMC] != 0} {
+                if {$ctype == $MOD_ID_ACQ1001SC && 
+			$site == 1 && [exec cat /dev/gpio/BV_FMC] != 0} {
                         puts "FMC test"
                         acq400t_test $site 31 1 31 0
-                } elseif {$ctype == 88 && $site == 1 &&
+                } elseif {$ctype == $MOD_ID_ACQ1102SC && $site == 1 &&
                         [exec cat /dev/gpio/BV1/value] != 0} {
                         puts "FMC test"
                         acq400t_test $site 31 1 31 0
-                } elseif {$ctype == 88 && $site == 2 &&
+                } elseif {$ctype == $MOD_ID_ACQ1102SC && $site == 2 &&
                         [exec cat /dev/gpio/BV2/value] != 0} {
                         puts "FMC test"
                         acq400t_test $site 31 1 31 0
-                } elseif {$ctype == 82 || $ctype == 88} {
+                } elseif {$ctype == $MOD_ID_ACQ2106SC || $ctype == $MOD_ID_ACQ1102SC} {
                         puts "DULPC test"
                         acq400t_test $site 31 1 0 0
                 } else {
