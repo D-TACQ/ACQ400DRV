@@ -193,6 +193,7 @@ namespace G {
 };
 
 int aggregator_S1() {
+	assert(G::aggregator_sites != 0);
 	assert(G::aggregator_sites[0] > '0' && G::aggregator_sites[0] < '6');
 	return G::aggregator_sites[0] - '0';
 }
@@ -1798,7 +1799,7 @@ void reserveBuffers(void)
 {
 	open("/dev/acq400.0.rsvd", O_RDONLY);
 }
-void aggregator_init()
+void aggregator_get_sites()
 {
 	if (G::devnum == 0 && G::aggregator_sites == 0){
 		static char _sites[32];
@@ -1807,6 +1808,9 @@ void aggregator_init()
 
 		if (verbose) fprintf(stderr, "default sites:%s\n", G::aggregator_sites);
 	}
+}
+void aggregator_init()
+{
 	reserveBuffers();
 	/* else .. defaults to 0 */
 	checkHolders();
@@ -1908,6 +1912,7 @@ void init(int argc, const char** argv) {
 		G::devnum = atoi(devc);
 	}
 
+	aggregator_get_sites();
 
 	if (G::stream_mode == SM_TRANSIENT){
 		if (G::buffer_mode == BM_NOT_SPECIFIED){
