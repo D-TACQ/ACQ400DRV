@@ -34,18 +34,26 @@ set ctype [exec cat /dev/acq400.0.knobs/module_type]
 
 if { $::argc > 0 } {          
         foreach site $::argv {
-		if {$ctype == 81 && $site == 1 &&
-			[exec cat /dev/gpio/BV_FMC] != 0} {
-			puts "FMC test"
-			acq400t_test $site 31 1 31 0
-		} elseif {$ctype == 82 } {
-			puts "DULPC test"
-			acq400t_test $site 31 1 0 0
-		} else {
-			puts "ULPC test"
-			acq400t_test $site 23 1 0 0
-		}
-        }                                               
+                if {$ctype == 81 && $site == 1 &&
+                        [exec cat /dev/gpio/BV_FMC] != 0} {
+                        puts "FMC test"
+                        acq400t_test $site 31 1 31 0
+                } elseif {$ctype == 88 && $site == 1 &&
+                        [exec cat /dev/gpio/BV1/value] != 0} {
+                        puts "FMC test"
+                        acq400t_test $site 31 1 31 0
+                } elseif {$ctype == 88 && $site == 2 &&
+                        [exec cat /dev/gpio/BV2/value] != 0} {
+                        puts "FMC test"
+                        acq400t_test $site 31 1 31 0
+                } elseif {$ctype == 82 || $ctype == 88} {
+                        puts "DULPC test"
+                        acq400t_test $site 31 1 0 0
+                } else {
+                        puts "ULPC test"
+                        acq400t_test $site 23 1 0 0
+                }
+        }
 } else {                                         
         puts "usage acq400t_test site1\[ site 2...\]"
 }
