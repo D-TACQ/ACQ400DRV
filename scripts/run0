@@ -41,7 +41,7 @@ echo sitelist: $sitelist
 echo sites: $sites
 
 rm -f $ETC0/run0_ready
-acq400_teardown
+#acq400_teardown
 
 spad3="$(tr , \  <$ETC0/spad)"
 let nspad=$(spad2nchan $spad3)
