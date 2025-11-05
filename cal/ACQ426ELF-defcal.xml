@@ -7,13 +7,13 @@
       <SerialNum>E42610000</SerialNum>
     </Info>
     <Data AICHAN="32" SW="gain%d" code_max="32767" code_min="-32768">
-      <Range name="+/- 10V" sw="M10-10">
+	<Range name="+/- 10V" sw="+/-10V">
         <Nominal eoff="0" eslo="0.00030517578125" max="10" min="-10" roff="0"/>
       </Range>
-      <Range name="+/- 5V" sw="M5-5">
+      <Range name="+/- 5V" sw="+/-5V">
         <Nominal eoff="0" eslo="0.000152587" max="5" min="-5" roff="0"/>
       </Range>
-      <Range name="+/- 2V5" sw="M2.5-2.5">
+      <Range name="+/- 2V5" sw="+/-2V5">
         <Nominal eoff="0" eslo="0.000076293" max="2.5" min="-2.5" roff="0"/>
       </Range>
     </Data>
