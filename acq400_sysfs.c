@@ -2144,12 +2144,16 @@ static const struct attribute *sysfs_adc_device_attrs[] = {
 	&dev_attr_event1.attr,
 	&dev_attr_event0.attr,
 	&dev_attr_sod.attr,
+	&dev_attr_event0_count.attr,
+	&dev_attr_evt_sc_latch.attr,
+	NULL
+};
+
+static const struct attribute *sysfs_adc_device_with_nacc_attrs[] = {
 	&dev_attr_nacc.attr,
 	&dev_attr_dna.attr,
 	&dev_attr_ACC.attr,
 	&dev_attr_DEC.attr,
-	&dev_attr_event0_count.attr,
-	&dev_attr_evt_sc_latch.attr,
 	NULL
 };
 
@@ -3824,7 +3828,12 @@ int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const st
 
 	if (HAS_AI(adev)){
 		if (sysfs_create_files(&dev->kobj, sysfs_adc_device_attrs)){
-			dev_err(dev, "failed to create sysfs");
+					dev_err(dev, "failed to create sysfs_adc_device_attrs");
+		}
+		if (HAS_NACC(adev)){
+			if (sysfs_create_files(&dev->kobj, sysfs_adc_device_with_nacc_attrs)){
+					dev_err(dev, "failed to create sysfs_adc_device_with_nacc_attrs");
+			}
 		}
 	}
 	if (HAS_RGM(adev)){
