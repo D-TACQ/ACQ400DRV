@@ -1,0 +1,14 @@
+#!/bin/sh
+
+RLC=/var/www/d-tacq/rc-local-complete
+if [ -e $RLC ]; then
+	RLCS="$(cat /var/www/d-tacq/rc-local-complete)"
+	if echo $RLCS | grep -q up; then
+		echo rclc UP $RLCS
+	else
+		echo rclc NOT READY but present $RLCS
+	fi
+else
+	echo rclc NOT READY
+fi
+

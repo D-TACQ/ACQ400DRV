@@ -695,6 +695,7 @@ build_site0() {
     ln -s ${ULC}/est_buf_size.sh ${ek}/optimise_bufferlen_burst
     ln -s ${ULC}/preset? ${ek}
     ln -s ${ULC}/get_data_size ${ek}/raw_data_size
+    ln -s ${ULC}/rc_local_complete ${ek}
     echo $HAS_MGTDRAM > ${ek}/has_mgtdram
     echo "none" > ${ek}/stream_subset_mask;
     IS_TIGA=none
