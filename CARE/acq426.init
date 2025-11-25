@@ -15,12 +15,6 @@ for s in $*; do
     fi
 done
 
-# sourced by init_stream
-cat - >/etc/sysconfig/acq400_streamd.0.conf_acq426 <<EOF
-logger -t acq400_streamd.0.conf_acq426 -- /usr/local/bin/acq426_knobs --dig_if_reset=$SITES
-/usr/local/bin/acq426_knobs --dig_if_reset=$SITES
-EOF
-
 [ -e /mnt/local/sysconfig/acq400.sh ] && source /mnt/local/sysconfig/acq400.sh
 
 
