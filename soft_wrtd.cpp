@@ -62,7 +62,7 @@
 
 #include "wrtd_message.h"
 
-namespace G {
+namespace soft_wrtd_ns {
         unsigned dns = 40*M1;				// delta nsec
         bool max_tx_specified;				// TRUE if UI changed max_tx
 
@@ -81,40 +81,40 @@ const char* ui_get_cmd_name(const char* path)
 
 struct poptOption opt_table[] = {
 	{
-	  "tickns", 0, POPT_ARG_INT, &G::ns_per_tick, 0, "tick size nsec"
+	  "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec"
 	},
 	{
-	  "dns", 'd', POPT_ARG_INT, &G::dns, 0, "nsec to add to current time"
+	  "dns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time"
 	},
 	{
-	  "delta_ns", 'd', POPT_ARG_INT, &G::dns, 0, "nsec to add to current time"
+	  "delta_ns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time"
 	},
 	{
-	  "rt_prio", 'p', POPT_ARG_INT, &G::rt_prio, 0, "real time priority"
+	  "rt_prio", 'p', POPT_ARG_INT, &soft_wrtd_ns::rt_prio, 0, "real time priority"
 	},
 	{
-	  "on_next_second", 'n', POPT_ARG_INT, &G::ons, 0, "trigger next second, on the second, for comparison with PPS"
+	  "on_next_second", 'n', POPT_ARG_INT, &soft_wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS"
 	},
 	{
-	  "verbose", 'v', POPT_ARG_INT, &G::verbose, 0, "debug"
+	  "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug"
 	},
 	{
-	  "max_tx", 0, POPT_ARG_INT, &G::max_tx, 'm', "maximum transmit count"
+	  "max_tx", 0, POPT_ARG_INT, &wrtd_message_ns::max_tx, 'm', "maximum transmit count"
 	},
 	{
-          "tx_id", 0, POPT_ARG_STRING, &G::tx_id, 0, "txid: default is $(hostname)"
+          "tx_id", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_id, 0, "txid: default is $(hostname)"
 	},
 	{
-	  "at", 0, POPT_ARG_STRING, &G::tx_at, 0, "at [+UT]sss[:.]ttt\n"
+	  "at", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_at, 0, "at [+UT]sss[:.]ttt\n"
 	  "at: +: relative, U: absolute UTC T: absolute TAI\n"
 	  "at: tx at +s[:nsec] or [UT]sec-since-epoch[:nsec]\n"
 	  "at: tx at +s[.frac] or [UT]sec-since-epoch[.frac]\n"
 	},
 	{
-	  "delay01", 0, POPT_ARG_INT, &G::delay01, 0, "in double tap, delay to second trigger"
+	  "delay01", 0, POPT_ARG_INT, &soft_wrtd_ns::delay01, 0, "in double tap, delay to second trigger"
 	},
 	{
-	  "tx_mask", 0, POPT_ARG_INT, &G::tx_mask, 0, "mask for TIGA trigger tx"
+	  "tx_mask", 0, POPT_ARG_INT, &wrtd_message_ns::tx_mask, 0, "mask for TIGA trigger tx"
 	},
 	POPT_AUTOHELP
 	POPT_TABLEEND
@@ -129,13 +129,13 @@ const char* ui(int argc, const char** argv)
                         poptGetContext(argv[0], argc, argv, opt_table, 0);
         int rc;
 
-        G::ns_per_tick 	= 	Env::getenv("WRTD_TICKNS", 	50.0	);
-        G::dns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
-        G::tx_id 	= 	Env::getenv("WRTD_ID", 	"WRTD0"	);
-        G::verbose 	= 	Env::getenv("WRTD_VERBOSE", 	0	);
-        G::rt_prio	= 	Env::getenv("WRTD_RTPRIO", 	0	);
-        G::delay01	= 	Env::getenv("WRTD_DELAY01", 	1000000	);
-        G::tx_mask	= 	Env::getenv("WRTD_TX_MASK", 	0	);
+        wrtd_TS_ns::ns_per_tick 	= 	Env::getenv("WRTD_TICKNS", 	50.0	);
+        soft_wrtd_ns::dns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
+        wrtd_message_ns::tx_id 	= 	Env::getenv("WRTD_ID", 	"WRTD0"	);
+        wrtd_message_ns::verbose 	= 	Env::getenv("WRTD_VERBOSE", 	0	);
+        soft_wrtd_ns::rt_prio	= 	Env::getenv("WRTD_RTPRIO", 	0	);
+        soft_wrtd_ns::delay01	= 	Env::getenv("WRTD_DELAY01", 	1000000	);
+        wrtd_message_ns::tx_mask	= 	Env::getenv("WRTD_TX_MASK", 	0	);
 
 
         if (! ::getenv("WRTD_FULL_MESSAGE")){
@@ -149,7 +149,7 @@ const char* ui(int argc, const char** argv)
         while ((rc = poptGetNextOpt( opt_context )) >= 0 ){
                 switch(rc){
                 case 'm':
-                	G::max_tx_specified = true;
+                	soft_wrtd_ns::max_tx_specified = true;
                 	break;
                 default:
                         ;
@@ -173,14 +173,14 @@ const char* ui(int argc, const char** argv)
         const char* tx_id = poptGetArg(opt_context);
         if (tx_id){
         	if (isdigit(tx_id[0])){
-        		G::max_tx = atoi(tx_id);		// args N TXID
-        		G::max_tx_specified = true;
+        		wrtd_message_ns::max_tx = atoi(tx_id);		// args N TXID
+        		soft_wrtd_ns::max_tx_specified = true;
         		tx_id = poptGetArg(opt_context);
         		if (tx_id && !isdigit(tx_id[0])){
-        			G::tx_id = tx_id;
+        			wrtd_message_ns::tx_id = tx_id;
         		}
         	}else{
-        		G::tx_id = tx_id;			// args TXID
+        		wrtd_message_ns::tx_id = tx_id;			// args TXID
         	}
         }
         							// else use defaults
@@ -201,21 +201,21 @@ Receiver* Receiver::instance(bool chatty)
 
 void get_local_env(void)
 {
-	G::verbose = Env::getenv("WRTD_VERBOSE", 0);
+	wrtd_message_ns::verbose = Env::getenv("WRTD_VERBOSE", 0);
 }
 
 int txq() {
-	if (G::verbose){
+	if (wrtd_message_ns::verbose){
 		fprintf(stderr, "%s\n", PFN);
 	}
-	TSCaster& comms = TSCaster::factory(MultiCast::factory(G::group, G::port, MultiCast::MC_SENDER));
+	TSCaster& comms = TSCaster::factory(MultiCast::factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER));
 	comms.sendraw(TS_QUICK);
 	return 0;
 }
 
 int rx() {
        return Receiver::instance()->event_loop(
-                       TSCaster::factory(MultiCast::factory(G::group, G::port, MultiCast::MC_RECEIVER)));
+                       TSCaster::factory(MultiCast::factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_RECEIVER)));
 }
 
 #include <time.h>
@@ -228,7 +228,7 @@ unsigned get_tai()
 }
 
 int txi() {
-	TSCaster& comms = TSCaster::factory(MultiCast::factory(G::group, G::port, MultiCast::MC_SENDER));
+	TSCaster& comms = TSCaster::factory(MultiCast::factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER));
 	comms.sendto(TS(get_tai()+1, 0));
 	return 0;
 }
@@ -237,7 +237,7 @@ class SoftTxa : public Txa {
 protected:
 	TS txa_validate_rel(unsigned sec, unsigned ns)
 	{
-		return TS(get_tai()+1+sec, ns/G::ns_per_tick);
+		return TS(get_tai()+1+sec, ns/wrtd_TS_ns::ns_per_tick);
 	}
 
 	TS txa_validate_abs(unsigned sec, unsigned ns)
@@ -248,7 +248,7 @@ protected:
 			fprintf(stderr, "ERROR: specified time @%u is less than current TAI @%u\n", sec, tai_sec);
 			exit(1);
 		}
-		return TS(sec, ns/G::ns_per_tick);
+		return TS(sec, ns/wrtd_TS_ns::ns_per_tick);
 	}
 };
 
