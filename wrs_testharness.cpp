@@ -28,7 +28,7 @@
 
 typedef unsigned u32;
 
-namespace G {
+namespace wrs_testharness_ns {
 	int rx_target_count;
 	int rx_count;
 	int tx_count;
@@ -45,40 +45,40 @@ namespace G {
 };
 
 void get_status(int sig){
-	fprintf(stderr, "rx_count to %d left out of %d\n", G::rx_count, G::rx_target_count);
+	fprintf(stderr, "rx_count to %d left out of %d\n", wrs_testharness_ns::rx_count, wrs_testharness_ns::rx_target_count);
 }
 
 const char* ui(int argc, const char** argv)
 {
-	G::rx_target_count = G::rx_count = Env::getenv("RX", 1);
-	G::tx_count = Env::getenv("TX", 0);
-	G::usleep   = Env::getenv("US", 0);
-	G::rx_block = Env::getenv("RX_BLOCK", 1);
-	G::rt_prio  = Env::getenv("RTPRIO", 0);
+	wrs_testharness_ns::rx_target_count = wrs_testharness_ns::rx_count = Env::getenv("RX", 1);
+	wrs_testharness_ns::tx_count = Env::getenv("TX", 0);
+	wrs_testharness_ns::usleep   = Env::getenv("US", 0);
+	wrs_testharness_ns::rx_block = Env::getenv("RX_BLOCK", 1);
+	wrs_testharness_ns::rt_prio  = Env::getenv("RTPRIO", 0);
 
-	const char* mode = G::rx_count&&G::tx_count? "r+": G::tx_count? "w": "r";
+	const char* mode = wrs_testharness_ns::rx_count&&wrs_testharness_ns::tx_count? "r+": wrs_testharness_ns::tx_count? "w": "r";
 
-	assert(G::rx_count||G::tx_count);
+	assert(wrs_testharness_ns::rx_count||wrs_testharness_ns::tx_count);
 
 	signal(SIGINT, get_status);
 
-	G::fp = fopen(WRS_DEV, mode);
-	assert(G::fp);
-	G::fd = fileno(G::fp);
+	wrs_testharness_ns::fp = fopen(WRS_DEV, mode);
+	assert(wrs_testharness_ns::fp);
+	wrs_testharness_ns::fd = fileno(wrs_testharness_ns::fp);
 
-	if (G::rx_block == 0){
-		int flags = fcntl(G::fd, F_GETFL, 0);
-		int rc = fcntl(G::fd, F_SETFL, flags|O_NONBLOCK);
+	if (wrs_testharness_ns::rx_block == 0){
+		int flags = fcntl(wrs_testharness_ns::fd, F_GETFL, 0);
+		int rc = fcntl(wrs_testharness_ns::fd, F_SETFL, flags|O_NONBLOCK);
 		assert(rc != -1);
 	}
-	G::rx_pkt = G::read_data+1;    // first word is TS.
+	wrs_testharness_ns::rx_pkt = wrs_testharness_ns::read_data+1;    // first word is TS.
 
 	for (int ii = 0; ii < PKT_LW; ++ii){
-		G::tx_pkt[ii] = 0xaabb0000|ii;
+		wrs_testharness_ns::tx_pkt[ii] = 0xaabb0000|ii;
 	}
 
-	if (G::rt_prio){
-		goRealTime(G::rt_prio);
+	if (wrs_testharness_ns::rt_prio){
+		goRealTime(wrs_testharness_ns::rt_prio);
 	}
 	return 0;
 }
@@ -90,36 +90,36 @@ void dump_pkt(u32* pkt, const char* id){
 	}
 }
 void tx() {
-	int rc = write(G::fd, G::tx_pkt, sizeof(u32)*PKT_LW);
+	int rc = write(wrs_testharness_ns::fd, wrs_testharness_ns::tx_pkt, sizeof(u32)*PKT_LW);
 	assert(rc == sizeof(u32)*PKT_LW);
-	dump_pkt(G::tx_pkt, "TX"); printf("\n");
-	G::tx_pkt[PKT_LW-1] += 1;
-	G::tx_pkt[0] = (G::tx_pkt[0]&~0x00ff00) | ((G::tx_pkt[0]&0x0ff00)+(1<<8));
+	dump_pkt(wrs_testharness_ns::tx_pkt, "TX"); printf("\n");
+	wrs_testharness_ns::tx_pkt[PKT_LW-1] += 1;
+	wrs_testharness_ns::tx_pkt[0] = (wrs_testharness_ns::tx_pkt[0]&~0x00ff00) | ((wrs_testharness_ns::tx_pkt[0]&0x0ff00)+(1<<8));
 }
 
 void rx() {
-	int rc = read(G::fd, G::read_data, WRS_PKT_FULL_READ);
+	int rc = read(wrs_testharness_ns::fd, wrs_testharness_ns::read_data, WRS_PKT_FULL_READ);
 	assert(rc == WRS_PKT_FULL_READ);
-	dump_pkt(G::rx_pkt, "RX"); printf("TS:%08x", G::read_data[0]); printf("\n");
+	dump_pkt(wrs_testharness_ns::rx_pkt, "RX"); printf("TS:%08x", wrs_testharness_ns::read_data[0]); printf("\n");
 }
 
 
 int main(int argc, const char* argv[])
 {
 	ui(argc, argv);
-//	WRS_Trigger* trigger = WRS_Trigger::factory(G::site)l
+//	WRS_Trigger* trigger = WRS_Trigger::factory(wrs_testharness_ns::site)l
 
-	while (G::tx_count || G::rx_count){
-		if (G::tx_count){
+	while (wrs_testharness_ns::tx_count || wrs_testharness_ns::rx_count){
+		if (wrs_testharness_ns::tx_count){
 			tx();
-			--G::tx_count;
-			if (G::usleep){
-				usleep(G::usleep);
+			--wrs_testharness_ns::tx_count;
+			if (wrs_testharness_ns::usleep){
+				usleep(wrs_testharness_ns::usleep);
 			}
 		}
-		if (G::rx_count){
+		if (wrs_testharness_ns::rx_count){
 			rx();
-			--G::rx_count;
+			--wrs_testharness_ns::rx_count;
 		}
 	}
 	return 0;

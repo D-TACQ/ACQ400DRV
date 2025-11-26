@@ -184,7 +184,7 @@ void set_hwid(char* wrbase)
 	*wr_hwid  = 0x41435134;				// tell ACQ400 we are done.
 }
 
-namespace G {
+namespace wr_reset_ns {
 	int verbose;
 	int save_cal;
 	int is_wr_present;
@@ -252,10 +252,10 @@ int restore_cal(char* wrbase)
 	return -1;
 }
 struct poptOption opt_table[] = {
-	{ "save_cal", 's', POPT_ARG_INT, &G::save_cal, 's', "save calibration and quit" },
-	{ "is_wr_present", 'w', POPT_ARG_INT, &G::is_wr_present, 'w', "report if WRC present in system and quit" },
+	{ "save_cal", 's', POPT_ARG_INT, &wr_reset_ns::save_cal, 's', "save calibration and quit" },
+	{ "is_wr_present", 'w', POPT_ARG_INT, &wr_reset_ns::is_wr_present, 'w', "report if WRC present in system and quit" },
 	{
-	  "verbose", 'v', POPT_ARG_INT, &G::verbose, 0, "debug"
+	  "verbose", 'v', POPT_ARG_INT, &wr_reset_ns::verbose, 0, "debug"
 	},
 	POPT_AUTOHELP
 	POPT_TABLEEND
@@ -284,10 +284,10 @@ int main(int argc, const char** argv)
 	const char* image_file = ui(argc, argv);
 	char* wrbase = (char*)mmap_wr();
 
-	if (G::is_wr_present){
+	if (wr_reset_ns::is_wr_present){
 		return is_wr_present(wrbase);
 	}
-	if (G::save_cal){
+	if (wr_reset_ns::save_cal){
 		return save_cal(wrbase);
 	}
 	reset(wrbase, 1);
