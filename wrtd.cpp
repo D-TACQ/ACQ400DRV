@@ -121,7 +121,7 @@ namespace wrtd_ns {
 
 struct poptOption opt_table[] = {
 	{
-	  "tickns", 0, POPT_ARG_INT, &G::ns_per_tick, 0, "tick size nsec"
+	  "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec"
 	},
 	{
 	  "dns", 'd', POPT_ARG_INT, &wrtd_ns::dns, 0, "nsec to add to current time"
@@ -193,7 +193,7 @@ const char* ui(int argc, const char** argv)
                         poptGetContext(argv[0], argc, argv, opt_table, 0);
         int rc;
 
-        G::ns_per_tick 	= 	Env::getenv("WRTD_TICKNS", 	50.0	);
+        wrtd_TS_ns::ns_per_tick 	= 	Env::getenv("WRTD_TICKNS", 	50.0	);
         wrtd_ns::dns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
         wrtd_message_ns::tx_id 	= 	Env::getenv("WRTD_ID", 	"WRTD0"	);
         wrtd_message_ns::verbose 	= 	Env::getenv("WRTD_VERBOSE", 	0	);
@@ -231,11 +231,11 @@ const char* ui(int argc, const char** argv)
                         ;
                 }
         }
-        G::ticks_per_sec = NSPS / G::ns_per_tick;
-        G::delta_ticks = wrtd_ns::dns / G::ns_per_tick;
+        wrtd_TS_ns::ticks_per_sec = NSPS / wrtd_TS_ns::ns_per_tick;
+        wrtd_TS_ns::delta_ticks = wrtd_ns::dns / wrtd_TS_ns::ns_per_tick;
 
         if (wrtd_message_ns::verbose) fprintf(stderr, "ns per tick: %.3f ticks per s: %u delta_ticks %u\n",
-        		G::ns_per_tick, G::ticks_per_sec, G::delta_ticks);
+        		wrtd_TS_ns::ns_per_tick, wrtd_TS_ns::ticks_per_sec, wrtd_TS_ns::delta_ticks);
 
         const char* mode = "wrtd_rx";
 
@@ -261,7 +261,7 @@ const char* ui(int argc, const char** argv)
         	}
         }
         							// else use defaults
-        wrtd_ns::delay01 /= G::ns_per_tick;
+        wrtd_ns::delay01 /= wrtd_TS_ns::ns_per_tick;
 
 	if (wrtd_ns::rt_prio){
 		goRealTime(wrtd_ns::rt_prio);
@@ -354,7 +354,7 @@ protected:
 				_write_trg(fp_trg[1], adjust_ts(ts2));
 			}else{
 				_write_trg(fp_trg[0], TS_QUICK);
-				usleep(wrtd_ns::delay01*G::ns_per_tick/1000);
+				usleep(wrtd_ns::delay01*wrtd_TS_ns::ns_per_tick/1000);
 				_write_trg(fp_trg[1], TS_QUICK);
 			}
 		}
@@ -487,7 +487,7 @@ public:
 		}
 		TS ts;
 		for (unsigned ntx = 0; fread(&ts.raw, sizeof(unsigned), 1, fp) == 1; ++ntx){
-			TS ts_tx = wrtd_ns::ons? ts.next_second(): ts + G::delta_ticks;
+			TS ts_tx = wrtd_ns::ons? ts.next_second(): ts + wrtd_TS_ns::delta_ticks;
 			ts_tx.mask = wrtd_message_ns::tx_mask;
 			comms.sendto(ts_tx);
 			if (local_rx){
@@ -576,7 +576,7 @@ protected:
 		unsigned tai_sec = getvalue<unsigned>(DEV_TAI, "r") + 1; // round up to next second
 
 		// .. default is add one to ensure up rounding, then add another 1 to ensure we have enough slack
-		return TS(tai_sec+(WRTD_TXA_AGGRESSIVE==0)+sec, ns/G::ns_per_tick);
+		return TS(tai_sec+(WRTD_TXA_AGGRESSIVE==0)+sec, ns/wrtd_TS_ns::ns_per_tick);
 	}
 
 	TS txa_validate_abs(unsigned sec, unsigned ns)
@@ -587,7 +587,7 @@ protected:
 			fprintf(stderr, "ERROR: specified time @%u is less than current TAI @%u\n", sec, tai_sec);
 			exit(1);
 		}
-		return TS(sec, ns/G::ns_per_tick);
+		return TS(sec, ns/wrtd_TS_ns::ns_per_tick);
 	}
 };
 int Acq400Txa::WRTD_TXA_AGGRESSIVE = Env::getenv("WRTD_TXA_AGGRESSIVE", 0);

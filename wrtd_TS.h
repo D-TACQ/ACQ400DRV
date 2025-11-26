@@ -25,7 +25,7 @@
 typedef std::vector<std::string> VS;
 
 
-namespace G {
+namespace wrtd_TS_ns {
 	unsigned ticks_per_sec = 80000000;
 	int delta_ticks;
 	double ns_per_tick = 50.0;			// ticks per nsec
@@ -68,14 +68,14 @@ public:
 
 	unsigned secs() const { return tai_s? tai_s: (raw& ~TS_EN) >> SECONDS_SHL; }
 	unsigned ticks() const { return raw&TICKS_MASK; }
-	unsigned nsec() const { return ticks() * G::ns_per_tick; }
+	unsigned nsec() const { return ticks() * wrtd_TS_ns::ns_per_tick; }
 
 	TS add (unsigned dsecs, unsigned dticks = 0) {
 		unsigned ss = secs();
 		unsigned tt = ticks();
 		tt += dticks;
-		if (tt > G::ticks_per_sec){
-			tt -= G::ticks_per_sec;
+		if (tt > wrtd_TS_ns::ticks_per_sec){
+			tt -= wrtd_TS_ns::ticks_per_sec;
 			ss += 1;
 		}
 		ss += dsecs;
@@ -101,13 +101,13 @@ public:
 		unsigned _ticks = ticks();
 		unsigned _secs = secs();
 		if (ts2.ticks() > ticks()){
-			_ticks += G::ticks_per_sec;
+			_ticks += wrtd_TS_ns::ticks_per_sec;
 			_ticks -= ts2.ticks();
 			_secs = dec(_secs);
 		}else{
 			_ticks -= ts2.ticks();
 		}
-		return (_secs - ts2.secs())*NSPS + _ticks*G::ns_per_tick;
+		return (_secs - ts2.secs())*NSPS + _ticks*wrtd_TS_ns::ns_per_tick;
 	}
 
 	const char* toStr(void) {
@@ -122,7 +122,7 @@ public:
 	}
 	TS next_second() {
 		int add_sec = 1;
-		if (ticks() + G::delta_ticks >= TICKS_MASK){
+		if (ticks() + wrtd_TS_ns::delta_ticks >= TICKS_MASK){
 			add_sec += 1;
 		}
 		return TS(secs() + add_sec, 0);

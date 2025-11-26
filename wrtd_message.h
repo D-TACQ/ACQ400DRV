@@ -209,7 +209,7 @@ protected:
 					}
 					return ts;
 				}else{
-					TS ts(msg.ts_sec, msg.ts_ns/G::ns_per_tick);
+					TS ts(msg.ts_sec, msg.ts_ns/wrtd_TS_ns::ns_per_tick);
 					ts.mask = msg.event_id[IMASK()];
 					if (wrtd_message_ns::verbose){
 						fprintf(stderr, "%s TS TIME ts:%s mask:%x tai_s:%u\n",
