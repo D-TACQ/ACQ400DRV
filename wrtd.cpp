@@ -136,7 +136,7 @@ struct poptOption opt_table[] = {
 	  "on_next_second", 'n', POPT_ARG_INT, &wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS"
 	},
 	{
-	  "verbose", 'v', POPT_ARG_INT, &G::verbose, 0, "debug"
+	  "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug"
 	},
 	{
 	  "local_clkdiv", 'l', POPT_ARG_INT, &wrtd_ns::local_clkdiv, 0, "local clock divider"
@@ -145,13 +145,13 @@ struct poptOption opt_table[] = {
 	  "local_clkoffset", 'L', POPT_ARG_INT, &wrtd_ns::local_clkoffset, 0, "local clock offset"
 	},
 	{
-	  "max_tx", 0, POPT_ARG_INT, &G::max_tx, 'm', "maximum transmit count"
+	  "max_tx", 0, POPT_ARG_INT, &wrtd_message_ns::max_tx, 'm', "maximum transmit count"
 	},
 	{
-          "tx_id", 0, POPT_ARG_STRING, &G::tx_id, 0, "txid: default is $(hostname)"
+          "tx_id", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_id, 0, "txid: default is $(hostname)"
 	},
 	{
-	  "at", 0, POPT_ARG_STRING, &G::tx_at, 0, "at [+UT]sss[:.]ttt\n"
+	  "at", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_at, 0, "at [+UT]sss[:.]ttt\n"
 	  "at: +: relative, U: absolute UTC T: absolute TAI\n"
 	  "at: tx at +s[:nsec] or [UT]sec-since-epoch[:nsec]\n"
 	  "at: tx at +s[.frac] or [UT]sec-since-epoch[.frac]\n"
@@ -160,7 +160,7 @@ struct poptOption opt_table[] = {
 	  "delay01", 0, POPT_ARG_INT, &wrtd_ns::delay01, 0, "in double tap, delay to second trigger"
 	},
 	{
-	  "tx_mask", 0, POPT_ARG_INT, &G::tx_mask, 0, "mask for TIGA trigger tx"
+	  "tx_mask", 0, POPT_ARG_INT, &wrtd_message_ns::tx_mask, 0, "mask for TIGA trigger tx"
 	},
 	{
 	  "dev_ts", 0, POPT_ARG_STRING, &wrtd_ns::dev_ts, 0, "timestamp device eg may be a TIGA site.."
@@ -195,11 +195,11 @@ const char* ui(int argc, const char** argv)
 
         G::ns_per_tick 	= 	Env::getenv("WRTD_TICKNS", 	50.0	);
         wrtd_ns::dns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
-        G::tx_id 	= 	Env::getenv("WRTD_ID", 	"WRTD0"	);
-        G::verbose 	= 	Env::getenv("WRTD_VERBOSE", 	0	);
+        wrtd_message_ns::tx_id 	= 	Env::getenv("WRTD_ID", 	"WRTD0"	);
+        wrtd_message_ns::verbose 	= 	Env::getenv("WRTD_VERBOSE", 	0	);
         wrtd_ns::rt_prio	= 	Env::getenv("WRTD_RTPRIO", 	0	);
         wrtd_ns::delay01	= 	Env::getenv("WRTD_DELAY01", 	1000000	);
-        G::tx_mask	= 	Env::getenv("WRTD_TX_MASK", 	0	);
+        wrtd_message_ns::tx_mask	= 	Env::getenv("WRTD_TX_MASK", 	0	);
         wrtd_ns::dev_ts	= 	Env::getenv("WRTD_DEV_TS",    DEV_TS	);
         wrtd_ns::local_clkoffset = 	Env::getenv("WRTD_LOCAL_CLKOFFSET",	0);
         wrtd_ns::local_clkdiv = 	Env::getenv("WRTD_LOCAL_CLKDIV",    	LOCAL_CLKDIV_AUTO);
@@ -234,7 +234,7 @@ const char* ui(int argc, const char** argv)
         G::ticks_per_sec = NSPS / G::ns_per_tick;
         G::delta_ticks = wrtd_ns::dns / G::ns_per_tick;
 
-        if (G::verbose) fprintf(stderr, "ns per tick: %.3f ticks per s: %u delta_ticks %u\n",
+        if (wrtd_message_ns::verbose) fprintf(stderr, "ns per tick: %.3f ticks per s: %u delta_ticks %u\n",
         		G::ns_per_tick, G::ticks_per_sec, G::delta_ticks);
 
         const char* mode = "wrtd_rx";
@@ -250,14 +250,14 @@ const char* ui(int argc, const char** argv)
         const char* tx_id = poptGetArg(opt_context);
         if (tx_id){
         	if (isdigit(tx_id[0])){
-        		G::max_tx = atoi(tx_id);		// args N TXID
+        		wrtd_message_ns::max_tx = atoi(tx_id);		// args N TXID
         		wrtd_ns::max_tx_specified = true;
         		tx_id = poptGetArg(opt_context);
         		if (tx_id && !isdigit(tx_id[0])){
-        			G::tx_id = tx_id;
+        			wrtd_message_ns::tx_id = tx_id;
         		}
         	}else{
-        		G::tx_id = tx_id;			// args TXID
+        		wrtd_message_ns::tx_id = tx_id;			// args TXID
         	}
         }
         							// else use defaults
@@ -287,7 +287,7 @@ TS _adjust_ts(TS& ts0)
 		ticks -= wrtd_ns::local_clkoffset;
 	}
 
-	if (G::verbose > 1) fprintf(stderr, "adjust_ts: ts0 %u div %u rem %u off %u adj %u\n",
+	if (wrtd_message_ns::verbose > 1) fprintf(stderr, "adjust_ts: ts0 %u div %u rem %u off %u adj %u\n",
 			ts0.ticks(), wrtd_ns::local_clkdiv, rem, wrtd_ns::local_clkoffset, ticks);
 
 	return TS(ts0.secs(), ticks);
@@ -333,7 +333,7 @@ protected:
 		fp_cur = fopen_safe(DEV_CUR, "r");
 	}
 	virtual void onAction(TS& ts, TS& ts_adj){
-		if (G::verbose){
+		if (wrtd_message_ns::verbose){
 			fprintf(stderr, "%s ts:%s ts_adj:%s mask:%x\n", PFN, ts.toStr(), ts_adj.toStr(), ts.mask);
 		}
 		if (ts.mask != 0){
@@ -345,8 +345,8 @@ protected:
 					_write_trg(fp, ts_adj);
 				}
 			}
-		}else if (G::trg < 2){
-			_write_trg(fp_trg[G::trg], ts_adj);
+		}else if (wrtd_message_ns::trg < 2){
+			_write_trg(fp_trg[wrtd_message_ns::trg], ts_adj);
 		}else{							/* DOUBLE TAP */
 			if (ts_adj != TS::ts_quick){
 				TS ts2 = ts + wrtd_ns::delay01;
@@ -392,7 +392,7 @@ public:
 		delete [] report_fname;
 	}
 	virtual void action(TS& ts, int nrx = 0){
-		if (G::verbose > 1) fprintf(stderr, "%s() TS:%s %08x\n", PFN, ts.toStr(), ts.raw);
+		if (wrtd_message_ns::verbose > 1) fprintf(stderr, "%s() TS:%s %08x\n", PFN, ts.toStr(), ts.raw);
 		if (ts.is_abs_tai()){
 			return deferredAction(ts, nrx);
 		}
@@ -404,12 +404,12 @@ public:
 		long dt = ts.diff(ts_cur);
 
 		snprintf(report, 256, "Receiver:%d nrx:%u cur:%s ts:%s adj:%s diff:%ld %s\n",
-				G::trg, nrx, ts_cur.toStr(), ts.toStr(), ts_adj.toStr(), dt, dt<0? "ERROR": "OK");
+				 wrtd_message_ns::trg, nrx, ts_cur.toStr(), ts.toStr(), ts_adj.toStr(), dt, dt<0? "ERROR": "OK");
 
 		FILE *fp_report = fopen(report_fname, "w");
 		fprintf(fp_report, report);
 		fclose(fp_report);
-		if (G::verbose > 1){
+		if (wrtd_message_ns::verbose > 1){
 			fprintf(stderr, report);
 		}
 
@@ -431,7 +431,7 @@ protected:
 	TIGA_Receiver() : ACQ400Receiver(8)
 	{
 		wrtd_ns::local_clkdiv = wrtd_ns::local_clkoffset = 0;		// stub clock adjust
-		if (G::verbose){
+		if (wrtd_message_ns::verbose){
 			fprintf(stderr, "TIGA_Receiver()\n");
 		}
 
@@ -441,7 +441,7 @@ protected:
 			const char* fn = globbuf.gl_pathv[ii];
 			int site = fn[strlen(fn)-1]-'0';
 
-			if (G::verbose){
+			if (wrtd_message_ns::verbose){
 				fprintf(stderr, "TIGA_Receiver() fn:\"%s\" site:%d\n", fn, site);
 			}
 
@@ -482,20 +482,20 @@ public:
 		fclose(fp);
 	}
 	int event_loop(TSCaster& comms, Receiver* local_rx) {
-		if (G::max_tx == 0){
+		if (wrtd_message_ns::max_tx == 0){
 			return 0;
 		}
 		TS ts;
 		for (unsigned ntx = 0; fread(&ts.raw, sizeof(unsigned), 1, fp) == 1; ++ntx){
 			TS ts_tx = wrtd_ns::ons? ts.next_second(): ts + G::delta_ticks;
-			ts_tx.mask = G::tx_mask;
+			ts_tx.mask = wrtd_message_ns::tx_mask;
 			comms.sendto(ts_tx);
 			if (local_rx){
 				local_rx->action(ts_tx, ntx);
 			}
 			++ntx;
-			if (G::verbose > 1) fprintf(stderr, "sender:ntx:%u ts:%s ts_tx:%s\n", ntx, ts.toStr(), ts_tx.toStr());
-			if (G::max_tx != MAX_TX_INF && ntx >= G::max_tx){
+			if (wrtd_message_ns::verbose > 1) fprintf(stderr, "sender:ntx:%u ts:%s ts_tx:%s\n", ntx, ts.toStr(), ts_tx.toStr());
+			if (wrtd_message_ns::max_tx != MAX_TX_INF && ntx >= wrtd_message_ns::max_tx){
 				break;
 			}else if (sleep_us){
 				usleep(sleep_us);
@@ -507,11 +507,11 @@ public:
 
 void get_local_env(void)
 {
-	G::verbose = Env::getenv("WRTD_VERBOSE", 0);
+	wrtd_message_ns::verbose = Env::getenv("WRTD_VERBOSE", 0);
 	wrtd_ns::site = Env::getenv("SITE", 11);
 	char envname[80];
 	sprintf(envname, "/dev/shm/wr%d.sh", wrtd_ns::site);
-	get_local_env(envname, G::verbose);
+	get_local_env(envname, wrtd_message_ns::verbose);
 
 	int use_wrs = Env::getenv("WRTD_USE_WRS", 0);
 	wrtd_ns::mc_factory = use_wrs? WrsCast::factory: MultiCast::factory;
@@ -520,7 +520,7 @@ void get_local_env(void)
 int sleep_if_notenabled(const char* key)
 {
 	if (Env::getenv(key, 0) == 0){
-		if (G::verbose){
+		if (wrtd_message_ns::verbose){
 			fprintf(stderr, "%s==0, sleep(9999)\n",key);
 		}
 		sleep(9999);
@@ -532,37 +532,37 @@ int sleep_if_notenabled(const char* key)
 
 int rx() {
        return ACQ400Receiver::instance()->event_loop(
-                       TSCaster::factory(wrtd_ns::mc_factory(G::group, G::port, MultiCast::MC_RECEIVER)));
+                       TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_RECEIVER)));
 }
 
 
 
 int tx() {
 	if (!wrtd_ns::max_tx_specified){
-		G::max_tx = MAX_TX_INF;
+		wrtd_message_ns::max_tx = MAX_TX_INF;
 	}
-	if (G::verbose){
+	if (wrtd_message_ns::verbose){
 		fprintf(stderr, "%s\n", PFN);
 	}
 	Transmitter t(wrtd_ns::dev_ts);
 	Receiver* r = Env::getenv("WRTD_LOCAL_RX_ACTION", 0)? Receiver::instance(): 0;
-	return t.event_loop(TSCaster::factory(wrtd_ns::mc_factory(G::group, G::port, MultiCast::MC_SENDER)), r);
+	return t.event_loop(TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER)), r);
 }
 
 int txi() {
-	if (G::verbose){
+	if (wrtd_message_ns::verbose){
 		fprintf(stderr, "%s\n", PFN);
 	}
 	Transmitter t(DEV_CUR, 2*wrtd_ns::dns/1000);
 	Receiver* r = Env::getenv("WRTD_LOCAL_RX_ACTION", 0)? Receiver::instance(): 0;
-	return t.event_loop(TSCaster::factory(wrtd_ns::mc_factory(G::group, G::port, MultiCast::MC_SENDER)), r);
+	return t.event_loop(TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER)), r);
 }
 
 int txq() {
-	if (G::verbose){
+	if (wrtd_message_ns::verbose){
 		fprintf(stderr, "%s\n", PFN);
 	}
-	TSCaster& comms = TSCaster::factory(wrtd_nsG::mc_factory(G::group, G::port, MultiCast::MC_SENDER));
+	TSCaster& comms = TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER));
 	comms.sendraw(TS_QUICK);
 	return 0;
 }
