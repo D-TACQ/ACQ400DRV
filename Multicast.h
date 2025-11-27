@@ -20,9 +20,7 @@ public:
 
 	enum MC { MC_SENDER, MC_RECEIVER };
 	static MultiCast& factory(const char* group, int port, MC mode);
-	static void set_IP_MULTICAST_IF(const char* addr) {
-		multicast_if = addr;
-	}
+	static void set_IP_MULTICAST_IF(const char* addr); 
 };
 
 class WrsCast: public MultiCast {

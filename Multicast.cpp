@@ -68,7 +68,7 @@ public:
 		return -1;
 	}
 };
-const char* MultiCast::multicast_if;
+const char* MultiCast::multicast_if = nullptr;
 
 class MultiCastSender : public MultiCastImpl {
 
@@ -137,3 +137,6 @@ MultiCast& MultiCast::factory(const char* group, int port, enum MC mode)
 	}
 }
 
+void MultiCast::set_IP_MULTICAST_IF(const char* addr) {
+    multicast_if = addr;
+}

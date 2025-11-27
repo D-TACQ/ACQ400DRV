@@ -8,6 +8,11 @@
 #ifndef WRTD_TS_H_
 #define WRTD_TS_H_
 
+#include <vector>
+#include <string>
+#include "split2.h"
+#include <cassert>
+
 #define SECONDS_SHL	28
 #define SECONDS_MASK	0x7
 #define MIN_TAI		59				// > this value -> absolute time
@@ -26,9 +31,9 @@ typedef std::vector<std::string> VS;
 
 
 namespace wrtd_TS_ns {
-	unsigned ticks_per_sec = 80000000;
-	int delta_ticks;
-	double ns_per_tick = 50.0;			// ticks per nsec
+	inline unsigned ticks_per_sec = 80000000;
+	inline int delta_ticks = 1000000;              // delta_ns / ns_per_tick, want default delta_ns=50ms
+	inline double ns_per_tick = 50.0;               // ticks per nsec
 }
 
 struct TS {
@@ -131,6 +136,6 @@ public:
 	static TS ts_quick;
 };
 
-TS TS::ts_quick = TS_QUICK;
+inline TS TS::ts_quick = TS_QUICK;
 
 #endif /* WRTD_TS_H_ */
