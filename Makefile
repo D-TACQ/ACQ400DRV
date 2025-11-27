@@ -1,6 +1,9 @@
 #
 # Cross compiler makefile for FIFO DMA example
 #KERN_SRC=~/PROJECTS/ACQ400/linux-xlnx
+
+VPATH=wrtd_src
+
 obj-m += xilinx_devcfg.o
 obj-m += dmaengine314.o
 obj-m += pl330.o
@@ -41,6 +44,7 @@ DC := $(shell date +%y%m%d%H%M%S)
 SEQ=10
 
 CXXFLAGS += -std=c++17
+CXXFLAGS += -Iapp -I.
 # original CPPFLAGS are directly below
 CPPFLAGS += -O3 -Wall
 #CPPFLAGS += -Wall -Wextra -g
