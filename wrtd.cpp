@@ -84,6 +84,7 @@
 #include "Knob.h"
 #include "Multicast.h"
 
+#include "wrtd.h"
 #include "wrtd_TS.h"
 
 
@@ -91,90 +92,30 @@
 
 #include "wrtd_message.h"
 
-
-
-#define DEV_TS		"/dev/acq400.0.wr_ts"	// blocking device returns TIMESTAMP
-#define DEV_CUR		"/dev/acq400.0.wr_cur"	// noblock device returns current TAI in 7:ticks format
-#define DEV_TAI		"/dev/acq400.0.wr_tai"	// noblock device returns current TAI in s
-#define DEV_TRG0	"/dev/acq400.0.wr_trg0" // write trigger0 definition here
-#define DEV_TRG1	"/dev/acq400.0.wr_trg1" // write trigger1 definition here
-
-namespace wrtd_ns {
-        unsigned dns = 40*M1;				// delta nsec
-        unsigned local_clkdiv;				// Site 1 clock divider, set at start
-        unsigned local_clkoffset;			// local_clk_offset eg 2 x 50nsec for ACQ42x
-
-        bool max_tx_specified;				// TRUE if UI changed max_tx
-
-        int rt_prio = 0;
-
-        int delay01;					// tr==2? trg0 at time t, trg1 at t+delay01
-
-        const char* dev_ts = DEV_TS;
-        unsigned site;
-        int ons;					// on next second
-        MC_FACTORY* mc_factory;
-}
-
-#define REPORT_THRESHOLD (wrtd_ns::dns/4)
-
+#define LOCAL_CLKDIV_AUTO	77777777
 
 struct poptOption opt_table[] = {
-	{
-	  "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec"
-	},
-	{
-	  "dns", 'd', POPT_ARG_INT, &wrtd_ns::dns, 0, "nsec to add to current time"
-	},
-	{
-	  "delta_ns", 'd', POPT_ARG_INT, &wrtd_ns::dns, 0, "nsec to add to current time"
-	},
-	{
-	  "rt_prio", 'p', POPT_ARG_INT, &wrtd_ns::rt_prio, 0, "real time priority"
-	},
-	{
-	  "on_next_second", 'n', POPT_ARG_INT, &wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS"
-	},
-	{
-	  "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug"
-	},
-	{
-	  "local_clkdiv", 'l', POPT_ARG_INT, &wrtd_ns::local_clkdiv, 0, "local clock divider"
-	},
-	{
-	  "local_clkoffset", 'L', POPT_ARG_INT, &wrtd_ns::local_clkoffset, 0, "local clock offset"
-	},
-	{
-	  "max_tx", 0, POPT_ARG_INT, &wrtd_message_ns::max_tx, 'm', "maximum transmit count"
-	},
-	{
-          "tx_id", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_id, 0, "txid: default is $(hostname)"
-	},
-	{
-	  "at", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_at, 0, "at [+UT]sss[:.]ttt\n"
+	{ "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec" },
+	{ "dns", 'd', POPT_ARG_INT, &wrtd_ns::dns, 0, "nsec to add to current time" },
+	{ "delta_ns", 'd', POPT_ARG_INT, &wrtd_ns::dns, 0, "nsec to add to current time" },
+	{ "rt_prio", 'p', POPT_ARG_INT, &wrtd_ns::rt_prio, 0, "real time priority" },
+	{ "on_next_second", 'n', POPT_ARG_INT, &wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS" },
+	{ "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug" },
+	{ "local_clkdiv", 'l', POPT_ARG_INT, &wrtd_ns::local_clkdiv, 0, "local clock divider" },
+	{ "local_clkoffset", 'L', POPT_ARG_INT, &wrtd_ns::local_clkoffset, 0, "local clock offset" },
+	{ "max_tx", 0, POPT_ARG_INT, &wrtd_message_ns::max_tx, 'm', "maximum transmit count" },
+	{ "tx_id", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_id, 0, "txid: default is $(hostname)" },
+	{ "at", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_at, 0, "at [+UT]sss[:.]ttt\n"
 	  "at: +: relative, U: absolute UTC T: absolute TAI\n"
 	  "at: tx at +s[:nsec] or [UT]sec-since-epoch[:nsec]\n"
 	  "at: tx at +s[.frac] or [UT]sec-since-epoch[.frac]\n"
 	},
-	{
-	  "delay01", 0, POPT_ARG_INT, &wrtd_ns::delay01, 0, "in double tap, delay to second trigger"
-	},
-	{
-	  "tx_mask", 0, POPT_ARG_INT, &wrtd_message_ns::tx_mask, 0, "mask for TIGA trigger tx"
-	},
-	{
-	  "dev_ts", 0, POPT_ARG_STRING, &wrtd_ns::dev_ts, 0, "timestamp device eg may be a TIGA site.."
-	},
+	{ "delay01", 0, POPT_ARG_INT, &wrtd_ns::delay01, 0, "in double tap, delay to second trigger" },
+	{ "tx_mask", 0, POPT_ARG_INT, &wrtd_message_ns::tx_mask, 0, "mask for TIGA trigger tx" },
+	{ "dev_ts", 0, POPT_ARG_STRING, &wrtd_ns::dev_ts, 0, "timestamp device eg may be a TIGA site.." },
 	POPT_AUTOHELP
 	POPT_TABLEEND
 };
-
-
-bool is_tiga()
-{
-	Knob k(0, "wr_tai_trg_s1");
-	return k.exists();
-}
 
 const char* ui_get_cmd_name(const char* path)
 {
@@ -183,7 +124,6 @@ const char* ui_get_cmd_name(const char* path)
 	return basename(cmd_name);
 }
 
-#define LOCAL_CLKDIV_AUTO	77777777
 
 const char* ui(int argc, const char** argv)
 {
@@ -269,192 +209,6 @@ const char* ui(int argc, const char** argv)
         return mode;
 }
 
-
-
-
-
-
-TS _adjust_ts(TS& ts0)
-{
-	int rem = ts0.ticks() % wrtd_ns::local_clkdiv;
-	unsigned ticks = ts0.ticks();
-
-
-	if (rem != 0){
-		ticks += wrtd_ns::local_clkdiv - rem;
-	}
-	if (ticks > wrtd_ns::local_clkoffset){
-		ticks -= wrtd_ns::local_clkoffset;
-	}
-
-	if (wrtd_message_ns::verbose > 1) fprintf(stderr, "adjust_ts: ts0 %u div %u rem %u off %u adj %u\n",
-			ts0.ticks(), wrtd_ns::local_clkdiv, rem, wrtd_ns::local_clkoffset, ticks);
-
-	return TS(ts0.secs(), ticks);
-}
-TS adjust_ts(TS& ts0)
-{
-	if (ts0 != TS::ts_quick && (wrtd_ns::local_clkdiv > 1 || wrtd_ns::local_clkoffset != 0)){
-		return _adjust_ts(ts0);
-	}else{
-		return ts0;
-	}
-}
-
-void _write_trg(FILE* fp, TS ts)
-{
-	int rc = fwrite(&ts.raw, sizeof(unsigned), 1, fp);
-	if (rc < 1){
-		perror("fwrite");
-	}
-	fflush(fp);
-}
-
-
-
-class ACQ400Receiver: public Receiver {
-
-protected:
-	const int ntriggers;
-	const long dms;
-
-	FILE **fp_trg;
-	FILE *fp_cur;
-
-	char* report_fname;
-	char* report;
-
-	ACQ400Receiver(int _ntriggers = 2) :  ntriggers(_ntriggers), dms(wrtd_ns::dns/M1), report_fname(new char[80]), report(new char[256]) {
-		sprintf(report_fname, "/etc/acq400/%d/WRTD_REPORT", wrtd_ns::site);
-		fp_trg = new FILE* [ntriggers];
-		memset(fp_trg, 0, ntriggers*sizeof(FILE*));
-		fp_trg[0] = fopen_safe(DEV_TRG0, "w");
-		fp_trg[1] = fopen_safe(DEV_TRG1, "w");
-		fp_cur = fopen_safe(DEV_CUR, "r");
-	}
-	virtual void onAction(TS& ts, TS& ts_adj){
-		if (wrtd_message_ns::verbose){
-			fprintf(stderr, "%s ts:%s ts_adj:%s mask:%x\n", PFN, ts.toStr(), ts_adj.toStr(), ts.mask);
-		}
-		if (ts.mask != 0){
-			unsigned char mask = ts.mask;
-			FILE *fp;
-
-			for (int ii = 0; (ii < ntriggers) && mask; mask >>= 1, ++ii){
-				if ((mask&1) && (fp = fp_trg[ii])){
-					_write_trg(fp, ts_adj);
-				}
-			}
-		}else if (wrtd_message_ns::trg < 2){
-			_write_trg(fp_trg[wrtd_message_ns::trg], ts_adj);
-		}else{							/* DOUBLE TAP */
-			if (ts_adj != TS::ts_quick){
-				TS ts2 = ts + wrtd_ns::delay01;
-				_write_trg(fp_trg[0], ts_adj);
-				_write_trg(fp_trg[1], adjust_ts(ts2));
-			}else{
-				_write_trg(fp_trg[0], TS_QUICK);
-				usleep(wrtd_ns::delay01*wrtd_TS_ns::ns_per_tick/1000);
-				_write_trg(fp_trg[1], TS_QUICK);
-			}
-		}
-
-	}
-
-	void deferredAction(TS& ts, int nrx = 0)
-	{
-		if (fork() == 0){
-			/* read wr_wait, tick up to within 1s, call action() */
-			File tai_file(DEV_TAI);
-			unsigned tai_sec;
-
-			while (true){
-				tai_sec = getvalue<unsigned>(tai_file);
-				if (ts.secs() > tai_sec && ts.secs() - tai_sec < 7){
-					ts.strip();
-					action(ts, nrx);
-					exit(0);
-				}
-				sleep(1);
-			}
-		}else{
-			int status;
-			/* reap any (previous) child */
-			waitpid(-1, &status, WNOHANG);
-		}
-	}
-public:
-	virtual ~ACQ400Receiver() {
-		fclose(fp_trg[0]);
-		fclose(fp_trg[1]);
-		fclose(fp_cur);
-		delete [] report;
-		delete [] report_fname;
-	}
-	virtual void action(TS& ts, int nrx = 0){
-		if (wrtd_message_ns::verbose > 1) fprintf(stderr, "%s() TS:%s %08x\n", PFN, ts.toStr(), ts.raw);
-		if (ts.is_abs_tai()){
-			return deferredAction(ts, nrx);
-		}
-		TS ts_adj = adjust_ts(ts);
-		onAction(ts, ts_adj);
-		TS ts_cur;
-		fread(&ts_cur.raw, sizeof(unsigned), 1, fp_cur);
-
-		long dt = ts.diff(ts_cur);
-
-		snprintf(report, 256, "Receiver:%d nrx:%u cur:%s ts:%s adj:%s diff:%ld %s\n",
-				 wrtd_message_ns::trg, nrx, ts_cur.toStr(), ts.toStr(), ts_adj.toStr(), dt, dt<0? "ERROR": "OK");
-
-		FILE *fp_report = fopen(report_fname, "w");
-		fprintf(fp_report, report);
-		fclose(fp_report);
-		if (wrtd_message_ns::verbose > 1){
-			fprintf(stderr, report);
-		}
-
-
-		if (dt < 0){
-			fprintf(stderr, "wrtd rx ERROR missed ts by %ld msec\n", dt/M1);
-		}else if (dt < (long)REPORT_THRESHOLD){
-			fprintf(stderr, "wrtd rx WARNING threshold %ld msec under limit %ld\n", dt/M1, dms);
-		}
-	}
-
-	friend class Receiver;
-};
-
-
-class TIGA_Receiver: public ACQ400Receiver {
-
-protected:
-	TIGA_Receiver() : ACQ400Receiver(8)
-	{
-		wrtd_ns::local_clkdiv = wrtd_ns::local_clkoffset = 0;		// stub clock adjust
-		if (wrtd_message_ns::verbose){
-			fprintf(stderr, "TIGA_Receiver()\n");
-		}
-
-		glob_t globbuf;
-		glob("/dev/acq400.0.wr_tiga_tt_s?", 0, NULL, &globbuf);
-		for (unsigned ii = 0; ii < globbuf.gl_pathc; ++ii){
-			const char* fn = globbuf.gl_pathv[ii];
-			int site = fn[strlen(fn)-1]-'0';
-
-			if (wrtd_message_ns::verbose){
-				fprintf(stderr, "TIGA_Receiver() fn:\"%s\" site:%d\n", fn, site);
-			}
-
-			if (site >= 1 && site <= 6){
-				fp_trg[site+1] = fopen_safe(fn, "w");		/* site1 => [2] */
-			}
-		}
-		globfree(&globbuf);
-	}
-
-	friend class Receiver;
-};
-
 Receiver* Receiver::instance(bool chatty)
 {
 	static Receiver* _instance;
@@ -463,79 +217,19 @@ Receiver* Receiver::instance(bool chatty)
 		if (Env::getenv("WRTD_TIGA", 0)){
 			_instance = new TIGA_Receiver;
 		}else{
-			_instance = new ACQ400Receiver;
+
+                    _instance = new ACQ400Receiver;
 		}
 		chatty = Env::getenv("WRTD_RX_CHATTY", 0);
 		_instance->chatty = chatty;
 	}
 	return _instance;
 }
-class Transmitter {
-	FILE* fp;
-	const int sleep_us;
-public:
-	Transmitter(const char* dev, int _sleep_us = 0) :
-		fp(::fopen_safe(dev)), sleep_us(_sleep_us)
-	{
-	}
-	virtual ~Transmitter(){
-		fclose(fp);
-	}
-	int event_loop(TSCaster& comms, Receiver* local_rx) {
-		if (wrtd_message_ns::max_tx == 0){
-			return 0;
-		}
-		TS ts;
-		for (unsigned ntx = 0; fread(&ts.raw, sizeof(unsigned), 1, fp) == 1; ++ntx){
-			TS ts_tx = wrtd_ns::ons? ts.next_second(): ts + wrtd_TS_ns::delta_ticks;
-			ts_tx.mask = wrtd_message_ns::tx_mask;
-			comms.sendto(ts_tx);
-			if (local_rx){
-				local_rx->action(ts_tx, ntx);
-			}
-			++ntx;
-			if (wrtd_message_ns::verbose > 1) fprintf(stderr, "sender:ntx:%u ts:%s ts_tx:%s\n", ntx, ts.toStr(), ts_tx.toStr());
-			if (wrtd_message_ns::max_tx != MAX_TX_INF && ntx >= wrtd_message_ns::max_tx){
-				break;
-			}else if (sleep_us){
-				usleep(sleep_us);
-			}
-		}
-		return 0;
-	}
-};
-
-void get_local_env(void)
-{
-	wrtd_message_ns::verbose = Env::getenv("WRTD_VERBOSE", 0);
-	wrtd_ns::site = Env::getenv("SITE", 11);
-	char envname[80];
-	sprintf(envname, "/dev/shm/wr%d.sh", wrtd_ns::site);
-	get_local_env(envname, wrtd_message_ns::verbose);
-
-	int use_wrs = Env::getenv("WRTD_USE_WRS", 0);
-	wrtd_ns::mc_factory = use_wrs? WrsCast::factory: MultiCast::factory;
-}
-
-int sleep_if_notenabled(const char* key)
-{
-	if (Env::getenv(key, 0) == 0){
-		if (wrtd_message_ns::verbose){
-			fprintf(stderr, "%s==0, sleep(9999)\n",key);
-		}
-		sleep(9999);
-		return 1;
-	}else{
-		return 0;
-	}
-}
 
 int rx() {
        return ACQ400Receiver::instance()->event_loop(
                        TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_RECEIVER)));
 }
-
-
 
 int tx() {
 	if (!wrtd_ns::max_tx_specified){
@@ -567,33 +261,7 @@ int txq() {
 	return 0;
 }
 
-
-class Acq400Txa : public Txa {
-	static int WRTD_TXA_AGGRESSIVE;
-protected:
-	TS txa_validate_rel(unsigned sec, unsigned ns)
-	{
-		unsigned tai_sec = getvalue<unsigned>(DEV_TAI, "r") + 1; // round up to next second
-
-		// .. default is add one to ensure up rounding, then add another 1 to ensure we have enough slack
-		return TS(tai_sec+(WRTD_TXA_AGGRESSIVE==0)+sec, ns/wrtd_TS_ns::ns_per_tick);
-	}
-
-	TS txa_validate_abs(unsigned sec, unsigned ns)
-	{
-		unsigned tai_sec = getvalue<unsigned>(DEV_TAI, "r");
-
-		if (sec < tai_sec){
-			fprintf(stderr, "ERROR: specified time @%u is less than current TAI @%u\n", sec, tai_sec);
-			exit(1);
-		}
-		return TS(sec, ns/wrtd_TS_ns::ns_per_tick);
-	}
-};
-int Acq400Txa::WRTD_TXA_AGGRESSIVE = Env::getenv("WRTD_TXA_AGGRESSIVE", 0);
-
-Txa& Txa::factory()
-{
+Txa& Txa::factory() {
 	return *new Acq400Txa;
 }
 

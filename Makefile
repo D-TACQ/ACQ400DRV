@@ -331,7 +331,7 @@ bigmac.x86: bigmac.o
 mgtdram_descgen: 	mgtdram_descgen.o
 	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
 
-wrtd: 	wrtd.o Multicast.o WrsCast.o knobs.o WrsTriggerDrv.o wrtd_message.o
+wrtd: 	wrtd.o Multicast.o WrsCast.o knobs.o WrsTriggerDrv.o wrtd_message.o wrtd_lib.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt -lacq -lrt
 	
 wrs_testharness: wrs_testharness.o
@@ -346,14 +346,14 @@ wrs_trigger: 	wrs_trigger.o knobs.o WrsTriggerDrv.o
 spad_update:	spad_update.o knobs.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt -lacq -lrt	
 	
-soft_wrtd: 	soft_wrtd.o Multicast.o  knobs.o wrtd_message.o
+soft_wrtd: 	soft_wrtd.o Multicast.o  knobs.o wrtd_message.o wrtd_lib.o WrsCast.o WrsTriggerDrv.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt -lacq -lrt
 	
-soft_wrtd_x86: 	soft_wrtd.cpp Multicast.cpp  knobs.cpp wrtd_message.o -lrt
+soft_wrtd_x86: 	soft_wrtd.cpp Multicast.cpp  knobs.cpp wrtd_message.o WrsCast.o WrsTriggerDrv.o -lrt
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ -lpopt
 	
 soft_wrtd_x86_clean: 
-	rm -f soft_wrtd_x86 soft_wrtd.o Multicast.o  knobs.o wrtd_message.o
+	rm -f soft_wrtd_x86 soft_wrtd.o Multicast.o  knobs.o wrtd_message.o WrsCast.o WrsTriggerDrv.o
 		
 multicast: 	multicast.o Multicast.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt

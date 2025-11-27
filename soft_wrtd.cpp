@@ -45,6 +45,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <time.h>
 #include "split2.h"
 
 #include "popt.h"
@@ -61,6 +62,7 @@
 #include "acq-util.h"
 
 #include "wrtd_message.h"
+#include "wrtd.h"
 
 namespace soft_wrtd_ns {
         unsigned dns = 40*M1;				// delta nsec
@@ -72,57 +74,33 @@ namespace soft_wrtd_ns {
         int ons;					// on next second
 }
 
-const char* ui_get_cmd_name(const char* path)
-{
+const char* ui_get_cmd_name(const char* path) {
 	char* cmd_name = new char[strlen(path)+1];
 	strcpy(cmd_name, path);
 	return basename(cmd_name);
 }
 
 struct poptOption opt_table[] = {
-	{
-	  "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec"
-	},
-	{
-	  "dns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time"
-	},
-	{
-	  "delta_ns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time"
-	},
-	{
-	  "rt_prio", 'p', POPT_ARG_INT, &soft_wrtd_ns::rt_prio, 0, "real time priority"
-	},
-	{
-	  "on_next_second", 'n', POPT_ARG_INT, &soft_wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS"
-	},
-	{
-	  "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug"
-	},
-	{
-	  "max_tx", 0, POPT_ARG_INT, &wrtd_message_ns::max_tx, 'm', "maximum transmit count"
-	},
-	{
-          "tx_id", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_id, 0, "txid: default is $(hostname)"
-	},
-	{
-	  "at", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_at, 0, "at [+UT]sss[:.]ttt\n"
+	{ "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec" },
+	{ "dns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time" },
+	{ "delta_ns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time" },
+	{ "rt_prio", 'p', POPT_ARG_INT, &soft_wrtd_ns::rt_prio, 0, "real time priority" },
+	{ "on_next_second", 'n', POPT_ARG_INT, &soft_wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS" },
+	{ "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug" },
+	{ "max_tx", 0, POPT_ARG_INT, &wrtd_message_ns::max_tx, 'm', "maximum transmit count" },
+	{ "tx_id", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_id, 0, "txid: default is $(hostname)" },
+	{ "at", 0, POPT_ARG_STRING, &wrtd_message_ns::tx_at, 0, "at [+UT]sss[:.]ttt\n"
 	  "at: +: relative, U: absolute UTC T: absolute TAI\n"
 	  "at: tx at +s[:nsec] or [UT]sec-since-epoch[:nsec]\n"
 	  "at: tx at +s[.frac] or [UT]sec-since-epoch[.frac]\n"
 	},
-	{
-	  "delay01", 0, POPT_ARG_INT, &soft_wrtd_ns::delay01, 0, "in double tap, delay to second trigger"
-	},
-	{
-	  "tx_mask", 0, POPT_ARG_INT, &wrtd_message_ns::tx_mask, 0, "mask for TIGA trigger tx"
-	},
+	{ "delay01", 0, POPT_ARG_INT, &soft_wrtd_ns::delay01, 0, "in double tap, delay to second trigger" },
+	{ "tx_mask", 0, POPT_ARG_INT, &wrtd_message_ns::tx_mask, 0, "mask for TIGA trigger tx" },
 	POPT_AUTOHELP
 	POPT_TABLEEND
 };
 
-
-const char* ui(int argc, const char** argv)
-{
+const char* ui(int argc, const char** argv) {
 	const char* cmd_name = ui_get_cmd_name(argv[0]);
 
         poptContext opt_context =
@@ -187,9 +165,7 @@ const char* ui(int argc, const char** argv)
         return mode;
 }
 
-
-Receiver* Receiver::instance(bool chatty)
-{
+Receiver* Receiver::instance(bool chatty) {
 	static Receiver* _instance;
 
 	if (!_instance){
@@ -197,11 +173,6 @@ Receiver* Receiver::instance(bool chatty)
 		_instance->chatty = true;
 	}
 	return _instance;
-}
-
-void get_local_env(void)
-{
-	wrtd_message_ns::verbose = Env::getenv("WRTD_VERBOSE", 0);
 }
 
 int txq() {
@@ -218,11 +189,7 @@ int rx() {
                        TSCaster::factory(MultiCast::factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_RECEIVER)));
 }
 
-#include <time.h>
-
-
-unsigned get_tai()
-{
+unsigned get_tai() {
 	time_t utc_sec = time(0);
 	return utc_sec + 37;
 }
@@ -257,7 +224,6 @@ Txa& Txa::factory()
 	return *new SoftTxa;
 }
 
-
 int main(int argc, const char* argv[])
 {
 	get_local_env();
@@ -274,6 +240,3 @@ int main(int argc, const char* argv[])
 		return rx();
 	}
 }
-
-
-
