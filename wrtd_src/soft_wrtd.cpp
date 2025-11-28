@@ -33,43 +33,20 @@
  * A top level controller can control and monitor a hard WR WRTD system
  * As a "soft controller", this can be any PC on the same subnet.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <glob.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
 #include <libgen.h>
 
-#include <assert.h>
-
-#include <sys/types.h>
-#include <sys/wait.h>
-
-#include <time.h>
-#include "split2.h"
-
 #include "popt.h"
-
-#include "local.h"
 #include "Env.h"
-#include "File.h"
-#include "Knob.h"
-#include "Multicast.h"
-
-#include "wrtd_TS.h"
-
-
-#include "acq-util.h"
-
-#include "wrtd_message.h"
 #include "wrtd.h"
 
 namespace soft_wrtd_ns {
-        unsigned dns = 40*M1;				// delta nsec
+        unsigned delta_ns = 40*wrtd_TS_defaults::M1;				// delta nsec
         bool max_tx_specified;				// TRUE if UI changed max_tx
-
         int rt_prio = 0;
-
         int delay01;					// tr==2? trg0 at time t, trg1 at t+delay01
         int ons;					// on next second
 }
@@ -82,8 +59,8 @@ const char* ui_get_cmd_name(const char* path) {
 
 struct poptOption opt_table[] = {
 	{ "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec" },
-	{ "dns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time" },
-	{ "delta_ns", 'd', POPT_ARG_INT, &soft_wrtd_ns::dns, 0, "nsec to add to current time" },
+	{ "dns", 'd', POPT_ARG_INT, &soft_wrtd_ns::delta_ns, 0, "nsec to add to current time" },
+	{ "delta_ns", 'd', POPT_ARG_INT, &soft_wrtd_ns::delta_ns, 0, "nsec to add to current time" },
 	{ "rt_prio", 'p', POPT_ARG_INT, &soft_wrtd_ns::rt_prio, 0, "real time priority" },
 	{ "on_next_second", 'n', POPT_ARG_INT, &soft_wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS" },
 	{ "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug" },
@@ -108,7 +85,7 @@ const char* ui(int argc, const char** argv) {
         int rc;
 
         wrtd_TS_ns::ns_per_tick 	= 	Env::getenv("WRTD_TICKNS", 	50.0	);
-        soft_wrtd_ns::dns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
+        soft_wrtd_ns::delta_ns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
         wrtd_message_ns::tx_id 	= 	Env::getenv("WRTD_ID", 	"WRTD0"	);
         wrtd_message_ns::verbose 	= 	Env::getenv("WRTD_VERBOSE", 	0	);
         soft_wrtd_ns::rt_prio	= 	Env::getenv("WRTD_RTPRIO", 	0	);
@@ -177,7 +154,7 @@ Receiver* Receiver::instance(bool chatty) {
 
 int txq() {
 	if (wrtd_message_ns::verbose){
-		fprintf(stderr, "%s\n", PFN);
+		fprintf(stderr, "%s\n", __PRETTY_FUNCTION__);
 	}
 	TSCaster& comms = TSCaster::factory(MultiCast::factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER));
 	comms.sendraw(TS_QUICK);

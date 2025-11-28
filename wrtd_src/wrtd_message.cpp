@@ -4,22 +4,18 @@
  *  Created on: 27 Nov 2025
  *      Author: cph
  */
-
-
-#include <math.h>
 #include "wrtd_message.h"
-#include <stdint.h>
-#include "wrtd-common.h"
+
 #include <unistd.h>
 #include <cstdio>
 #include <cassert>
 #include <cstring>
+#include <cmath>
+#include <string>
 #include <sys/mman.h>
 #include <fcntl.h>     // For O_CREAT, O_RDWR
 #include <sys/stat.h>  // For S_IRUSR, SIWUSR
-#include <string>
 #include "split2.h"
-#include "wrtd_TS.h"
 #include "Env.h"
 
 namespace wrtd_message_ns {
@@ -222,11 +218,9 @@ const int WrtdCaster::IMASK(){
 
 Receiver::Receiver(): chatty(false) {}
 
-Receiver::~Receiver() {}
-
 void Receiver::onAction(TS& ts, TS& ts_adj) {}
 
-void Receiver::action(TS& ts, int nrx = 0) {
+void Receiver::action(TS& ts, int nrx) {
         fprintf(stderr, "%s ts:%s mask:%x\n", __PRETTY_FUNCTION__, ts.toStr(), ts.mask);
 }
 
@@ -292,10 +286,6 @@ TS Txa::txa_validate() {
         // not reached, but keeping compiler happy..
         return TS();
 }
-
-Txa::Txa() {}
-
-Txa::~Txa() {}
 
 int Txa::operator() () {
         if (wrtd_message_ns::verbose){

@@ -1,4 +1,4 @@
-/* wrtd_lib.cpp : White Rabbit Time Distribution                  	 	     */
+/* wrtd_lib.cpp : White Rabbit Time Distribution Helper Library 	     */
 /* ------------------------------------------------------------------------- */
 /*   Copyright (C) 2019 pgm, D-TACQ Solutions Ltd                            *
  *                      <peter dot milne at D hyphen TACQ dot com>           *
@@ -24,52 +24,23 @@
  *  Created on: 19 Sep 2019
  *      Author: pgm
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include "wrtd.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <glob.h>
-#include <libgen.h>
-
-#include <assert.h>
-
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include "split2.h"
-
-#include "popt.h"
-
-#include "local.h"
 #include "Env.h"
 #include "File.h"
 #include "Knob.h"
-#include "Multicast.h"
 
-#include "wrtd.h"
-#include "wrtd_TS.h"
+using namespace wrtd_defaults;
 
-#include "acq-util.h"
-
-#include "wrtd_message.h"
-
-
-namespace wrtd_ns {
-        unsigned dns = 40*M1;				// delta nsec
-        unsigned local_clkdiv;				// Site 1 clock divider, set at start
-        unsigned local_clkoffset;			// local_clk_offset eg 2 x 50nsec for ACQ42x
-
-        bool max_tx_specified;				// TRUE if UI changed max_tx
-
-        int rt_prio = 0;
-
-        int delay01;					// tr==2? trg0 at time t, trg1 at t+delay01
-
-        const char* dev_ts = DEV_TS;
-        unsigned site;
-        int ons;					// on next second
-        MC_FACTORY* mc_factory;
-}
+using namespace wrtd_ns;
 
 
 bool is_tiga()
@@ -114,7 +85,7 @@ void _write_trg(FILE* fp, TS ts)
 	fflush(fp);
 }
 
-ACQ400Receiver::ACQ400Receiver(int _ntriggers) :  ntriggers(_ntriggers), dms(wrtd_ns::dns/M1), report_fname(new char[80]), report(new char[256]) {
+ACQ400Receiver::ACQ400Receiver(int _ntriggers) :  ntriggers(_ntriggers), dms(wrtd_ns::delta_ns/M1), report_fname(new char[80]), report(new char[256]) {
         sprintf(report_fname, "/etc/acq400/%d/WRTD_REPORT", wrtd_ns::site);
         fp_trg = new FILE* [ntriggers];
         memset(fp_trg, 0, ntriggers*sizeof(FILE*));

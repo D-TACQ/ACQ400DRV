@@ -8,33 +8,34 @@
 #ifndef WRTD_TS_H_
 #define WRTD_TS_H_
 
+#include <cassert>
 #include <vector>
 #include <string>
 #include "split2.h"
-#include <cassert>
 
-#define SECONDS_SHL	28
-#define SECONDS_MASK	0x7
-#define MIN_TAI		59				// > this value -> absolute time
-#define TICKS_MASK	0x0fffffff
-#define TS_EN		(1<<31)
+namespace wrtd_TS_defaults {
+    constexpr int M1 = 1000000;
+    constexpr int SECONDS_SHL =	28;
+    constexpr int SECONDS_MASK = 0x7;
+    constexpr int MIN_TAI = 59;			// > this value -> absolute time
+    constexpr int TICKS_MASK = 0x0fffffff;
+    constexpr int TS_EN = 1<<31;
+    constexpr int NSPS = 1000 * M1;		// nanoseconds per second
+}
 
 #define TS_QUICK	0xffffffffU			// trigger right away, no timing ..
 #define TS_QUICK_TICKS	0x0fffffffU			// trigger right away, no timing ..
-
-#define M1 1000000
-#define NSPS	(1000*M1)		// nanoseconds per second
-
 #define MAX_TX_INF	0xFFFFFFFF
 
 typedef std::vector<std::string> VS;
-
 
 namespace wrtd_TS_ns {
 	inline unsigned ticks_per_sec = 80000000;
 	inline int delta_ticks = 1000000;              // delta_ns / ns_per_tick, want default delta_ns=50ms
 	inline double ns_per_tick = 50.0;               // ticks per nsec
 }
+
+using namespace wrtd_TS_defaults;
 
 struct TS {
 
@@ -112,7 +113,7 @@ public:
 		}else{
 			_ticks -= ts2.ticks();
 		}
-		return (_secs - ts2.secs())*NSPS + _ticks*wrtd_TS_ns::ns_per_tick;
+		return (_secs - ts2.secs())*wrtd_TS_defaults::NSPS + _ticks*wrtd_TS_ns::ns_per_tick;
 	}
 
 	const char* toStr(void) {

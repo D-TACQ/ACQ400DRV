@@ -59,45 +59,25 @@
  *   WRTD_RX_MATCHES=m1[,m2,m3...]   # receiver matches on multiple strings, not just default ["acq2106"[7]], operates WRTT[0]
  *   WRTD_RX_MATCHES1=mx[my..]       # match strings operate WRTT1. WRTT0 has priority, strings MUST be unique.
  */
+#include "wrtd.h"
 
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <glob.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
 #include <libgen.h>
 
-#include <assert.h>
-
-#include <sys/types.h>
-#include <sys/wait.h>
-
-#include "split2.h"
-
-#include "popt.h"
-
-#include "local.h"
-#include "Env.h"
-#include "File.h"
-#include "Knob.h"
-#include "Multicast.h"
-
-#include "wrtd.h"
-#include "wrtd_TS.h"
-
-
 #include "acq-util.h"
+#include "popt.h"
+#include "Env.h"
+#include "Knob.h"
 
-#include "wrtd_message.h"
-
-#define LOCAL_CLKDIV_AUTO	77777777
+using namespace wrtd_defaults;
 
 struct poptOption opt_table[] = {
 	{ "tickns", 0, POPT_ARG_INT, &wrtd_TS_ns::ns_per_tick, 0, "tick size nsec" },
-	{ "dns", 'd', POPT_ARG_INT, &wrtd_ns::dns, 0, "nsec to add to current time" },
-	{ "delta_ns", 'd', POPT_ARG_INT, &wrtd_ns::dns, 0, "nsec to add to current time" },
+	{ "dns", 'd', POPT_ARG_INT, &wrtd_ns::delta_ns, 0, "nsec to add to current time" },
+	{ "delta_ns", 'd', POPT_ARG_INT, &wrtd_ns::delta_ns, 0, "nsec to add to current time" },
 	{ "rt_prio", 'p', POPT_ARG_INT, &wrtd_ns::rt_prio, 0, "real time priority" },
 	{ "on_next_second", 'n', POPT_ARG_INT, &wrtd_ns::ons, 0, "trigger next second, on the second, for comparison with PPS" },
 	{ "verbose", 'v', POPT_ARG_INT, &wrtd_message_ns::verbose, 0, "debug" },
@@ -134,7 +114,7 @@ const char* ui(int argc, const char** argv)
         int rc;
 
         wrtd_TS_ns::ns_per_tick 	= 	Env::getenv("WRTD_TICKNS", 	50.0	);
-        wrtd_ns::dns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
+        wrtd_ns::delta_ns 		= 	Env::getenv("WRTD_DELTA_NS", 	50000000);
         wrtd_message_ns::tx_id 	= 	Env::getenv("WRTD_ID", 	"WRTD0"	);
         wrtd_message_ns::verbose 	= 	Env::getenv("WRTD_VERBOSE", 	0	);
         wrtd_ns::rt_prio	= 	Env::getenv("WRTD_RTPRIO", 	0	);
@@ -171,8 +151,8 @@ const char* ui(int argc, const char** argv)
                         ;
                 }
         }
-        wrtd_TS_ns::ticks_per_sec = NSPS / wrtd_TS_ns::ns_per_tick;
-        wrtd_TS_ns::delta_ticks = wrtd_ns::dns / wrtd_TS_ns::ns_per_tick;
+        wrtd_TS_ns::ticks_per_sec = wrtd_TS_defaults::NSPS / wrtd_TS_ns::ns_per_tick;
+        wrtd_TS_ns::delta_ticks = wrtd_ns::delta_ns / wrtd_TS_ns::ns_per_tick;
 
         if (wrtd_message_ns::verbose) fprintf(stderr, "ns per tick: %.3f ticks per s: %u delta_ticks %u\n",
         		wrtd_TS_ns::ns_per_tick, wrtd_TS_ns::ticks_per_sec, wrtd_TS_ns::delta_ticks);
@@ -236,7 +216,7 @@ int tx() {
 		wrtd_message_ns::max_tx = MAX_TX_INF;
 	}
 	if (wrtd_message_ns::verbose){
-		fprintf(stderr, "%s\n", PFN);
+		fprintf(stderr, "%s\n", __PRETTY_FUNCTION__);
 	}
 	Transmitter t(wrtd_ns::dev_ts);
 	Receiver* r = Env::getenv("WRTD_LOCAL_RX_ACTION", 0)? Receiver::instance(): 0;
@@ -245,16 +225,16 @@ int tx() {
 
 int txi() {
 	if (wrtd_message_ns::verbose){
-		fprintf(stderr, "%s\n", PFN);
+		fprintf(stderr, "%s\n", __PRETTY_FUNCTION__);
 	}
-	Transmitter t(DEV_CUR, 2*wrtd_ns::dns/1000);
+	Transmitter t(DEV_CUR, 2*wrtd_ns::delta_ns/1000);
 	Receiver* r = Env::getenv("WRTD_LOCAL_RX_ACTION", 0)? Receiver::instance(): 0;
 	return t.event_loop(TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER)), r);
 }
 
 int txq() {
 	if (wrtd_message_ns::verbose){
-		fprintf(stderr, "%s\n", PFN);
+		fprintf(stderr, "%s\n", __PRETTY_FUNCTION__);
 	}
 	TSCaster& comms = TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER));
 	comms.sendraw(TS_QUICK);
