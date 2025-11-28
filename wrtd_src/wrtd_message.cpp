@@ -29,6 +29,7 @@ namespace wrtd_message_ns {
 
         unsigned max_tx = 1;				// send max this many trigs
         const char* tx_at = nullptr;					// send message at +s[.nsec] or @secs-since-epoch[.nsec]
+        unsigned char channel_selection = '1';
 
 }
 
@@ -108,10 +109,11 @@ MessageFilter& MessageFilter::factory() {
 	return * new Acq2106DefaultMessageFilter();
 }
 
+
 void WrtdCaster::sendcommon(){
-        msg.hw_detect[0] = 'P'; // LXI
-        msg.hw_detect[1] = 'S';
-        msg.hw_detect[2] = 'A';
+        msg.hw_detect[0] = 'L'; // LXI
+        msg.hw_detect[1] = ts.channel_selection; //'S';  // stubbed this out for channel number prototype
+        msg.hw_detect[2] = 'I';
         msg.seq = ++*seq;
 
         mc.sendto(&msg, sizeof(msg));
@@ -158,16 +160,37 @@ void WrtdCaster::sendraw(unsigned raw) {
         //msg.event_id is pre-cooked, all other fields are zero
         msg.event_id[IMASK()] = wrtd_message_ns::tx_mask;	// use global default, NOT member ts ..
 
-        sendcommon();
+        // sendcommon();
+
+        msg.hw_detect[0] = 'Q'; // LXI
+        msg.hw_detect[1] = ts.channel_selection; //'S';  // stubbed this out for donatella's channel number
+        msg.hw_detect[2] = 'A';
+        msg.seq = ++*seq;
+
+        mc.sendto(&msg, sizeof(msg));
+        if (wrtd_message_ns::verbose) printLast("hello");
 }
 
-void WrtdCaster::sendto(const TS& ts) {
+/*
+ * @brief final call for flexible elements of packets before they are sent on the wire.
+ *
+ */
+void WrtdCaster::sendto(const TS& tstamp) {
+    this->ts = tstamp;
         msg.ts_sec = ts.secs();			// truncated at 7.. worktodo use TAI
         msg.ts_ns = ts.nsec();
         //msg.event_id is pre-cooked, all other fields are zero
         msg.event_id[IMASK()] = ts.mask;
 
-        sendcommon();
+        // sendcommon(tstamp);
+
+        msg.hw_detect[0] = 'L'; // LXI
+        msg.hw_detect[1] = tstamp.channel_selection; //'S';  // stubbed this out for donatella's channel number
+        msg.hw_detect[2] = 'I';
+        msg.seq = ++*seq;
+
+        mc.sendto(&msg, sizeof(msg));
+        if (wrtd_message_ns::verbose) printLast();
 }
 
 int WrtdCaster::printLast(const char* pfx) {

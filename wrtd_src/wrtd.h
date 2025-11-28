@@ -39,6 +39,7 @@ namespace wrtd_defaults {
     constexpr const char* DEV_TRG0 = "/dev/acq400.0.wr_trg0"; // write trigger0 definition here
     constexpr const char* DEV_TRG1 = "/dev/acq400.0.wr_trg1"; // write trigger1 definition here
     constexpr int LOCAL_CLKDIV_AUTO = 77777777;
+    constexpr const char* MESSAGE_HEADER = "X";
 }
 
 namespace wrtd_ns {

@@ -23,6 +23,7 @@ namespace wrtd_message_ns {
         extern unsigned tx_mask;
         extern unsigned max_tx;				// send max this many trigs
         extern const char* tx_at;				// send message at +s[.nsec] or @secs-since-epoch[.nsec]
+        extern unsigned char channel_selection;
 }
 
 class MessageFilter {

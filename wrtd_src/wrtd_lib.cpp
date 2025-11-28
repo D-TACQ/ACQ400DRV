@@ -225,6 +225,7 @@ int Transmitter::event_loop(TSCaster& comms, Receiver* local_rx) {
         for (unsigned ntx = 0; fread(&ts.raw, sizeof(unsigned), 1, fp) == 1; ++ntx){
                 TS ts_tx = wrtd_ns::ons? ts.next_second(): ts + wrtd_TS_ns::delta_ticks;
                 ts_tx.mask = wrtd_message_ns::tx_mask;
+                ts_tx.channel_selection = wrtd_message_ns::channel_selection;
                 comms.sendto(ts_tx);
                 local_rx->action(ts_tx, ntx);
                 if (wrtd_message_ns::verbose > 1) fprintf(stderr, "sender:ntx:%u ts:%s ts_tx:%s\n", ntx, ts.toStr(), ts_tx.toStr());
@@ -246,6 +247,8 @@ void get_local_env(void)
 	get_local_env(envname, wrtd_message_ns::verbose);
 
 	int use_wrs = Env::getenv("WRTD_USE_WRS", 0);
+        const char* ch = Env::getenv("WRTD_CH_SEL", wrtd_defaults::MESSAGE_HEADER); // "X");
+        wrtd_message_ns::channel_selection = static_cast<unsigned char>(ch[0]);
 	wrtd_ns::mc_factory = use_wrs? WrsCast::factory: MultiCast::factory;
 }
 

@@ -56,7 +56,7 @@ public:
 	unsigned raw;
 	char repr[32];
 	unsigned char mask;		/* possible, multiple receivers */
-
+        unsigned char channel_selection;
 	TS(const TS& ts) : tai_s(ts.tai_s), raw(ts.raw), mask(ts.mask)
 	{}
 
