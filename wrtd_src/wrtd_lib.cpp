@@ -229,7 +229,6 @@ int Transmitter::event_loop(TSCaster& comms, Receiver* local_rx) {
                 if (local_rx){
                         local_rx->action(ts_tx, ntx);
                 }
-                ++ntx;
                 if (wrtd_message_ns::verbose > 1) fprintf(stderr, "sender:ntx:%u ts:%s ts_tx:%s\n", ntx, ts.toStr(), ts_tx.toStr());
                 if (wrtd_message_ns::max_tx != MAX_TX_INF && ntx >= wrtd_message_ns::max_tx){
                         break;
