@@ -226,9 +226,7 @@ int Transmitter::event_loop(TSCaster& comms, Receiver* local_rx) {
                 TS ts_tx = wrtd_ns::ons? ts.next_second(): ts + wrtd_TS_ns::delta_ticks;
                 ts_tx.mask = wrtd_message_ns::tx_mask;
                 comms.sendto(ts_tx);
-                if (local_rx){
-                        local_rx->action(ts_tx, ntx);
-                }
+                local_rx->action(ts_tx, ntx);
                 if (wrtd_message_ns::verbose > 1) fprintf(stderr, "sender:ntx:%u ts:%s ts_tx:%s\n", ntx, ts.toStr(), ts_tx.toStr());
                 if (wrtd_message_ns::max_tx != MAX_TX_INF && ntx >= wrtd_message_ns::max_tx){
                         break;

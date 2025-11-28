@@ -219,7 +219,13 @@ int tx() {
 		fprintf(stderr, "%s\n", __PRETTY_FUNCTION__);
 	}
 	Transmitter t(wrtd_ns::dev_ts);
-	Receiver* r = Env::getenv("WRTD_LOCAL_RX_ACTION", 0)? Receiver::instance(): 0;
+
+        static NullReceiver null_rx;
+        Receiver* r = &null_rx;
+
+        if (Env::getenv("WRTD_LOCAL_RX_ACTION", 0)) { 
+            r = Receiver::instance();
+        }
 	return t.event_loop(TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER)), r);
 }
 
@@ -228,7 +234,13 @@ int txi() {
 		fprintf(stderr, "%s\n", __PRETTY_FUNCTION__);
 	}
 	Transmitter t(DEV_CUR, 2*wrtd_ns::delta_ns/1000);
-	Receiver* r = Env::getenv("WRTD_LOCAL_RX_ACTION", 0)? Receiver::instance(): 0;
+
+        static NullReceiver null_rx;
+        Receiver* r = &null_rx;
+
+        if (Env::getenv("WRTD_LOCAL_RX_ACTION", 0)) { 
+            r = Receiver::instance();
+        }
 	return t.event_loop(TSCaster::factory(wrtd_ns::mc_factory(wrtd_message_ns::group, wrtd_message_ns::port, MultiCast::MC_SENDER)), r);
 }
 

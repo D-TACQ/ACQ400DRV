@@ -90,6 +90,13 @@ public:
 	static Receiver* instance(bool chatty = false);
 };
 
+class NullReceiver : public Receiver {
+    public:
+        void action(TS& ts, int nrx) override {
+            // intentionally do nothing
+        }
+};
+
 class Txa {
 protected:
 	virtual TS txa_validate_rel(unsigned sec, unsigned ns) = 0;
