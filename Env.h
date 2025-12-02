@@ -47,8 +47,11 @@ public:
 			return def;
 		}
 	}
-};
 
+        // Using delete to disallow passing of a char as second argument
+        // Compiler will catch this
+        static int getenv(const char*, char) = delete;
+};
 
 
 
