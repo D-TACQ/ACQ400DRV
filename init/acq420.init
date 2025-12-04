@@ -920,7 +920,7 @@ build_knobs() {
 	$ULC/di460.init ${DI460_SITES}
     fi
     if [ "x${ACQ425_SITES}" != "x" ]; then
-        $ULC/acq425.init ${ACQ425_SITES}
+        $ULC/acq425.init ${ACQ425_SITES} ${ACQ427_4_SITES}
         # use /mnt/local/acq420_custom
         #       BLEN=4194304
         #       NBUF=128
