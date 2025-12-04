@@ -300,6 +300,7 @@ ACQ426_SITES=""
 ACQ465_SITES=""
 DI460_SITES=""
 AO420_SITES=""
+ACQ427_4_SITES=""
 
 start_knob_services()
 {
@@ -329,6 +330,22 @@ get_mtype() {
     fi
 }
 
+get_fpn_first() {
+    if [ -f /dev/sites/$1/details ]; then
+	source /dev/sites/$1/details
+	eval ${FRU_PART_NUM#* }
+	echo ${FRU_PART_NUM%% *}
+    fi
+}
+
+get_fpn_name() {
+	echo $(get_fpn_first $1) | awk -F- '{ print $1 }'
+}
+
+get_fpn_modifier() {
+	echo $(get_fpn_first $1) | awk -F- '{ print $2 }'
+}
+
 get_nchan() {
     if [ -f /dev/sites/$1/details ]; then
         source /dev/sites/$1/details
@@ -336,6 +353,8 @@ get_nchan() {
         echo $N
     fi
 }
+
+
 
 
 fake_fmc2_leds() 
@@ -413,6 +432,11 @@ build_knobs_acq43x() {
         CLKDIV=8
 }
 
+acq427_4_action() {
+	echo "acq427_4_action ACQ427_4_SITES=\"$ACQ427_4_SITES\" /usr/local/CARE/acq427.init $ACQ427_4_SITES"
+	ACQ427_4_SITES="$ACQ427_4_SITES" /usr/local/CARE/acq427.init $ACQ427_4_SITES
+}
+
 build_knobs_ao420() {
         site=$1; mtype=$2 dk=$3 ek=$4
 
@@ -420,8 +444,12 @@ build_knobs_ao420() {
         ${MOD_ID_DAC_CELF})
             set_max_min_khz ${site} 250 10;;
         ${MOD_ID_AO420FMC})
-            [ "x$AO420_SITES" != "x" ] && AO420_SITES="${AO420_SITES} "
-            AO420_SITES="${AO420_SITES}$site"
+	    echo "build_knobs_ao420 $(get_fpn_name ${site}) $(get_fpn_modifier ${site})"
+	    [ "x$(get_fpn_name ${site})" = "xACQ427ELF" ] &&
+	    [ "x$(get_fpn_modifier ${site})" = "x04" ] &&
+		    ACQ427_4_SITES="${ACQ427_4_SITES}${site} "
+#	    echo ACQ427_4_SITES $ACQ427_4_SITES
+            AO420_SITES="${AO420_SITES}$site "
             set_max_min_khz ${site} 1000 10;;
         ${MOD_ID_AO422FMC})
             echo AO422 call EARLY
@@ -896,7 +924,8 @@ build_knobs() {
         # use /mnt/local/acq420_custom
         #       BLEN=4194304
         #       NBUF=128
-    elif [ "x${ACQ426_SITES}" != "x" ]; then
+    fi
+    if [ "x${ACQ426_SITES}" != "x" ]; then
         for site in $ACQ426_SITES; do
             web_append acq426.$site nomon
         done
@@ -906,7 +935,8 @@ build_knobs() {
                 echo "++ Warning using patch $acq426_init"
         fi
         $acq426_init ${ACQ426_SITES}
-    elif [ "x${ACQ427_SITES}" != "x" ]; then
+    fi
+    if [ "x${ACQ427_SITES}" != "x" ]; then
         case $IS_ACQ427 in
         02|03)
             export AO420_SITES;;
@@ -919,12 +949,17 @@ build_knobs() {
         # use /mnt/local/acq420_custom
         #       BLEN=4194304
         #       NBUF=128
-    elif [ "x${ACQ437_SITES}" != "x" ]; then
+    fi
+    if [ "x${ACQ427_4_SITES}" != "x" ]; then
+	acq427_4_action
+    fi
+    if [ "x${ACQ437_SITES}" != "x" ]; then
         $ULC/acq437.init ${ACQ437_SITES}
         # use /mnt/local/acq420_custom
         #       BLEN=4194304
         #       NBUF=128
-    elif [ "x${ACQ465_SITES}" != "x" ]; then
+    fi
+    if [ "x${ACQ465_SITES}" != "x" ]; then
         for site in $ACQ465_SITES; do
             web_append acq465.$site nomon
         done
@@ -934,9 +969,11 @@ build_knobs() {
         	echo "++ Warning using patch $acq465_init"
         fi
         $acq465_init ${ACQ465_SITES}
-    elif [ "x${ACQ494_SITES}" != "x" ]; then
+    fi
+    if [ "x${ACQ494_SITES}" != "x" ]; then
         [ -z $ACQ494_STUB ] && nice $ULC/acq494.init ${ACQ494_SITES} &
-    elif [ "x${ACQ400T_SITES}" != "x" ]; then
+    fi
+    if [ "x${ACQ400T_SITES}" != "x" ]; then
 		echo ACQ400T : "calling $ULC/acq400t.init ${ACQ400T_SITES}"
 		$ULC/acq400t.init ${ACQ400T_SITES}
     fi

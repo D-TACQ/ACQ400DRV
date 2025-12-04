@@ -73,44 +73,51 @@ set AO420_SITES 0
 if { [info exists ::env(AO420_SITES) ] } {
         set AO420_SITES $::env(AO420_SITES)
 }
+set ACQ427_4_SITES 0
+if { [info exists ::env(ACQ427_4_SITES) ] } {
+	set ACQ427_4_SITES $::env(ACQ427_4_SITES)
+}
 
 
 if { $::argc > 0 } {
-	set i 1
 	foreach site $::argv {
 		if { [string length $SITES] > 0 } {
 			set SITES "$SITES,"
 		}
 		set SITES "$SITES$site"	
 	} 	
-	exec /sbin/insmod  /usr/local/lib/modules/acq425_drv.ko \
+	exec /bin/ash -c "grep -q acq425 /proc/modules || /sbin/insmod  /usr/local/lib/modules/acq425_drv.ko \
 	       i2c_chan_offset=$I2C_CHAN_OFFSET \
-	       acq425_sites=$SITES single_pga_script=1
+	       acq425_sites=$SITES single_pga_script=1"
 	
 	foreach site $::argv {
-	    puts "build gain knobs site:$site"
+		puts "build gain knobs site:$site"
 		exec mkdir -p /dev/acq425/$site
 		set gpio1 [get_gpio1 $site 22]
 		link_gpio $site $LNAMES1 $OUTPUTS1 $gpio1
-
-		for {set ic 1} {$ic <= 8} {incr ic} {
-			file delete -force /etc/acq400/$site/gain$ic			
-			exec ln -s /usr/local/bin/acq425_set_gain \
-				/etc/acq400/$site/gain$ic
-		}	
-		file delete -force 	/etc/acq400/$site/gains
-		exec ln -s /usr/local/bin/acq425_set_gain \
-				/etc/acq400/$site/gains
-		set fp [open "/etc/acq400/$site/groups" a+]
-		puts $fp {gain=gain[0-9]*}
-		close $fp
-
 		link_gpio $site $LNAMES2 $OUTPUTS2 [expr $gpio1 + 16]
 
-		foreach ao_site $AO420_SITES {
-		    if { $ao_site > $site } {
-		        hook_aosite $site $ao_site
-		    }
+		if {[lsearch $ACQ427_4_SITES $site] >= 0 } {
+			puts "acq427_4 action:$site"
+			hook_aosite $site $site
+		} else {
+			for {set ic 1} {$ic <= 8} {incr ic} {
+				file delete -force /etc/acq400/$site/gain$ic
+				exec ln -s /usr/local/bin/acq425_set_gain \
+					/etc/acq400/$site/gain$ic
+			}
+			file delete -force 	/etc/acq400/$site/gains
+			exec ln -s /usr/local/bin/acq425_set_gain \
+				/etc/acq400/$site/gains
+			set fp [open "/etc/acq400/$site/groups" a+]
+			puts $fp {gain=gain[0-9]*}
+			close $fp
+
+			foreach ao_site $AO420_SITES {
+				if { $ao_site > $site } {
+					hook_aosite $site $ao_site
+				}
+			}
 		}
 	} 	
 } else {
