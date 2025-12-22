@@ -104,7 +104,7 @@ APPS := mmap acq400_stream permute acq435_decode \
 	dsp_coprocessor ramp acq400_stream_disk \
 	acq480_knobs acq465_knobs transition_counter acq435_rtm_trim anatrg \
 	muxdec dmadescfs_test tblock2file acq400_sls bb bbq_send_ai  \
-	fix_state bpaste clocks_to_first_edge \
+	fix_state bpaste clocks_to_first_edge dio_raw2stl \
 	mgtdram_descgen bigcat egu2int dawg watchdog_PIL \
 	dump_regs subr \
 	soft_atd spad_update \
@@ -362,6 +362,9 @@ trigger_at: trigger_at.o knobs.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
 	
 clocks_to_first_edge: clocks_to_first_edge.o knobs.o
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)	
+	
+dio_raw2stl: dio_raw2stl.o knobs.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)	
 	
 slowmon_hw: slowmon_hw.o knobs.o
