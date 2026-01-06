@@ -364,6 +364,7 @@
 
 #define ADC_MAX_NACC		256U
 
+#define ADC_TRANSLEN_MASK	0x00ffffff
 
 #define ADC_ACC_DEC_SHIFT_MAX   15U
 

@@ -902,7 +902,10 @@ static ssize_t show_reg_rtm_translen(
 	struct device_attribute *attr,
 	char * buf)
 {
-	return show_reg(dev, attr, buf, ADC_TRANSLEN, "%u\n", 0);
+	u32 regval = acq400rd32(acq400_devices[dev->id], ADC_TRANSLEN);
+	u32 field = regval&ADC_TRANSLEN_MASK;
+
+	return snprintf(buf, 128, "%u\n", field==0? ADC_TRANSLEN_MASK+1: field);
 }
 
 
@@ -923,6 +926,7 @@ static ssize_t store_reg_rtm_translen(
 					ctrl, ADC_CTRL_ADC_EN);
 			return -1;
 		}else{
+			if (count > ADC_TRANSLEN_MASK) count = 0;
 			return store_reg(dev, attr, buf, count, ADC_TRANSLEN, 0);
 		}
 	}else{
