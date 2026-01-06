@@ -6,7 +6,7 @@ source $ULB/mod_id.sh
 if [ "x$1" = "xall" ]; then
 	sites=$(set.site 0 aggregator | awk '{print $2}' | grep -o '[1-6]')
 	for site in $sites; do
-		/usr/local/bin/ao420_init $site > /dev/null
+		$ULB/ao420_init $site > /dev/null
 	done
 	exit 0
 fi
@@ -132,7 +132,7 @@ ao428elf)
 	;;
 esac
 
-cat - >>/etc/acq400/$SITE/groups <<EOF
+cat - >>${EK}/groups <<EOF
 dac_range_XX=dac_range_[0-9]*
 AO_ALL=AO_[0-9]*
 EOF
