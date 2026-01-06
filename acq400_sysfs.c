@@ -3354,11 +3354,22 @@ static ssize_t store_jettison_buffers_from(
 static DEVICE_ATTR(jettison_buffers_from, S_IRUGO|S_IWUSR,
 		show_jettison_buffers_from, store_jettison_buffers_from);
 
+
+
 static const struct attribute *rgm_attrs[] = {
 	&dev_attr_rgm.attr,
 	&dev_attr_burst.attr,
 	&dev_attr_rtm_translen.attr,
 	&dev_attr_es_enable.attr,
+	NULL
+};
+
+/* awg uses the same rgm control, but the dx selection comes from trg.dx due to bit overallocation */
+MAKE_BITS(awg_rgm,   ADC_CTRL, ADC_CTRL_RGM_GATE_SHL, ADC_CTRL_RGM_MODE_MASK);
+
+static const struct attribute *awg_rgm_attrs[] = {
+	&dev_attr_awg_rgm.attr,
+	&dev_attr_rtm_translen.attr,
 	NULL
 };
 
@@ -3841,8 +3852,14 @@ int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const st
 		}
 	}
 	if (HAS_RGM(adev)){
-		if (sysfs_create_files(&dev->kobj, rgm_attrs)){
-			dev_err(dev, "failed to create rgm sysfs");
+		if (IS_XO(adev)){
+			if (sysfs_create_files(&dev->kobj, awg_rgm_attrs)){
+				dev_err(dev, "failed to create awg_rgm sysfs");
+			}
+		}else{
+			if (sysfs_create_files(&dev->kobj, rgm_attrs)){
+				dev_err(dev, "failed to create rgm sysfs");
+			}
 		}
 	}
 	if (HAS_ATD(adev)){
