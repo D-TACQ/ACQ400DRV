@@ -396,7 +396,7 @@ static ssize_t show_ch5_en(
 	char * buf)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
-	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
+	u32 dac_ctrl = acq400rd32(adev, AO420_RANGE);
 	return sprintf(buf, "%u\n", (dac_ctrl&DAC_422_CH5_EN) != 0);
 }
 
@@ -410,12 +410,12 @@ static ssize_t store_ch5_en(
 	unsigned ch5_en;
 
 	if (sscanf(buf, "%u", &ch5_en) == 1){
-		u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
+		u32 dac_ctrl = acq400rd32(adev, AO420_RANGE);
 		if (ch5_en){
-			acq400wr32(adev, DAC_CTRL, dac_ctrl|DAC_422_CH5_EN);
+			acq400wr32(adev, AO420_RANGE, dac_ctrl|DAC_422_CH5_EN);
 			adev->nchan_enabled = 5;
 		}else{
-			acq400wr32(adev, DAC_CTRL, dac_ctrl& ~DAC_422_CH5_EN);
+			acq400wr32(adev, AO420_RANGE, dac_ctrl& ~DAC_422_CH5_EN);
 			adev->nchan_enabled = 4;
 		}
 		return count;

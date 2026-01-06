@@ -948,7 +948,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define FPCTL_IS_INPUT	0x0
 
 /* AO422 */
-#define DAC_422_CH5_EN			(1<<15)
+#define DAC_422_CH5_EN			(1<<15)   /* reg: AO420_RANGE */
 /* AO424 */
 
 #define DAC_424_CGEN_ODD_CHANS		(1<<4)
