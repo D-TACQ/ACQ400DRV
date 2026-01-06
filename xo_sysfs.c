@@ -397,7 +397,7 @@ static ssize_t show_ch5_en(
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 dac_ctrl = acq400rd32(adev, DAC_CTRL);
-	return sprintf(buf, "%u\n", (dac_ctrl& ~DAC_422_CH5_EN) != 0);
+	return sprintf(buf, "%u\n", (dac_ctrl&DAC_422_CH5_EN) != 0);
 }
 
 static ssize_t store_ch5_en(
