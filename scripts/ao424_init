@@ -12,7 +12,7 @@ SPANS=/sys/kernel/debug/acq400/acq400.${SITE}/spans
 
 for spchan in ${SPANS}/??
 do
-	ln -s $spchan /etc/acq400/${SITE}/range$(basename $spchan)
+	ln -s $spchan ${EK}/range$(basename $spchan)
 done
 
 INITS=/sys/kernel/debug/acq400/acq400.${SITE}/init/
@@ -27,8 +27,9 @@ ln -s ${EK}/dacreset_device ${EK}/range99
 [ ! -e ${EK}/awg_seg ] && ln -s ${MODP}/awg_seg ${EK}
 [ ! -e ${EK}/awg_seg_bufs ] && ln -s ${MODP}/awg_seg_bufs ${EK}
 
-cat - <<EOF >>/etc/acq400/$SITE/groups
+cat - <<EOF >>${EK}/groups
 range=range[0-9]*
 init=init[0-9]*
 AO_ALL=AO_[0-9]*
 EOF
+
