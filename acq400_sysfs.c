@@ -3365,10 +3365,10 @@ static const struct attribute *rgm_attrs[] = {
 };
 
 /* awg uses the same rgm control, but the dx selection comes from trg.dx due to bit overallocation */
-MAKE_BITS(awg_rgm,   ADC_CTRL, ADC_CTRL_RGM_MODE_SHL, ADC_CTRL_RGM_MODE_MASK);
+MAKE_BITS(awg_rtm,   ADC_CTRL, ADC_CTRL_RGM_MODE_SHL, ADC_CTRL_RGM_MODE_MASK);
 
 static const struct attribute *awg_rgm_attrs[] = {
-	&dev_attr_awg_rgm.attr,
+	&dev_attr_awg_rtm.attr,
 	&dev_attr_rtm_translen.attr,
 	NULL
 };
