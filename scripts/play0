@@ -54,7 +54,7 @@ echo distributor set $(get.sys ${DK}/distributor)
 echo dist_s1     set $(get.sys ${DK}/dist_s1)
 echo $sites > /etc/acq400/0/play0_ready
 echo $s > /etc/acq400/0/play0_s1
-echo $0 $* ssb=$SSB > /var/log/play0.log
+echo $0 $sitelist ssb=$SSB > /var/log/play0.log
 
 
 
