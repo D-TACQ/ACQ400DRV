@@ -297,6 +297,7 @@ ACQ427_SITES=""
 ACQ437_SITES=""
 ACQ400T_SITES=""
 ACQ426_SITES=""
+ACQ428_SITES=""
 ACQ465_SITES=""
 DI460_SITES=""
 AO420_SITES=""
@@ -618,6 +619,9 @@ build_knobs_device() {
     ${MOD_ID_ACQ426ELF})
         set_max_min_khz ${site} 1000 1
         ACQ426_SITES="${ACQ426_SITES} $site";;
+    ${MOD_ID_ACQ428ELF})
+        set_max_min_khz ${site} 1000 1
+        ACQ428_SITES="${ACQ428_SITES} $site";;
     ${MOD_ID_ACQ465ELF})
         set_max_min_khz ${site} 1400 1
         ACQ465_SITES="${ACQ465_SITES} $site";;
@@ -935,6 +939,17 @@ build_knobs() {
                 echo "++ Warning using patch $acq426_init"
         fi
         $acq426_init ${ACQ426_SITES}
+    fi
+    if [ "x${ACQ428_SITES}" != "x" ]; then
+        for site in $ACQ428_SITES; do
+            web_append acq428.$site nomon
+        done
+        acq428_init=$ULC/acq428.init
+        if [ -e /mnt/local/acq428.init ]; then
+            acq428_init=/mnt/local/acq428.init
+            echo "++ Warning using patch $acq428_init"
+        fi
+        $acq428_init ${ACQ428_SITES}
     fi
     if [ "x${ACQ427_SITES}" != "x" ]; then
         case $IS_ACQ427 in

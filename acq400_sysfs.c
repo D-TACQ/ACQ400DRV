@@ -1746,6 +1746,7 @@ static const char* _lookup_id(struct acq400_dev *adev)
 		{ MOD_ID_ACQ426ELF,     "acq426elf"	},
 		{ MOD_ID_ACQ427ELF,	"acq427elf"	},
 		{ MOD_ID_ACQ427ELF_2000,"acq427elf"     },
+                { MOD_ID_ACQ428ELF,     "acq428elf"     },
 		{ MOD_ID_ACQ430FMC,     "acq430fmc"	},
 		{ MOD_ID_ACQ435ELF,	"acq435elf"	},
 		{ MOD_ID_ACQ436ELF,	"acq436elf"	},
@@ -2245,6 +2246,7 @@ static const struct attribute *acq465_attrs[] = {
 	NULL
 };
 
+// TODO: what do we need to do with this for acq428?
 MAKE_BITS(va_en, ACQ426_BCSR, MAKE_BITS_FROM_MASK, ACQ426_BCSR_VA_EN);
 MAKE_BITS(vset,  ACQ426_BCSR, MAKE_BITS_FROM_MASK, ACQ426_BCSR_VSET);
 MAKE_BIT_RON(busy,  ACQ426_BCSR, MAKE_BITS_FROM_MASK, ACQ426_BCSR_BSY);
