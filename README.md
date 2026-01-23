@@ -10,4 +10,5 @@ export DIO_ACTIVE_LOW_SITES=s1[,s2..]
 export DIO_WDT=N
 
 
-
+# how do RELEASE tags work?
+YOU MUST make a package before submitting for ACQ400_ESW_TOP

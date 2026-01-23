@@ -2583,7 +2583,7 @@ static void init_soft_trigger_timer(struct acq400_dev* adev, int ntriggers, int 
 			stt->timer_init = 0;
 	}
 	if (ntriggers != 0){
-		int interval_usec = rate_limit_uhz_or_hz <= 10000? 1000000/rate_limit_uhz_or_hz: 0;
+		int interval_usec = rate_limit_uhz_or_hz <  10000? 1000000/rate_limit_uhz_or_hz: 0;
 		int interval_secs = rate_limit_uhz_or_hz >= 10000? 1000000/rate_limit_uhz_or_hz: 0;
 
 		dev_dbg(DEVP(adev), "%s ntriggers:%d interval:%d,%d init:%d repeat:%d",
@@ -2637,7 +2637,7 @@ static ssize_t store_soft_trigger(
 				pulse_soft_trigger(adev);  // > 1 ? see (X)
 			}
 			if (ntriggers){
-				if (rate_limit_uhz_or_hz < 100000){
+				if (rate_limit_uhz_or_hz < 10000){
 					rate_limit_uhz_or_hz = min(rate_limit_uhz_or_hz, 1000);
 					rate_limit_uhz_or_hz = max(1, rate_limit_uhz_or_hz);
 				} /* else it's uHz, let her rip */
