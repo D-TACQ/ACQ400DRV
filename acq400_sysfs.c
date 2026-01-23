@@ -2572,22 +2572,24 @@ enum hrtimer_restart  pulse_soft_trigger_callback(struct hrtimer* hrt)
 	}
 }
 
-static void init_soft_trigger_timer(struct acq400_dev* adev, int ntriggers, int rate_limit_hz)
+static void init_soft_trigger_timer(struct acq400_dev* adev, int ntriggers, int rate_limit_uhz_or_hz)
 {
 	struct acq400_sc_dev* sc_dev = container_of(adev, struct acq400_sc_dev, adev);
 	struct SoftTriggerTimer* stt = &sc_dev->stt;
 
-	dev_dbg(DEVP(adev), "%s ntriggers:%d rate:%d init:%d repeat:%d",
-			__FUNCTION__, ntriggers, rate_limit_hz, stt->timer_init, stt->repeat_count);
 
 	if (stt->timer_init){
 			hrtimer_cancel(&stt->timer);
 			stt->timer_init = 0;
 	}
 	if (ntriggers != 0){
-		int interval_usec = 1000000/rate_limit_hz;
+		int interval_usec = rate_limit_uhz_or_hz <= 10000? 1000000/rate_limit_uhz_or_hz: 0;
+		int interval_secs = rate_limit_uhz_or_hz >= 10000? 1000000/rate_limit_uhz_or_hz: 0;
 
-		if (soft_trigger_udelay > interval_usec/2){
+		dev_dbg(DEVP(adev), "%s ntriggers:%d interval:%d,%d init:%d repeat:%d",
+				__FUNCTION__, ntriggers, interval_secs, interval_usec, stt->timer_init, stt->repeat_count);
+
+		if (interval_usec && soft_trigger_udelay > interval_usec/2){
 			dev_warn(DEVP(adev),
 				"WARNING: trigger interval usec %d too short for soft_trigger_udelay %d shorten to %d",
 				interval_usec, soft_trigger_udelay, interval_usec/2);
@@ -2597,7 +2599,7 @@ static void init_soft_trigger_timer(struct acq400_dev* adev, int ntriggers, int 
 		hrtimer_init(&stt->timer, CLOCK_REALTIME, HRTIMER_MODE_REL);
 		stt->timer.function = pulse_soft_trigger_callback;
 		stt->timer_init = 1;
-		stt->period = ktime_set(0, interval_usec*1000);
+		stt->period = ktime_set(interval_secs, interval_usec*1000);
 		stt->repeat_count = ntriggers;
 		hrtimer_start(&stt->timer, stt->period, HRTIMER_MODE_REL);
 	}
@@ -2625,9 +2627,9 @@ static ssize_t store_soft_trigger(
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	int ntriggers;            /* -1 == infinity */
-	int rate_limit_hz = 0;
+	int rate_limit_uhz_or_hz = 0;
 
-	if (sscanf(buf, "%d %d", &ntriggers, &rate_limit_hz) >= 1){
+	if (sscanf(buf, "%d %d", &ntriggers, &rate_limit_uhz_or_hz) >= 1){
 		if (ntriggers == 1){
 			pulse_soft_trigger(adev);
 		}else{
@@ -2635,10 +2637,12 @@ static ssize_t store_soft_trigger(
 				pulse_soft_trigger(adev);  // > 1 ? see (X)
 			}
 			if (ntriggers){
-				rate_limit_hz = min(rate_limit_hz, 1000);
-				rate_limit_hz = max(1, rate_limit_hz);
+				if (rate_limit_uhz_or_hz < 100000){
+					rate_limit_uhz_or_hz = min(rate_limit_uhz_or_hz, 1000);
+					rate_limit_uhz_or_hz = max(1, rate_limit_uhz_or_hz);
+				} /* else it's uHz, let her rip */
 			}
-			init_soft_trigger_timer(adev, ntriggers, rate_limit_hz);
+			init_soft_trigger_timer(adev, ntriggers, rate_limit_uhz_or_hz);
 		}
 		return count;
 	}else{
