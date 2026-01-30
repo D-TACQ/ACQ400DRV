@@ -1248,6 +1248,8 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 		case MOD_ID_DIO482TD_PG:
 			dio482td_init_defaults(adev);
 			break;
+                case MOD_ID_ACQ428ELF:
+                        acq428_init_defaults(adev);
 		default:
 			dev_warn(DEVP(adev), "no custom init for module type %x",
 						(adev)->mod_id>>MOD_ID_TYPE_SHL);
