@@ -12,6 +12,7 @@ obj-m += pl330_fs.o
 
 obj-m += bolo8_drv.o
 obj-m += acq425_drv.o
+obj-m += acq428_drv.o
 obj-m += acq480.o
 obj-m += acq400t.o
 #obj-m += acq4xx_fs.o
