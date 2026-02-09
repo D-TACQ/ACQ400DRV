@@ -25,6 +25,7 @@
 #include "popt.h"
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <time.h>
@@ -51,12 +52,18 @@ typedef std::vector<time_t> TTV;
 
 char* G_trigger_string;
 int G_delay_ticks;
+int G_has_dds;
+int G_trg_d0_src_reroute;
+int G_trg_repeat;
+
+#define REPEAT_FOREVER -1
 
 // --trg=1,d5,rising
 struct poptOption opt_table[] = {
-
 	{ "trg", 0, POPT_ARG_STRING, &G_trigger_string, 0, "special trigger instruction for final second" },
 	{ "delay_ticks", 0, POPT_ARG_INT, &G_delay_ticks, 0, "delay chirp start by N*100nsec ticks" },
+	{ "trg_d0_src_reroute", 'T', POPT_ARG_INT, &G_trg_d0_src_reroute, 0, "disable trigger by rerouting trg.d0 source .. ok for pulse trigger, bad for 50:50" },
+	{ "repeat", 'R', POPT_ARG_INT, &G_trg_repeat, 0, "repeat triggers, good for +N key" },
 	POPT_AUTOHELP
 	POPT_TABLEEND
 };
@@ -174,13 +181,19 @@ void wait_for(time_t t2)
 		_set_pidf(getpid(), t2, t1, usecs_adj);
 		usleep(usecs_adj);
 	}
-	final_second_trigger_enable(G_trigger_string);
-	Knob kA(DDSA_ARM_PPS);
-	Knob kB(DDSB_ARM_PPS);
-	kA.set(1); kB.set(1);
 	_set_log(getpid(), t2, t1, usecs_late);
-	usleep(1000000);
-	kA.set(0); kB.set(0);
+}
+
+void release_trigger(void)
+{
+	if (G_has_dds){
+		final_second_trigger_enable(G_trigger_string);
+		Knob kA(DDSA_ARM_PPS);
+		Knob kB(DDSB_ARM_PPS);
+		kA.set(1); kB.set(1);
+		usleep(1000000);
+		kA.set(0); kB.set(0);
+	}
 }
 
 int prepare_daemon()
@@ -199,19 +212,28 @@ int prepare_daemon()
 	return 0;
 }
 
+void divert_trigger(void)
+{
+	if (G_has_dds){
+		Knob(DDSA_ARM_PPS).set(0);
+		Knob(DDSB_ARM_PPS).set(0);
+	}
+}
 int schedule(time_t t2)
 {
 	pid_t cpid;
-
-	Knob(DDSA_ARM_PPS).set(0);
-	Knob(DDSB_ARM_PPS).set(0);
 
 	if ((cpid = fork()) == 0){
 		if (prepare_daemon() != 0){
 			return -1;
 		}
 		if ((cpid = fork()) == 0){
-			wait_for(t2);
+			do {
+				divert_trigger();
+				wait_for(t2);
+				release_trigger();
+			} while (G_trg_repeat == REPEAT_FOREVER ||
+				 (G_trg_repeat > 0 && --G_trg_repeat));
 			unlink(PIDF);
 		}else{
 			_set_pidf(cpid, t2, _gettimeofday(), 0);
@@ -224,8 +246,10 @@ int schedule(TTV& times)
 {
 	pid_t cpid;
 
-	Knob(DDSA_ARM_PPS).set(0);
-	Knob(DDSB_ARM_PPS).set(0);
+	if (G_has_dds){
+		Knob(DDSA_ARM_PPS).set(0);
+		Knob(DDSB_ARM_PPS).set(0);
+	}
 
 	if ((cpid = fork()) == 0){
 		if (prepare_daemon() != 0){
@@ -347,17 +371,24 @@ int run_today(const char** times)
 	return 0;
 }
 
+
 int main(int argc, const char* argv[])
 {
+	struct stat sb;
+	if (stat(DDSA_ARM_PPS, &sb) == 0){
+		G_has_dds = true;
+	}
 	poptContext opt_context =
 			poptGetContext(argv[0], argc, argv, opt_table, 0);
 	int rc;
+
         while ((rc = poptGetNextOpt( opt_context )) >= 0 ){
                 switch(rc){
                 default:
                         ;
                 }
         }
+
         const char* key = poptGetArg(opt_context);
         if (key == 0){
         	return validate(0);
