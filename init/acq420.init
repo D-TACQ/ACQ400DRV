@@ -502,7 +502,7 @@ build_knobs_dio_device() {
         case $mtype in
         ${MOD_ID_DIO482TD})
                 ;;
-        ${MOD_ID_DIO482TD_PG})
+        ${MOD_ID_DIO482TD_PG}|${MOD_ID_DIO482ELF_XRM})
                 num_pg=4;
                 if [ ! -z $DIO482TD_PG5 ] && [ "$DIO482TD_PG5" != "no" ]; then
                         num_pg=5;
@@ -633,7 +633,7 @@ build_knobs_device() {
         CLKDIV=500;;
     ${MOD_ID_BOLO8}|${MOD_ID_BOLO8B})
         build_knobs_bolo8_device $site $mtype $dk $ek;;
-    ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_PIG_CELF}|${MOD_ID_DIO482TD}|${MOD_ID_DIO482TD_PG}|${MOD_ID_DIO482FMC})
+    ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_PIG_CELF}|${MOD_ID_DIO482TD}|${MOD_ID_DIO482TD_PG}|${MOD_ID_DIO482FMC}|${MOD_ID_DIO482ELF_XRM})
         build_knobs_dio_device $site $mtype $dk $ek;;
     ${MOD_ID_DI460ELF})
 	mv=$(cat ${dk}/module_variant)
