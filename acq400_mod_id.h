@@ -63,6 +63,7 @@
 
 #define MOD_ID_DIO482TD		0x7a	// Vanilla DIO version
 #define MOD_ID_DIO482TD_PG	0x7b
+#define MOD_ID_DIO482ELF_XRM	0x7c
 
 #define MOD_ID_ACQ2006SC	0x80
 #define MOD_ID_ACQ1001SC	0x81

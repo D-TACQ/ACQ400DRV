@@ -149,7 +149,7 @@ build_nodes() {
                 fi;;
             ${MOD_ID_BOLO8}|${MOD_ID_BOLO8B})
                 mknod /dev/${NAME}.awg c ${MAJOR} 8;;
-            ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_DIO482FMC})
+            ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_DIO482FMC}|${MOD_ID_DIO482ELF_XRM})
                 if [ -e /dev/acq400.$ID.knobs/gpg_enable ]; then
                     mknod /dev/acq400.$ID.gpg c ${MAJOR} 5
                     mknod /dev/acq400.$ID.gpg32 c ${MAJOR} 28
