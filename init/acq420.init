@@ -706,7 +706,7 @@ build_site0() {
         $ULB/run0 $ULB/play0 $ULB/get.xdt \
         $ULB/streamtonowhered $ULB/set.sync_role \
 	$ULB/datals ${ULB}/cstate $ULB/channel_mapping \
-	$ULB/stream_subset \
+	$ULB/stream_subset ${ULB}/trigger_at \
 	${ek}
 
     echo "dummy role" > /dev/shm/role
