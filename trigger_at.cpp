@@ -31,6 +31,7 @@
 #include <time.h>
 
 #include "local.h"
+#include "acq-util.h"
 #include "Env.h"
 #include "File.h"
 #include "Knob.h"
@@ -406,6 +407,8 @@ int main(int argc, const char* argv[])
 	poptContext opt_context =
 			poptGetContext(argv[0], argc, argv, opt_table, 0);
 	int rc;
+
+	goRealTime(1);
 
         while ((rc = poptGetNextOpt( opt_context )) >= 0 ){
                 switch(rc){
