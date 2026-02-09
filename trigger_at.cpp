@@ -49,12 +49,24 @@ typedef std::vector<time_t> TTV;
 
 #define PIDF  "/var/run/trigger_at.pid"
 
+/*
+ * trigger source divert: in the interests of speed, write knob direct
+acq2206_088> acq400_knobs_mon /dev/acq400.0.knobs/sig_src_route_trg_d0
+7  NONE
+0  EXT
+*/
+
+#define SIG_SRC_TRG_0		"/dev/acq400.0.knobs/sig_src_route_trg_d0"
+#define SIG_SRC_TRG_0_EXT	0
+#define SIG_SRC_TRG_0_NONE	7
 
 char* G_trigger_string;
 int G_delay_ticks;
 int G_has_dds;
-int G_trg_d0_src_reroute;
+int G_trg_d0_src_reroute = -1;
 int G_trg_repeat;
+
+unsigned long G_delta;
 
 #define REPEAT_FOREVER -1
 
@@ -62,7 +74,7 @@ int G_trg_repeat;
 struct poptOption opt_table[] = {
 	{ "trg", 0, POPT_ARG_STRING, &G_trigger_string, 0, "special trigger instruction for final second" },
 	{ "delay_ticks", 0, POPT_ARG_INT, &G_delay_ticks, 0, "delay chirp start by N*100nsec ticks" },
-	{ "trg_d0_src_reroute", 'T', POPT_ARG_INT, &G_trg_d0_src_reroute, 0, "disable trigger by rerouting trg.d0 source .. ok for pulse trigger, bad for 50:50" },
+	{ "trg_d0_src_reroute", 'T', POPT_ARG_INT, &G_trg_d0_src_reroute, 'T', "disable trigger by rerouting trg.d0 source .. ok for pulse trigger, bad for 50:50" },
 	{ "repeat", 'R', POPT_ARG_INT, &G_trg_repeat, 0, "repeat triggers, good for +N key" },
 	POPT_AUTOHELP
 	POPT_TABLEEND
@@ -186,13 +198,19 @@ void wait_for(time_t t2)
 
 void release_trigger(void)
 {
+	if (G_trg_d0_src_reroute >= 0){
+		Knob(SIG_SRC_TRG_0).set(G_trg_d0_src_reroute);
+		usleep(1000000);
+	}
 	if (G_has_dds){
 		final_second_trigger_enable(G_trigger_string);
 		Knob kA(DDSA_ARM_PPS);
 		Knob kB(DDSB_ARM_PPS);
 		kA.set(1); kB.set(1);
 		usleep(1000000);
-		kA.set(0); kB.set(0);
+		if (G_has_dds){
+			kA.set(0); kB.set(0);
+		}
 	}
 }
 
@@ -214,6 +232,9 @@ int prepare_daemon()
 
 void divert_trigger(void)
 {
+	if (G_trg_d0_src_reroute >= 0){
+		Knob(SIG_SRC_TRG_0).set(SIG_SRC_TRG_0_NONE);
+	}
 	if (G_has_dds){
 		Knob(DDSA_ARM_PPS).set(0);
 		Knob(DDSB_ARM_PPS).set(0);
@@ -232,6 +253,9 @@ int schedule(time_t t2)
 				divert_trigger();
 				wait_for(t2);
 				release_trigger();
+				if (G_delta){
+					t2 = _gettimeofday() + G_delta;
+				}
 			} while (G_trg_repeat == REPEAT_FOREVER ||
 				 (G_trg_repeat > 0 && --G_trg_repeat));
 			unlink(PIDF);
@@ -307,7 +331,8 @@ int validate(const char* message)
 	case 'k':
 		return kill_job();
 	case '+':
-		return _validate(strtoul(message+1, 0, 0));
+		G_delta = strtoul(message+1, 0, 0);
+		return _validate(G_delta);
 	default:
 		return _validate(message);
 	}
@@ -384,6 +409,11 @@ int main(int argc, const char* argv[])
 
         while ((rc = poptGetNextOpt( opt_context )) >= 0 ){
                 switch(rc){
+                case 'T':
+			fprintf(stderr,
+				"G_trg_d0_src_reroute set %d known values: EXT:%d NONE:%d\n",
+				G_trg_d0_src_reroute, SIG_SRC_TRG_0_EXT, SIG_SRC_TRG_0_NONE);
+			break;
                 default:
                         ;
                 }
