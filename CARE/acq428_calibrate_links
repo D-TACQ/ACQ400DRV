@@ -1,0 +1,72 @@
+#!/bin/sh
+
+SITES=""
+FIRST=""
+
+source /mnt/local/sysconfig/acq400.sh
+
+hexquad() {
+        cat $1 | awk '{
+                aa = sprintf("%2d", "0x"substr($1,3,2));
+                bb = sprintf("%2d", "0x"substr($1,5,2));
+                cc = sprintf("%2d", "0x"substr($1,7,2));
+                dd = sprintf("%2d", "0x"substr($1,9,2));
+                print $1" "aa" "bb" "cc" "dd 
+        }'
+}
+# set pattern
+for dev in /dev/acq428/[123456]; do
+        if [ -d $dev ]; then
+		site=$(basename $dev)
+
+                for chip in A B C D; do
+                        echo 0xaaaaaaaa >$dev/$chip/in_voltage0_test_pattern32
+                        echo 0x33333333 >$dev/$chip/in_voltage7_test_pattern32
+                        echo ON > $dev/$chip/test_pattern_enable   
+                done
+                
+		[ -z $FIRST ] && FIRST=$site
+                SITES="$SITES $site"
+        fi
+done
+
+FS0=0
+FS=0
+ERRPC=100
+CTRIES=0
+ACQ428_BOOT_CLK_TIMEOUT=${ACQ428_BOOT_CLK_TIMEOUT:-10}
+
+while [ $FS -gt 1000 -o $FS -lt 1000000 ] && [ $ERRPC -gt 10 ]; do
+	if [ $CTRIES -gt $ACQ428_BOOT_CLK_TIMEOUT ]; then
+		echo "acq428_calibrate_links timeout .. please run $0 when there is a valid clock"
+		exit 1
+	fi
+	FS0=$FS
+	sleep 1
+	FS=$(get.site 0 SIG:CLK_S${FIRST}:FREQ | awk '{ print int($2) }')
+	ERRPC=$(echo $FS $FS0 | awk '{ ad=sqrt(($1-$2)*($1-$2)); err=int(ad/$1*100); print err }')
+
+	echo "acq428_calibrate_links waiting for CLK to settle $FS0 .. $FS drift $ERRPC %"
+	CTRIES=$((CTRIES+1))
+done
+
+# set cal
+for site in $SITES; do
+        echo 1 > /dev/acq400.$site.knobs/acq428_cal
+done
+
+usleep 10000
+
+# check state
+for site in $SITES; do
+        dk=/dev/acq400.$site.knobs
+        echo "site $site $(cat $dk/acq428_cal) $(hexquad $dk/acq428_cal_point) $(hexquad $dk/acq428_cal_win)"
+done
+
+# return to normal
+for site in $SITES; do
+        echo 0 > /dev/acq400.$site.knobs/acq428_cal
+        for chip in A B C D; do
+                echo OFF > /dev/acq428/$site/$chip/test_pattern_enable
+        done
+done
