@@ -46,7 +46,8 @@ struct i2c_adapter *i2c_adap[7];   /* index by site 1..6 from zero */
 static int ndev;
 
 #define PGA_TYPE	"tca6424"
-#define PGA_ADDR	0x22
+#define PGA_ADDR_1	0x22
+#define PGA_ADDR_2      0x23
 #define N_PGA_GPIO 24
 
 static struct i2c_client* new_device(
@@ -70,7 +71,10 @@ static void __init acq428_init_site(int site)
 
 	i2c_adap[site] = i2c_get_adapter(ch);
 
-	if (new_device(i2c_adap[site], PGA_TYPE, PGA_ADDR, gpio_base) == 0){
+	if (new_device(i2c_adap[site], PGA_TYPE, PGA_ADDR_1, gpio_base) == 0){
+		printk("acq428_init_site(%d) PGA NOT found\n", site);
+	}
+	if (new_device(i2c_adap[site], PGA_TYPE, PGA_ADDR_2, gpio_base + N_PGA_GPIO) == 0){
 		printk("acq428_init_site(%d) PGA NOT found\n", site);
 	}
 
