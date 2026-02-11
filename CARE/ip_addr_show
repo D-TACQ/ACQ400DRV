@@ -1,0 +1,4 @@
+DEV=${1:-eth0}
+
+ip addr show dev $DEV | grep 'inet.*'$DEV'$' | tr / \  | awk '{ print $2}'
+
