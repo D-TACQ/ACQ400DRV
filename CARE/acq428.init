@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-echo acq428.init $*  begin 01
+echo +++acq428.init $*  begin 01
 
 for s in $*; do
     if [ -z $SITES ]; then
@@ -85,6 +85,10 @@ EOF
 #       (cd ${ek};source /tmp/makeLinks)
 done
 
+for site in $*; do
+    /usr/local/CARE/acq428gpio.init ${site} 2
+done
+
 # make post job boot file
 (
 cat - <<EOF
@@ -111,5 +115,5 @@ chmod a+rx /tmp/acq428_init.job
 
 nice /tmp/acq428_init.job &
 
-echo acq428.init 99
+echo +++acq428.init 99
 
