@@ -35,7 +35,8 @@ get_gain() {
 	011) echo 1;;
 	010) echo 0.5;;
 	001) echo 0.25;;
-	*)  echo 0.125;;
+        000) echo 0.125;;
+	*)  echo -1;;
 	esac
 }
 
@@ -47,5 +48,6 @@ case $1 in
 1) set_gain 0 1 1;;
 0.5) set_gain 0 1 0;;
 0.25) set_gain 0 0 1;;
+0.125) set_gain 0 0 0;;
 *) get_gain;;
 esac
