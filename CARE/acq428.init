@@ -86,7 +86,8 @@ EOF
 done
 
 for site in $*; do
-    /usr/local/CARE/acq428gpio.init ${site} 2
+    bus=$(expr "$site" + 1)
+    /usr/local/CARE/acq428gpio.init ${site} ${bus}
 done
 
 # make post job boot file
