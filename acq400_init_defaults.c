@@ -353,6 +353,8 @@ void acq428_onStart(struct acq400_dev *adev)
 	}
 
 	acq400wr32(adev, ADC_HITIDE, 	adev->hitide);
+        ctrl = acq400rd32(adev, ADC_CTRL);
+        acq400wr32(adev, ADC_CTRL, ctrl | ADC_CTRL_ADC_RST);
 	acq420_enable_fifo(adev);
 	acq420_reset_fifo(adev);
 	adev->fifo_isr_done = 0;
