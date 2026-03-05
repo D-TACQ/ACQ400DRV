@@ -1011,10 +1011,10 @@ dma_async_memcpy_callback(
 
 extern dma_cookie_t
 dma_async_memcpy(
-	struct dma_chan *chan, dma_addr_t src, 	dma_addr_t dest, size_t len);
+	struct dma_chan *chan, dma_addr_t src, 	dma_addr_t dest, size_t len, unsigned long flags);
 extern
 int dma_memcpy(
-	struct acq400_dev* adev, dma_addr_t dest, dma_addr_t src, size_t len);
+	struct acq400_dev* adev, dma_addr_t dest, dma_addr_t src, size_t len, unsigned long flags);
 
 extern void acq400_dma_callback(void *param);
 extern void xo400_getDMA(struct acq400_dev* adev);

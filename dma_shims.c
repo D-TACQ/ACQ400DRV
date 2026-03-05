@@ -113,11 +113,10 @@ dma_async_memcpy_callback(
 
 dma_cookie_t
 dma_async_memcpy(
-	struct dma_chan *chan, dma_addr_t src, 	dma_addr_t dest, size_t len)
+	struct dma_chan *chan, dma_addr_t src, 	dma_addr_t dest, size_t len, unsigned long flags)
 {
 	struct dma_device *dev = chan->device;
 	struct dma_async_tx_descriptor *tx;
-	unsigned long flags = DMA_DST_NO_INCR | DMA_CTRL_ACK;
 
 	DMA_NS;
 	tx = dev->device_prep_dma_memcpy(chan, dest, src, len, flags);
@@ -141,7 +140,7 @@ dma_async_memcpy(
 }
 
 int dma_memcpy(
-	struct acq400_dev* adev, dma_addr_t dest, dma_addr_t src, size_t len)
+	struct acq400_dev* adev, dma_addr_t dest, dma_addr_t src, size_t len, unsigned long flags)
 {
 	dma_cookie_t cookie;
 	DMA_NS_INIT;
@@ -153,7 +152,7 @@ int dma_memcpy(
 	}
 	dev_dbg(DEVP(adev), "dma_memcpy() chan:%d src:%08x dest:%08x len:%d\n",
 			adev->dma_chan[0]->chan_id, src, dest, len);
-	cookie = dma_async_memcpy(adev->dma_chan[0], src, dest, len);
+	cookie = dma_async_memcpy(adev->dma_chan[0], src, dest, len, flags);
 	dev_dbg(DEVP(adev), "dma_memcpy() wait cookie:%d\n", cookie);
 	dma_sync_wait(adev->dma_chan[0], cookie);
 	dev_dbg(DEVP(adev), "dma_memcpy() wait cookie:%d done\n", cookie);
