@@ -30,6 +30,8 @@
 #include "acq400_lists.h"
 #include "acq400_ui.h"
 
+#include "acq400_fs_ioctl.h"
+
 //int event_to = HZ/2;
 int event_to = 0x7fffffff;		// ie infinity
 module_param(event_to, int, 0644);
@@ -405,6 +407,27 @@ int acq400_hb_release(struct inode *inode, struct file *file)
 }
 
 
+static long
+acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+        struct acq400_dev *adev = ACQ400_DEV(file);
+        int dst_buf = BUFFER(PD(file)->minor);
+        struct HBM *dst_hbm = adev->hb[dst_buf];
+
+	switch(cmd){
+	case ACQ400_HB_COPYFROM: {
+		unsigned src_buf = arg;
+		struct HBM *src_hbm = adev->hb[src_buf];
+		dev_dbg(DEVP(adev), "%s: dst:%d src:%d 0x%08x := %08x %d memcpy()",
+				__FUNCTION__, dst_buf, src_buf, dst_hbm->pa, src_hbm->pa, src_hbm->len);
+		memcpy(dst_hbm->va, src_hbm->va, src_hbm->len);
+		return 0;
+	}
+	default:
+		return -ENODEV;
+	}
+}
+
 
 int acq400_open_hb(struct inode *inode, struct file *file)
 {
@@ -414,6 +437,8 @@ int acq400_open_hb(struct inode *inode, struct file *file)
 		.read = acq400_hb_read,
 		.write = acq400_hb_write,
 		.release = acq400_hb_release,
+		.unlocked_ioctl = acq400_hb_unlocked_ioctl,
+
 		// sendfile method is no more.. it's probably not quite this easy ..
 		// sure enough, it's not !
 		// most likely the HB's have to be on a block device ..

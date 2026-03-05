@@ -1294,7 +1294,8 @@ static int xo400_write_fifo_dma(struct acq400_dev* adev, int frombyte, int bytes
 
 	rc = dma_memcpy(adev,
 			adev->dev_physaddr+AXI_FIFO,
-			adev->cursor.hb[ib]->pa+offset, bytes);
+			adev->cursor.hb[ib]->pa+offset, bytes,
+			DMA_DST_NO_INCR | DMA_CTRL_ACK);
 
 	if (rc != bytes){
 		dev_err(DEVP(adev), "dma_memcpy FAILED :%d\n", rc);
