@@ -1,0 +1,55 @@
+#!/usr/bin/python
+
+import sys
+import spidev
+
+DEVICE_NUMBER = 0
+
+try:
+    DEVICE_NUMBER = int(sys.argv[1])
+except:
+    print(f"usage: {sys.argv[0]} <device_number>")
+    sys.exit(1)
+
+spi = spidev.SpiDev()
+spi.open(1, DEVICE_NUMBER)
+spi.max_speed_hz = 10000000
+spi.mode = 0b00
+
+"""
+reg | field   | bits | setting | desc |
+0x13|TP_EN_A  |  1   |    0    | 1 :  Data output is the ADC conversion result
+"""
+TP_EN_A = 0x0 << 1 # shift this << 1
+
+
+# The above is for registers 0x13, 0x14, 0x15
+# Rinse and repeat the above for registers 0x18, 0x19, 0x1A
+"""
+reg | field   | bits |setting| desc |
+0x18|TP_EN_B  | 1    |    1  | 0 :  Data output is the ADC conversion result
+"""
+TP_EN_B = 0x0 << 1 # shift this << 1
+
+reg13 = 0x00 | TP_EN_A
+reg18 = 0x00 | TP_EN_B
+
+def register_write(addr, data, dev=None):
+	data_high_byte = data >> 8
+	data_low_byte = data & 255
+	s = [addr, data_high_byte, data_low_byte]
+	chain = s+s+s+s+s+s+s+s
+
+	if not dev:
+		response = spi.xfer3(chain)
+	else:
+		response = dev.xfer3(chain)
+	return response
+
+responses = []
+responses.append(register_write(0x13, reg13))
+responses.append(register_write(0x18, reg18))
+
+for response in responses:
+    resp = map(hex, response)
+    print(list(resp))
