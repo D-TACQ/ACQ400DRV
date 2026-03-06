@@ -63,6 +63,10 @@ int acq400_sc_nacc_readoff = 0;
 module_param(acq400_sc_nacc_readoff, int, 0644);
 MODULE_PARM_DESC(acq400_sc_nacc_readfun, "0: normal ADC_");
 
+int hb_copy_from_mode = 0;
+module_param(hb_copy_from_mode, int, 0644);
+MODULE_PARM_DESC(hb_copy_from_mode, "0: no copy, 1:memcpy, 2:dma");
+
 
 int xo400_awg_open(struct inode *inode, struct file *file)
 /* if write mode, reset length */
@@ -406,7 +410,6 @@ int acq400_hb_release(struct inode *inode, struct file *file)
         return acq400_release(inode, file);
 }
 
-
 static long
 acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
@@ -418,9 +421,26 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case ACQ400_HB_COPYFROM: {
 		unsigned src_buf = arg;
 		struct HBM *src_hbm = adev->hb[src_buf];
-		dev_dbg(DEVP(adev), "%s: dst:%d src:%d 0x%08x := %08x %d memcpy()",
-				__FUNCTION__, dst_buf, src_buf, dst_hbm->pa, src_hbm->pa, src_hbm->len);
-		memcpy(dst_hbm->va, src_hbm->va, src_hbm->len);
+
+	        dev_dbg(DEVP(adev), "%s: dst:%d src:%d 0x%08x := %08x %d %s()",
+	        		__FUNCTION__, dst_buf, src_buf,
+				dst_hbm->pa, src_hbm->pa, src_hbm->len,
+				hb_copy_from_mode==0? "STUB":
+				hb_copy_from_mode==1? "memcpy":
+				hb_copy_from_mode==2? "DMA": "undefined" );
+
+		switch(hb_copy_from_mode){
+		case 0:
+			break;
+		case 1:
+			memcpy(dst_hbm->va, src_hbm->va, src_hbm->len);
+			break;
+		case 2:
+			dev_warn(DEVP(adev), "DMA STUB @@todo");
+			break;
+		}
+
+
 		return 0;
 	}
 	default:
