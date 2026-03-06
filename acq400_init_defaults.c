@@ -353,8 +353,6 @@ void acq428_onStart(struct acq400_dev *adev)
 	}
 
 	acq400wr32(adev, ADC_HITIDE, 	adev->hitide);
-        u32 ctrl = acq400rd32(adev, ADC_CTRL);
-        acq400wr32(adev, ADC_CTRL, ctrl | ADC_CTRL_ADC_RST);
 	acq420_enable_fifo(adev);
 	acq420_reset_fifo(adev);
 	adev->fifo_isr_done = 0;
@@ -708,7 +706,7 @@ static void acq428_init_defaults(struct acq400_dev *adev)
 	adev->word_size = 4;  // TODO: check the rest of the settings
 	adev->hitide = 128;
 	adev->lotide = adev->hitide - 4;
-	acq400wr32(adev, ADC_CLKDIV, 16);
+	// acq400wr32(adev, ADC_CLKDIV, 16); // clkdiv not required
 	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
 	adev->onStart = acq428_onStart;
 	adev->onStop = acq420_disable_fifo;
