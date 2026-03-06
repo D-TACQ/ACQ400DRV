@@ -2246,7 +2246,6 @@ static const struct attribute *acq465_attrs[] = {
 	NULL
 };
 
-// TODO: what do we need to do with this for acq428?
 MAKE_BITS(va_en, ACQ426_BCSR, MAKE_BITS_FROM_MASK, ACQ426_BCSR_VA_EN);
 MAKE_BITS(vset,  ACQ426_BCSR, MAKE_BITS_FROM_MASK, ACQ426_BCSR_VSET);
 MAKE_BIT_RON(busy,  ACQ426_BCSR, MAKE_BITS_FROM_MASK, ACQ426_BCSR_BSY);
@@ -2384,6 +2383,15 @@ static const struct attribute *acq426_attrs[] = {
 	NULL
 };
 
+// TODO: what do we need to do with this for acq428?
+MAKE_BITS(idelay_en, ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_IDELAY_EN);
+MAKE_BITS(sync_en,  ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_SYNC_EN);
+
+static const struct attribute *acq428_attrs[] = {
+	&dev_attr_idelay_en.attr,
+	&dev_attr_sync_en.attr,
+	NULL
+};
 SCOUNT_KNOB(CLK_EXT, 	ACQ2006_CLK_COUNT(0));
 SCOUNT_KNOB(CLK_MB, 	ACQ2006_CLK_COUNT(1));
 SCOUNT_KNOB(CLK_S1,     ACQ2006_CLK_COUNT(SITE2DX(1)));
@@ -3911,6 +3919,8 @@ int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const st
 			specials[nspec++] = acq425_attrs;
 		}else if (IS_ACQ426(adev)){
 			specials[nspec++] = acq426_attrs;
+                }else if (IS_ACQ428(adev)){
+                        specials[nspec++] = acq428_attrs;
 		}else{
 			specials[nspec++] = ACQ420_ATTRS;
 		}
