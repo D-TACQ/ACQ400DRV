@@ -25,45 +25,22 @@ fi
 
 /sbin/insmod $MODFILE ${ACQ428_PARAMS} acq428sites=$SITES
 
+/sbin/insmod /lib/modules/4.14.0-acq400-xilinx/spidev.ko
+
+
 mkdir -p /dev/acq428
 
 D428=/dev/acq428
 EK=/etc/acq400
 
 for site in $*; do
-        # /usr/local/CARE/load.overlay acq428_c32_s${site}_overlay
+        /usr/local/CARE/load.overlay acq428_s${site}_overlay /mnt/local/acq428_s${site}_overlay.dtb
         mkdir -p ${D428}/${site}
-        #for spidev in $SPI/spi1.*; do
-        #        cb=$(printf %x ${spidev#*.})
-        #        if [ ${cb:0:1} -eq $site ]; then
-        #                chip=${cb:1:1}
-        #                alpha=$(echo $chip | tr 01234567 ABCDEFGH)
-        #                id=$chip
-        #                ln -s ${D428}/$site/${id} ${D428}/$site/${alpha}
-        #                direct=reg.$site.$chip
-        #                ln -s ${D428}/$direct ${D428}/reg.$site.$alpha
-        #                iiodev=$(cat ${spidev}/iio_id)
-        #                ln -s ${IIO}${iiodev}                    ${D428}/$site/${id}
-        #                ln -s ${IIOD}${iiodev}/direct_reg_access ${D428}/$direct
-        #        fi
-        #done
-
-        #ch=1
-        #for chip in ${D428}/${site}/[0123]; do
-        #        for pchan in 7 6 5 4 3 2 1 0; do
-        #                in_v=$chip/in_voltage${pchan}
-        #                span=${in_v}_softspan
-        #                [ ! -e $span ] && break
- 
-#                        ln -s $span ${EK}/${site}/gain${ch}
-#                        echo $ACQ428_DEFSPAN > $span
-#                        ln -s ${in_v}_scale ${EK}/${site}/scale${ch}
-#                        ch=$((ch+1))
-#                done
-#        done
         echo 
 done
 
+# TODO: need this to happen for more than one site
+/usr/local/CARE/acq428_adc_init 0
 
 for site in $*; do
         ek=/etc/acq400/${site}
@@ -105,9 +82,27 @@ for site in $*; do
 	echo "SITE=$site $ACC"
 done
 
-cat - <<EOF
+cat - <<'EOF'
 echo run link calibration..
-/usr/local/CARE/acq428_calibrate_links
+/usr/local/CARE/acq428_adc_init 0
+/usr/local/CARE/acq428_idelay 0
+echo 1 > /sys/devices/soc0/amba/40010000.acq400fmc/idelay_en
+/usr/local/CARE/acq428_sync 0
+echo 1 > /sys/devices/soc0/amba/40010000.acq400fmc/sync_en
+/usr/local/CARE/acq428_data 0
+echo checking calib_debug for ff00ff00
+
+DEBUG_FILE="/sys/kernel/debug/acq400/acq400.1/ACQ428_CALIB_DEBUG.0x58"
+PATTERN=$(cat "$DEBUG_FILE")
+
+if [ "$PATTERN" != "0xff00ff00" ]; then
+    echo "Error: Calibration pattern mismatch! Expected 0xff00ff00, got $PATTERN"
+    exit 1
+fi
+
+echo Calibration good: pattern 0xff00ff00 detected.
+echo 0 > /sys/devices/soc0/amba/40010000.acq400fmc/sync_en
+echo 0 > /sys/devices/soc0/amba/40010000.acq400fmc/idelay_en
 echo acq428_init.job 99
 EOF
 
