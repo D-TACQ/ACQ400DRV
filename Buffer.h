@@ -72,6 +72,7 @@ public:
 	const char* getName() {
 		return fname;
 	}
+	int getFD() const { return fd; }
 
 	virtual int pred() {
 		return ibuf == 0? last_buf-1: ibuf-1;
