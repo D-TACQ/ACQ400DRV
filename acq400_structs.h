@@ -138,6 +138,8 @@ struct GatherDesc {
 	unsigned dst_idx;   /* dest, longs */
 };
 
+#define DMACHAN_MEMCPY 	2
+
 /** acq400_dev one descriptor per device */
 struct acq400_dev {
 	dev_t devno;
@@ -160,9 +162,9 @@ struct acq400_dev {
 	int dma_callback_done;
 	int fifo_isr_done;
 
-	struct dma_chan* dma_chan[2];   /* may get swapped to achieve channel align */
+	struct dma_chan* dma_chan[3];   /* may get swapped to achieve channel align */
 	struct dma_chan* dma_chan0;	/* the "real" chan0 for singles */
-	int dma_cookies[2];
+	int dma_cookies[3];
 	struct task_struct* w_task;
 	struct task_struct* h_task;	/* creates fifo histogram */
 	wait_queue_head_t w_waitq;

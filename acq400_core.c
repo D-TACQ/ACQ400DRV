@@ -263,6 +263,12 @@ extern int xo_use_distributor;		/* REMOVE ME */
 
 int get_dma_channels(struct acq400_dev *adev)
 {
+	if (IS_SC(adev)){
+		int rc = _get_dma_chan(adev, DMACHAN_MEMCPY);
+		if (rc != 0){
+			dev_err(DEVP(adev), "ERROR failed to allocate DMACHAN_MEMCPY");
+		}
+	}
 	if (IS_AXI64(adev)){
 		return 0;
 	}else if (IS_AO42X(adev) || IS_DIO432X(adev)){

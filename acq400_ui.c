@@ -63,7 +63,7 @@ int acq400_sc_nacc_readoff = 0;
 module_param(acq400_sc_nacc_readoff, int, 0644);
 MODULE_PARM_DESC(acq400_sc_nacc_readfun, "0: normal ADC_");
 
-int hb_copy_from_mode = 0;
+int hb_copy_from_mode = 2;
 module_param(hb_copy_from_mode, int, 0644);
 MODULE_PARM_DESC(hb_copy_from_mode, "0: no copy, 1:memcpy, 2:dma");
 
@@ -432,11 +432,15 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		switch(hb_copy_from_mode){
 		case 0:
 			break;
+		case 2:
+			if (adev->dma_chan[DMACHAN_MEMCPY] != 0){
+				dma_memcpy(adev, dst_hbm->pa, src_hbm->pa, src_hbm->len, 0);
+				break;
+			}else{
+				hb_copy_from_mode = 1;  // fall thru
+			}
 		case 1:
 			memcpy(dst_hbm->va, src_hbm->va, src_hbm->len);
-			break;
-		case 2:
-			dev_warn(DEVP(adev), "DMA STUB @@todo");
 			break;
 		}
 

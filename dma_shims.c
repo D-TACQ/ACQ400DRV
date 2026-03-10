@@ -145,16 +145,21 @@ int dma_memcpy(
 	dma_cookie_t cookie;
 	DMA_NS_INIT;
 	DMA_NS;
-	if (adev->dma_chan[0] == 0){
+	struct dma_chan* dmac = adev->dma_chan[DMACHAN_MEMCPY];
+	if (dmac == 0){
+		dmac = adev->dma_chan[0];
+	}
+
+	if (dmac == 0){
 		dev_err(DEVP(adev), "%p id:%d dma_find_channel set zero",
 				adev, adev->pdev->dev.id);
 		return -1;
 	}
 	dev_dbg(DEVP(adev), "dma_memcpy() chan:%d src:%08x dest:%08x len:%d\n",
-			adev->dma_chan[0]->chan_id, src, dest, len);
-	cookie = dma_async_memcpy(adev->dma_chan[0], src, dest, len, flags);
+			dmac->chan_id, src, dest, len);
+	cookie = dma_async_memcpy(dmac, src, dest, len, flags);
 	dev_dbg(DEVP(adev), "dma_memcpy() wait cookie:%d\n", cookie);
-	dma_sync_wait(adev->dma_chan[0], cookie);
+	dma_sync_wait(dmac, cookie);
 	dev_dbg(DEVP(adev), "dma_memcpy() wait cookie:%d done\n", cookie);
 	DMA_NS;
 	return len;
