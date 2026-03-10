@@ -1,0 +1,61 @@
+<?xml version="1.0" standalone="no" ?>
+<ACQ>
+<!-- acq425-default.xml
+     add calibration data if available via <Calibrated> fields -->
+<!-- calibration data -->
+<AcqCalibration>
+    <Info>
+        <CalDate>20260310</CalDate>
+        <Version>B1007</Version>
+        <Model>ACQ428ELF</Model>
+	<SerialNum>E42510000</SerialNum>
+    </Info>
+    <Data AICHAN="16" code_min="-32768" code_max="32764" SW="gains">
+        <Range name="0.125" sw="7">
+			<Nominal min="-1.25" max="1.25" eoff="0" eslo="38.146972e-6"/>
+        </Range>
+		<Range name="0.25" sw="6">
+			<Nominal min="-2.5" max="2.5" eoff="0" eslo="76.293945e-6" />
+<!-- example
+		<Calibrated ch="1" min="-2.2" max="2.2" />
+		<Calibrated ch="2" min="-2.10" max="2.10" />
+-->
+		</Range>
+        <Range name="0.5" sw="5">
+            <Nominal min="-5" max="5" eoff="0" eslo="152.58789e-6" />
+        </Range>
+        <Range name="1" sw="4">
+            <Nominal min="-10" max="10" eoff="0" eslo="305.17578e-6" />
+        </Range>
+        <Range name="2" sw="3">
+			<Nominal min="-1.25" max="1.25" eoff="0" eslo="38.146972e-6"/>
+        </Range>
+		<Range name="4" sw="2">
+			<Nominal min="-2.5" max="2.5" eoff="0" eslo="76.293945e-6" />
+<!-- example
+		<Calibrated ch="1" min="-2.2" max="2.2" />
+		<Calibrated ch="2" min="-2.10" max="2.10" />
+-->
+		</Range>
+        <Range name="8" sw="1">
+            <Nominal min="-5" max="5" eoff="0" eslo="152.58789e-6" />
+        </Range>
+        <Range name="16" sw="0">
+            <Nominal min="-10" max="10" eoff="0" eslo="305.17578e-6" />
+        </Range>
+    </Data>
+</AcqCalibration>
+<ModelSpec>
+        <ChannelBlockMask>
+                <BlockWidth>4</BlockWidth>
+                <BlockSet>"1111"</BlockSet>
+        </ChannelBlockMask>
+        <MaxAggregateRate>64 MB/sec</MaxAggregateRate>
+        <MaxDeviceRate>2 MS/sec</MaxDeviceRate>
+        <MinDeviceRate>0 MS/sec</MinDeviceRate>
+        <CalClock>1000000</CalClock>
+        <CalMeanN>1024000</CalMeanN>
+</ModelSpec>
+</ACQ>
+
+
