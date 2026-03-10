@@ -63,10 +63,13 @@ int acq400_sc_nacc_readoff = 0;
 module_param(acq400_sc_nacc_readoff, int, 0644);
 MODULE_PARM_DESC(acq400_sc_nacc_readfun, "0: normal ADC_");
 
-int hb_copy_from_mode = 2;
+int hb_copy_from_mode = 1;    // mode 2 no-go, pl330 is NFG.
 module_param(hb_copy_from_mode, int, 0644);
 MODULE_PARM_DESC(hb_copy_from_mode, "0: no copy, 1:memcpy, 2:dma");
 
+int hb_dma_flags = 0;
+module_param(hb_dma_flags, int, 0644);
+MODULE_PARM_DESC(hb_dma_flags, "magic combo to unpick pl330");
 
 int xo400_awg_open(struct inode *inode, struct file *file)
 /* if write mode, reset length */
@@ -409,7 +412,7 @@ int acq400_hb_release(struct inode *inode, struct file *file)
 
         return acq400_release(inode, file);
 }
-
+#include "dmaengine.h"
 static long
 acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
@@ -434,7 +437,9 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			break;
 		case 2:
 			if (adev->dma_chan[DMACHAN_MEMCPY] != 0){
-				dma_memcpy(adev, dst_hbm->pa, src_hbm->pa, src_hbm->len, 0);
+				unsigned flags = hb_dma_flags;
+				//flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
+				dma_memcpy(adev, dst_hbm->pa, src_hbm->pa, src_hbm->len, flags);
 				break;
 			}else{
 				hb_copy_from_mode = 1;  // fall thru
