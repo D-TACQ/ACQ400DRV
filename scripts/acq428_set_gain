@@ -9,7 +9,7 @@ if [ "$id" = "gains" ]; then
 	for ic in $(seq 1 16)
 	do
             val=$(/etc/acq400/$SITE/gain$ic)
-	    GAINS="$GAINS $val"
+	    GAINS="${GAINS}${val}"
 	done
 	echo $GAINS	
 	exit 0
@@ -28,26 +28,26 @@ set_gain() {
 get_gain() {
     bits=$(cat $KNOB2)$(cat $KNOB1)$(cat $KNOB0)
 	case $bits in
-	111) echo 16;;
-	110) echo 8;;
-	101) echo 4;;
-	100) echo 2;;
-	011) echo 1;;
-	010) echo 0.5;;
-	001) echo 0.25;;
-        000) echo 0.125;;
+	111) echo 7;; # 16
+	110) echo 6;; # 8
+	101) echo 5;; # 4
+	100) echo 4;; # 2
+	011) echo 3;; # 1
+	010) echo 2;; # 0.5
+	001) echo 1;; # 0.25
+        000) echo 0;; # 0.125
 	*)  echo -1;;
 	esac
 }
 
 case $1 in
-16) set_gain 1 1 1;;
-8) set_gain 1 1 0;;
-4) set_gain 1 0 1;;
-2) set_gain 1 0 0;;
-1) set_gain 0 1 1;;
-0.5) set_gain 0 1 0;;
-0.25) set_gain 0 0 1;;
-0.125) set_gain 0 0 0;;
+7) set_gain 1 1 1;; # 16
+6) set_gain 1 1 0;; # 8
+5) set_gain 1 0 1;; # 4
+4) set_gain 1 0 0;; # 2
+3) set_gain 0 1 1;; # 1
+2) set_gain 0 1 0;; # 0.5
+1) set_gain 0 0 1;; # 0.25
+0) set_gain 0 0 0;; # 0.125
 *) get_gain;;
 esac
