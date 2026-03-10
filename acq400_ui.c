@@ -448,6 +448,27 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 }
 
+static long
+acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+        struct acq400_dev *adev = ACQ400_DEV(file);
+        int dst_buf = BUFFER(PD(file)->minor);
+        struct HBM *dst_hbm = adev->hb[dst_buf];
+
+	switch(cmd){
+	case ACQ400_HB_COPYFROM: {
+		unsigned src_buf = arg;
+		struct HBM *src_hbm = adev->hb[src_buf];
+		dev_dbg(DEVP(adev), "%s: dst:%d src:%d 0x%08x := %08x %d memcpy()",
+				__FUNCTION__, dst_buf, src_buf, dst_hbm->pa, src_hbm->pa, src_hbm->len);
+		memcpy(dst_hbm->va, src_hbm->pa, src_hbm->len);
+		return 0;
+	}
+	default:
+		return -ENODEV;
+	}
+}
+
 
 int acq400_open_hb(struct inode *inode, struct file *file)
 {
