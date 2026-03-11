@@ -243,7 +243,7 @@ static ssize_t show_di_snoop(
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 
-	return sprintf(buf, "%08x\n", acq400rd32(adev, DIO432_DI_SNOOP));
+	return sprintf(buf, "0x%08x\n", acq400rd32(adev, DIO432_DI_SNOOP));
 }
 
 static DEVICE_ATTR(di_snoop, S_IRUGO, show_di_snoop, 0);
