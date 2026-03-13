@@ -61,9 +61,6 @@
 #define ACQ428_EVENT_SAMPLE_CTR (ADC_BASE+0x30)
 #define ACQ428_CLKDIV           (ADC_BASE+0x40)
 
-#define ACQ428_BANK_MODE        (ADC_BASE+0x44)
-
-
 #define ACQ428_CALIB_DEBUG      (ADC_BASE+0x58)
 #define ACQ428_CALIB_POINT_1    (ADC_BASE+0x60)
 #define ACQ428_CALIB_POINT_2    (ADC_BASE+0x64)
@@ -88,6 +85,7 @@
 
 #define ACQ425_BANK             (ADC_BASE+0x44) /* MUST MATCH ACQ435_MODE in address and meaning! */
 #define ACQ423_BANK		(ADC_BASE+0x44)
+#define ACQ428_BANK		(ADC_BASE+0x44)
 #define AO420_DACSPI		(ADC_BASE+0x48)
 
 #define DAC_424_SNOOP		(ADC_BASE+0x4C)
@@ -237,6 +235,7 @@
 
 #define ACQ428_ADC_CTRL_IDELAY_EN (1 << 16)
 #define ACQ428_ADC_CTRL_SYNC_EN (1 << 17)
+#define ACQ428_BANK_XRM_D37_MODE    (1<<5)
 
 #define DAC_CTRL_DAC_EN		ADC_CTRL_ADC_EN
 #define DAC_CTRL_DAC_RST	ADC_CTRL_ADC_RST

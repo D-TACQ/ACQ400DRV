@@ -2386,10 +2386,12 @@ static const struct attribute *acq426_attrs[] = {
 // TODO: what do we need to do with this for acq428?
 MAKE_BITS(idelay_en, ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_IDELAY_EN);
 MAKE_BITS(sync_en,  ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_SYNC_EN);
+MAKE_BITS(xrm_d37_mode, ACQ428_BANK, MAKE_BITS_FROM_MASK, ACQ428_BANK_XRM_D37_MODE);
 
 static const struct attribute *acq428_attrs[] = {
 	&dev_attr_idelay_en.attr,
 	&dev_attr_sync_en.attr,
+        &dev_attr_xrm_d37_mode.attr,
 	NULL
 };
 SCOUNT_KNOB(CLK_EXT, 	ACQ2006_CLK_COUNT(0));
