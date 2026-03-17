@@ -27,6 +27,7 @@ fi
 
 /sbin/insmod /lib/modules/4.14.0-acq400-xilinx/spidev.ko
 
+/sbin/insmod /lib/modules/4.14.0-acq400-xilinx/acq400_hook_spi_cs.ko
 
 mkdir -p /dev/acq428
 
