@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# back up enough of the SD card to allow it to be recreated from a public release.
+# use externally as follow
+# ssh root@$UUT /usr/local/CARE/backup_metadata > meta_$UUT.tar
+
+tar cvf - -C/  tmp/fpga_status dev/shm/fw.xml mnt/local
+
+
+
