@@ -76,10 +76,7 @@ EOF
     # print individual site init scripts
     for site in $*; do
 	echo "SITE=$site /usr/local/CARE/acq428_adc.init"
-	echo "SITE=$site $ACC"
     done
-
-    echo Run link calibration...
 
     # Loop through sites to generate calibration sequence
     idx=1
@@ -117,7 +114,7 @@ EOF
         idx=$((idx + 1))
     done
 
-    echo acq428_init.job 99
+    echo "acq428_init.job 99"
 } > /tmp/acq428_init.job
 chmod a+rx /tmp/acq428_init.job
 nice /tmp/acq428_init.job &

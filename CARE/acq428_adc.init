@@ -4,8 +4,6 @@ logger -t acq428_adc.init 01 SITE $SITE
 
 dk=/dev/acq400.${SITE}.knobs
 
-echo 1 > ${dk}/va_en
-
 logger -t acq428_adc.init 99
 
 
