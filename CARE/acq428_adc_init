@@ -40,7 +40,7 @@ for frame in chain24:
 
 for response in responses:
     resp = map(hex, response)
-    print(list(resp))
+    #print(list(resp))
 
 
 # ADC init
@@ -151,5 +151,5 @@ responses.append(register_write(0xFB, regFB))
 
 for response in responses:
 	resp = map(hex, response)
-	print(list(resp)[24:])
+	#print(list(resp)[24:])
 
