@@ -632,7 +632,7 @@ build_knobs_device() {
         ACQ426_SITES="${ACQ426_SITES} $site";;
     ${MOD_ID_ACQ428ELF})
         set_max_min_khz ${site} 1000 1
-        build_knobs_acq428_device $site $mtype $dk $ek
+        build_knobs_acq428_device $site $mtype $dk $ek;;
     ${MOD_ID_ACQ465ELF})
         set_max_min_khz ${site} 1400 1
         ACQ465_SITES="${ACQ465_SITES} $site";;
