@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 echo +++acq428.init $*  begin 01
 
 for s in $*; do
@@ -13,7 +12,6 @@ done
 
 [ -e /mnt/local/sysconfig/acq400.sh ] && source /mnt/local/sysconfig/acq400.sh
 
-
 MODFILE=/mnt/local/acq428_drv.ko
 if [ -e $MODFILE ]; then
         echo loading override /mnt/local/acq428_drv.ko
@@ -22,9 +20,7 @@ else
 fi
 
 /sbin/insmod $MODFILE ${ACQ428_PARAMS} acq428sites=$SITES
-
 /sbin/insmod /lib/modules/4.14.0-acq400-xilinx/spidev.ko
-
 /sbin/insmod /lib/modules/4.14.0-acq400-xilinx/acq400_hook_spi_cs.ko
 
 mkdir -p /dev/acq428
@@ -69,26 +65,23 @@ for site in $*; do
 done
 
 # make post job boot file
-(
-cat - <<EOF
+{
+    cat - <<EOF
 #!/bin/sh
 while [ ! -e  /var/www/d-tacq/rc-user-complete ]; do
 	sleep 3
 done
 echo acq428_init.job \$(cat /var/www/d-tacq/rc-user-complete)
 EOF
-
-for site in $*; do
+    # print individual site init scripts
+    for site in $*; do
 	echo "SITE=$site /usr/local/CARE/acq428_adc.init"
 	echo "SITE=$site $ACC"
-done
+    done
 
-{
+    echo Run link calibration...
 
-    cat <<'EOF'
-echo Run link calibration...
-EOF
-
+    # Loop through sites to generate calibration sequence
     idx=1
     for site in $*; do
         if [ "$idx" -eq 1 ]; then
@@ -99,17 +92,17 @@ EOF
 
 
         cat - <<EOF
-echo run link calibration..
+echo "run link calibration for site $site..."
 /usr/local/CARE/acq428_adc_init $offset
 /usr/local/CARE/acq428_idelay $offset
 echo 1 > /dev/acq400.${site}.knobs/idelay_en
 /usr/local/CARE/acq428_sync $offset
 echo 1 > /dev/acq400.${site}.knobs/sync_en
 /usr/local/CARE/acq428_data $offset
-echo checking calib_debug for ff00ff00 on site $site
+echo "checking calib_debug for ff00ff00 on site $site"
 
 DEBUG_FILE="/sys/kernel/debug/acq400/acq400.${site}/ACQ428_CALIB_DEBUG.0x58"
-PATTERN=$(cat "\$DEBUG_FILE")
+PATTERN=\`cat "\$DEBUG_FILE"\`
 
 if [ "\$PATTERN" != "0xff00ff00" ]; then
     echo "Error: Calibration pattern mismatch on site $site! Expected 0xff00ff00, got \$PATTERN"
@@ -119,17 +112,14 @@ fi
 echo Calibration good for site $site : pattern 0xff00ff00 detected
 echo 0 > /dev/acq400.${site}.knobs/sync_en
 echo 0 > /dev/acq400.${site}.knobs/idelay_en
-echo acq428_init.job 99
 EOF
 
         idx=$((idx + 1))
     done
 
-    cat <<'EOF'
-EOF
+    echo acq428_init.job 99
 } > /tmp/acq428_init.job
 chmod a+rx /tmp/acq428_init.job
-)
 nice /tmp/acq428_init.job &
 
 echo +++acq428.init 99
