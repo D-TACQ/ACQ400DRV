@@ -14,8 +14,6 @@ done
 [ -e /mnt/local/sysconfig/acq400.sh ] && source /mnt/local/sysconfig/acq400.sh
 
 
-ACQ428_DEFSPAN=${ACQ428_DEFSPAN:-M10-10}
-
 MODFILE=/mnt/local/acq428_drv.ko
 if [ -e $MODFILE ]; then
         echo loading override /mnt/local/acq428_drv.ko
@@ -40,8 +38,10 @@ for site in $*; do
         echo 
 done
 
-# TODO: need this to happen for more than one site
-/usr/local/CARE/acq428_adc_init 0
+for site in $*; do
+    mapped_site=$(expr "$site" - 1)
+    /usr/local/CARE/acq428_adc_init $mapped_site
+done
 
 for site in $*; do
         ek=/etc/acq400/${site}
@@ -83,33 +83,53 @@ for site in $*; do
 	echo "SITE=$site $ACC"
 done
 
-cat - <<'EOF'
+{
+
+    cat <<'EOF'
+echo Run link calibration...
+EOF
+
+    idx=1
+    for site in $*; do
+        if [ "$idx" -eq 1 ]; then
+            offset=0
+        else
+            offset=$((idx * 16))
+        fi
+
+
+        cat - <<EOF
 echo run link calibration..
-/usr/local/CARE/acq428_adc_init 0
-/usr/local/CARE/acq428_idelay 0
-echo 1 > /sys/devices/soc0/amba/40010000.acq400fmc/idelay_en
-/usr/local/CARE/acq428_sync 0
-echo 1 > /sys/devices/soc0/amba/40010000.acq400fmc/sync_en
-/usr/local/CARE/acq428_data 0
-echo checking calib_debug for ff00ff00
+/usr/local/CARE/acq428_adc_init $offset
+/usr/local/CARE/acq428_idelay $offset
+echo 1 > /dev/acq400.${site}.knobs/idelay_en
+/usr/local/CARE/acq428_sync $offset
+echo 1 > /dev/acq400.${site}.knobs/sync_en
+/usr/local/CARE/acq428_data $offset
+echo checking calib_debug for ff00ff00 on site $site
 
-DEBUG_FILE="/sys/kernel/debug/acq400/acq400.1/ACQ428_CALIB_DEBUG.0x58"
-PATTERN=$(cat "$DEBUG_FILE")
+DEBUG_FILE="/sys/kernel/debug/acq400/acq400.${site}/ACQ428_CALIB_DEBUG.0x58"
+PATTERN=$(cat "\$DEBUG_FILE")
 
-if [ "$PATTERN" != "0xff00ff00" ]; then
-    echo "Error: Calibration pattern mismatch! Expected 0xff00ff00, got $PATTERN"
+if [ "\$PATTERN" != "0xff00ff00" ]; then
+    echo "Error: Calibration pattern mismatch on site $site! Expected 0xff00ff00, got \$PATTERN"
     exit 1
 fi
 
-echo Calibration good: pattern 0xff00ff00 detected.
-echo 0 > /sys/devices/soc0/amba/40010000.acq400fmc/sync_en
-echo 0 > /sys/devices/soc0/amba/40010000.acq400fmc/idelay_en
+echo Calibration good for site $site : pattern 0xff00ff00 detected
+echo 0 > /dev/acq400.${site}.knobs/sync_en
+echo 0 > /dev/acq400.${site}.knobs/idelay_en
 echo acq428_init.job 99
 EOF
 
-) >/tmp/acq428_init.job
-chmod a+rx /tmp/acq428_init.job
+        idx=$((idx + 1))
+    done
 
+    cat <<'EOF'
+EOF
+} > /tmp/acq428_init.job
+chmod a+rx /tmp/acq428_init.job
+)
 nice /tmp/acq428_init.job &
 
 echo +++acq428.init 99
