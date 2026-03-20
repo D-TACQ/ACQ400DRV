@@ -19,9 +19,9 @@ else
 	MODFILE=/usr/local/lib/modules/acq428_drv.ko
 fi
 
-/sbin/insmod /lib/modules/4.14.0-acq400-xilinx/acq400_hook_spi_cs.ko cb=1
+/sbin/insmod /lib/modules/$(uname -r)/acq400_hook_spi_cs.ko cb=1
 /sbin/insmod $MODFILE ${ACQ428_PARAMS} acq428sites=$SITES
-/sbin/insmod /lib/modules/4.14.0-acq400-xilinx/spidev.ko
+/sbin/insmod /lib/modules/$(uname -r)/spidev.ko
 
 mkdir -p /dev/acq428
 
