@@ -19,7 +19,7 @@ else
 	MODFILE=/usr/local/lib/modules/acq428_drv.ko
 fi
 
-/sbin/insmod /lib/modules/4.14.0-acq400-xilinx/acq400_hook_spi_cs.ko cb=0
+/sbin/insmod /lib/modules/4.14.0-acq400-xilinx/acq400_hook_spi_cs.ko cb=1
 /sbin/insmod $MODFILE ${ACQ428_PARAMS} acq428sites=$SITES
 /sbin/insmod /lib/modules/4.14.0-acq400-xilinx/spidev.ko
 
@@ -32,11 +32,6 @@ for site in $*; do
         /usr/local/CARE/load.overlay acq428_s${site}_overlay /mnt/local/acq428_s${site}_overlay.dtb
         mkdir -p ${D428}/${site}
         echo 
-done
-
-for site in $*; do
-    mapped_site=$(expr "$site" - 1)
-    /usr/local/CARE/acq428_adc_init $mapped_site
 done
 
 for site in $*; do
@@ -81,11 +76,7 @@ EOF
     # Loop through sites to generate calibration sequence
     idx=1
     for site in $*; do
-        if [ "$idx" -eq 1 ]; then
-            offset=0
-        else
-            offset=$((idx * 16))
-        fi
+        offset=$((idx * 16))
 
 
         cat - <<EOF
