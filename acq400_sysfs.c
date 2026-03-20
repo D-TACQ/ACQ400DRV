@@ -2394,6 +2394,8 @@ static const struct attribute *acq428_attrs[] = {
 	&dev_attr_sync_en.attr,
         &dev_attr_xrm_d37_mode.attr,
         &dev_attr_adc_resolution.attr,
+	&dev_attr_adc_18b.attr,
+	&dev_attr_adc_conv_time.attr,
 	NULL
 };
 SCOUNT_KNOB(CLK_EXT, 	ACQ2006_CLK_COUNT(0));
