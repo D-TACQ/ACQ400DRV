@@ -50,6 +50,8 @@ static int ndev;
 #define PGA_ADDR_2      0x23
 #define N_PGA_GPIO 24
 
+extern void acq480_hook_spi(void);
+
 static struct i2c_client* new_device(
 		struct i2c_adapter *adap,
 		const char* name, unsigned short addr, int gpio_base)
@@ -68,6 +70,7 @@ static void __init acq428_init_site(int site)
 {
 	int ch = site+1;
 	int gpio_base = acq428_gpio_base + ndev * N_PGA_GPIO;
+        acq480_hook_spi();
 
 	i2c_adap[site] = i2c_get_adapter(ch);
 

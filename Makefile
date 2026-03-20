@@ -80,6 +80,8 @@ acq480-objs := acq480_drv.o hbm.o zynq_peripheral_spi_shim.o
 
 acq426-objs := acq426_drv.o hbm.o zynq_peripheral_spi_shim.o
 
+acq428-objs := acq428_drv.o hbm.o zynq_peripheral_spi_shim.o
+
 acq465-objs := acq465_drv.o hbm.o zynq_peripheral_spi_shim.o
 
 acq494-objs := acq494_gpx2_drv.o zynq_peripheral_spi_shim.o
