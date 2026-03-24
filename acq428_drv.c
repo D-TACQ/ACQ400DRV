@@ -49,43 +49,80 @@ static int ndev;
 #define PGA_ADDR_1	0x22
 #define PGA_ADDR_2      0x23
 #define N_PGA_GPIO 24
+#define MAX_SITES 6
 
-static struct i2c_client* new_device(
-		struct i2c_adapter *adap,
-		const char* name, unsigned short addr, int gpio_base)
-{
-	struct pca953x_platform_data pca_data = {};
-	struct i2c_board_info info = {};
+struct acq428_site_data {
+    struct i2c_adapter *adap;
+    struct i2c_client *client1;
+    struct i2c_client *client2;
+    struct pca953x_platform_data pdata1;
+    struct pca953x_platform_data pdata2;
+};
 
-	strlcpy(info.type, name, I2C_NAME_SIZE);
-	info.addr = addr;
-	pca_data.gpio_base = gpio_base;
-	pca_data.irq_base = -1;
-	info.platform_data = &pca_data;
-	return i2c_new_device(adap, &info);
-}
+static struct acq428_site_data site_data[MAX_SITES];
+static int ndev;
+
 static void __init acq428_init_site(int site)
 {
-	int ch = site+1;
-	int gpio_base = acq428_gpio_base + ndev * N_PGA_GPIO;
+    struct acq428_site_data *sd;
+    struct i2c_board_info info1 = {};
+    struct i2c_board_info info2 = {};
+    int ch = site + 1;
+    int gpio_base = acq428_gpio_base + (ndev * N_PGA_GPIO * 2);
+    if (site < 0 || site > MAX_SITES) {
+        pr_err("acq428: Site %d is out of bounds\n", site);
+        return;
+    }
 
-	i2c_adap[site] = i2c_get_adapter(ch);
+    sd = &site_data[site];
+    sd->adap = i2c_get_adapter(ch);
+    if (!sd->adap) {
+        pr_err("acq428: i2c adapter %d not found for site %d\n", ch, site);
+        return;
+    }
 
-	if (new_device(i2c_adap[site], PGA_TYPE, PGA_ADDR_1, gpio_base) == 0){
-		printk("acq428_init_site(%d) PGA NOT found\n", site);
-	}
-	if (new_device(i2c_adap[site], PGA_TYPE, PGA_ADDR_2, gpio_base + N_PGA_GPIO) == 0){
-		printk("acq428_init_site(%d) PGA NOT found\n", site);
-	}
+    // Setup persistent platform data
+    sd->pdata1.gpio_base = gpio_base;
+    sd->pdata1.irq_base = -1;
 
+    sd->pdata2.gpio_base = gpio_base + N_PGA_GPIO;
+    sd->pdata2.irq_base = -1;
+
+    // Initialise PGA 1
+    strlcpy(info1.type, PGA_TYPE, I2C_NAME_SIZE);
+    info1.addr = PGA_ADDR_1;
+    info1.platform_data = &sd->pdata1;
+    sd->client1 = i2c_new_device(sd->adap, &info1);
+    if (!sd->client1)
+        pr_err("acq428_init_site(%d) PGA 1 not found\n", site);
+
+    // Initialise PGA 2
+    strlcpy(info2.type, PGA_TYPE, I2C_NAME_SIZE);
+    info2.addr = PGA_ADDR_2;
+    info2.platform_data = &sd->pdata2;
+    sd->client2 = i2c_new_device(sd->adap, &info2);
+    if (!sd->client2)
+        pr_err("acq428_init_site(%d) PGA 2 not found\n", site);
 }
+
 
 static void __init acq428_remove_site(int site)
 {
-	int ch = site+1;
-	printk("acq428_init_site %d channel %d\n", site, ch);
-	i2c_put_adapter(i2c_adap[site]);
+    struct acq428_site_data *sd;
+    if (site < 0 || site > MAX_SITES)
+        return;
+
+    sd = &site_data[site];
+    pr_info("acq428_remove_site %d channel %d\n", site, site + 1);
+    
+    if (sd->client1)
+        i2c_unregister_device(sd->client1);
+    if (sd->client2)
+        i2c_unregister_device(sd->client2);
+    if (sd->adap)
+        i2c_put_adapter(sd->adap);
 }
+
 
 static void __exit acq428_exit(void)
 {
@@ -97,14 +134,13 @@ static void __exit acq428_exit(void)
 
 static int __init acq428_init(void)
 {
-        int status = 0;
 
-	printk("D-TACQ ACQ428ELF Driver %s\n", REVID);
+	pr_info("D-TACQ ACQ428ELF Driver %s\n", REVID);
 
 	for (ndev = 0; ndev < acq428sites_count; ++ndev){
 		acq428_init_site(acq428sites[ndev]);
 	}
-        return status;
+        return 0;
 }
 
 module_init(acq428_init);
