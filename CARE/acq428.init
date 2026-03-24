@@ -112,9 +112,9 @@ nice /tmp/acq428_init.job &
 
 echo +++acq428.init 99
 
-# FPGA check for XRM
-FPGA=$(grep filename /tmp/fpga_status | awk '{ print $5 }')
-
-if echo $FPGA | grep -q '\-XRM'; then
-    echo "It's an XRM!"
+if grep -q '\-XRM'; then
+    for site in $*
+    do
+        set.site $site xrm_d37_mode 1
+    done
 fi
