@@ -24,6 +24,7 @@
 
 
 #define REVID 			"3.945"
+#define REVID 			"3.950"
 #define MODULE_NAME             "acq420"
 
 /* Define debugging for use during our driver bringup */

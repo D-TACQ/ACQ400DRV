@@ -362,7 +362,7 @@ multicast: 	multicast.o Multicast.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
 		
 trigger_at: trigger_at.o knobs.o
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt -lacq
 	
 clocks_to_first_edge: clocks_to_first_edge.o knobs.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)	

@@ -149,7 +149,7 @@ build_nodes() {
                 fi;;
             ${MOD_ID_BOLO8}|${MOD_ID_BOLO8B})
                 mknod /dev/${NAME}.awg c ${MAJOR} 8;;
-            ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_DIO482FMC})
+            ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_DIO482FMC}|${MOD_ID_DIO482ELF_XRM})
                 if [ -e /dev/acq400.$ID.knobs/gpg_enable ]; then
                     mknod /dev/acq400.$ID.gpg c ${MAJOR} 5
                     mknod /dev/acq400.$ID.gpg32 c ${MAJOR} 28
@@ -526,7 +526,7 @@ build_knobs_dio_device() {
                         fi
                 fi
                 echo $num_pg >${ek}/num_pg;;
-        ${MOD_ID_DIO482FMC})
+        ${MOD_ID_DIO482FMC}|${MOD_ID_DIO482ELF_XRM})
                 source  /dev/sites/${site}/details
                 mv=$(cat ${dk}/module_variant)
                 case $mv in
@@ -648,7 +648,7 @@ build_knobs_device() {
         CLKDIV=500;;
     ${MOD_ID_BOLO8}|${MOD_ID_BOLO8B})
         build_knobs_bolo8_device $site $mtype $dk $ek;;
-    ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_PIG_CELF}|${MOD_ID_DIO482TD}|${MOD_ID_DIO482TD_PG}|${MOD_ID_DIO482FMC})
+    ${MOD_ID_DIO432FMC}|${MOD_ID_DIO432PMOD}|${MOD_ID_PIG_CELF}|${MOD_ID_DIO482TD}|${MOD_ID_DIO482TD_PG}|${MOD_ID_DIO482FMC}|${MOD_ID_DIO482ELF_XRM})
         build_knobs_dio_device $site $mtype $dk $ek;;
     ${MOD_ID_DI460ELF})
 	mv=$(cat ${dk}/module_variant)
@@ -721,7 +721,7 @@ build_site0() {
         $ULB/run0 $ULB/play0 $ULB/get.xdt \
         $ULB/streamtonowhered $ULB/set.sync_role \
 	$ULB/datals ${ULB}/cstate $ULB/channel_mapping \
-	$ULB/stream_subset \
+	$ULB/stream_subset ${ULB}/trigger_at \
 	${ek}
 
     echo "dummy role" > /dev/shm/role
@@ -739,6 +739,7 @@ build_site0() {
     ln -s ${ULC}/preset? ${ek}
     ln -s ${ULC}/get_data_size ${ek}/raw_data_size
     ln -s ${ULC}/rc_local_complete ${ek}
+    ln -s /usr/bin/uptime ${ek}
     echo $HAS_MGTDRAM > ${ek}/has_mgtdram
     echo "none" > ${ek}/stream_subset_mask;
     IS_TIGA=none
