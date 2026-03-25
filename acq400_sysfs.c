@@ -1746,6 +1746,7 @@ static const char* _lookup_id(struct acq400_dev *adev)
 		{ MOD_ID_ACQ426ELF,     "acq426elf"	},
 		{ MOD_ID_ACQ427ELF,	"acq427elf"	},
 		{ MOD_ID_ACQ427ELF_2000,"acq427elf"     },
+                { MOD_ID_ACQ428ELF,     "acq428elf"     },
 		{ MOD_ID_ACQ430FMC,     "acq430fmc"	},
 		{ MOD_ID_ACQ435ELF,	"acq435elf"	},
 		{ MOD_ID_ACQ436ELF,	"acq436elf"	},
@@ -2383,6 +2384,21 @@ static const struct attribute *acq426_attrs[] = {
 	NULL
 };
 
+// TODO: what do we need to do with this for acq428?
+MAKE_BITS(idelay_en, ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_IDELAY_EN);
+MAKE_BITS(sync_en,  ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_SYNC_EN);
+MAKE_BITS(adc_resolution, ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_RESOLUTION_18B);
+MAKE_BITS(xrm_d37_mode, ACQ428_BANK, MAKE_BITS_FROM_MASK, ACQ428_BANK_XRM_D37_MODE);
+
+static const struct attribute *acq428_attrs[] = {
+	&dev_attr_idelay_en.attr,
+	&dev_attr_sync_en.attr,
+        &dev_attr_xrm_d37_mode.attr,
+        &dev_attr_adc_resolution.attr,
+	&dev_attr_adc_18b.attr,
+	&dev_attr_adc_conv_time.attr,
+	NULL
+};
 SCOUNT_KNOB(CLK_EXT, 	ACQ2006_CLK_COUNT(0));
 SCOUNT_KNOB(CLK_MB, 	ACQ2006_CLK_COUNT(1));
 SCOUNT_KNOB(CLK_S1,     ACQ2006_CLK_COUNT(SITE2DX(1)));
@@ -3914,6 +3930,8 @@ int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const st
 			specials[nspec++] = acq425_attrs;
 		}else if (IS_ACQ426(adev)){
 			specials[nspec++] = acq426_attrs;
+                }else if (IS_ACQ428(adev)){
+                        specials[nspec++] = acq428_attrs;
 		}else{
 			specials[nspec++] = ACQ420_ATTRS;
 		}

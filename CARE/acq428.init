@@ -1,0 +1,121 @@
+#!/bin/sh
+
+echo +++acq428.init $*  begin 01
+
+for s in $*; do
+    if [ -z $SITES ]; then
+    	SITES=$s
+    else
+    	SITES=$SITES,$s
+    fi
+done
+
+[ -e /mnt/local/sysconfig/acq400.sh ] && source /mnt/local/sysconfig/acq400.sh
+
+MODFILE=/mnt/local/acq428_drv.ko
+if [ -e $MODFILE ]; then
+        echo loading override /mnt/local/acq428_drv.ko
+else
+	MODFILE=/usr/local/lib/modules/acq428_drv.ko
+fi
+
+/sbin/insmod /lib/modules/$(uname -r)/acq400_hook_spi_cs.ko cb=1
+/sbin/insmod $MODFILE ${ACQ428_PARAMS} acq428sites=$SITES
+/sbin/insmod /lib/modules/$(uname -r)/spidev.ko
+
+mkdir -p /dev/acq428
+
+D428=/dev/acq428
+EK=/etc/acq400
+
+for site in $*; do
+        /usr/local/CARE/load.overlay acq428_s${site}_overlay /mnt/local/acq428_s${site}_overlay.dtb
+        mkdir -p ${D428}/${site}
+        echo 
+done
+
+for site in $*; do
+        ek=/etc/acq400/${site}
+        dk=/dev/acq400.${site}.knobs
+
+        echo ${ACQ428_DATA32:-0} > $dk/data32
+        rm -f $ek/data32
+        cat - >$ek/data32 <<EOF
+#!/bin/sh
+if [ "x\$1" = "x" ]; then
+        cat $dk/data32
+else
+        echo \$1 > $dk/data32
+        echo set data32
+fi
+EOF
+        chmod a+rx $ek/data32
+        ln -s /usr/local/CARE/acq428_adc.init ${ek}
+#       (cd ${ek};source /tmp/makeLinks)
+done
+
+for site in $*; do
+    bus=$(expr "$site" + 1)
+    /usr/local/CARE/acq428gpio.init ${site} ${bus}
+done
+
+# make post job boot file
+{
+    cat - <<EOF
+#!/bin/sh
+while [ ! -e  /var/www/d-tacq/rc-user-complete ]; do
+	sleep 3
+done
+echo acq428_init.job \$(cat /var/www/d-tacq/rc-user-complete)
+EOF
+    # print individual site init scripts
+    for site in $*; do
+	echo "SITE=$site /usr/local/CARE/acq428_adc.init"
+    done
+
+    # Loop through sites to generate calibration sequence
+    idx=1
+    for site in $*; do
+        offset=$((idx * 16))
+
+
+        cat - <<EOF
+echo "run link calibration for site $site..."
+/usr/local/CARE/acq428_adc_init $offset
+/usr/local/CARE/acq428_idelay $offset
+echo 1 > /dev/acq400.${site}.knobs/idelay_en
+/usr/local/CARE/acq428_sync $offset
+echo 1 > /dev/acq400.${site}.knobs/sync_en
+/usr/local/CARE/acq428_data $offset
+echo "checking calib_debug for ff00ff00 on site $site"
+
+DEBUG_FILE="/sys/kernel/debug/acq400/acq400.${site}/ACQ428_CALIB_DEBUG.0x58"
+PATTERN=\`cat "\$DEBUG_FILE"\`
+
+if [ "\$PATTERN" != "0xff00ff00" ]; then
+    echo "Error: Calibration pattern mismatch on site $site! Expected 0xff00ff00, got \$PATTERN"
+    exit 1
+fi
+
+echo Calibration good for site $site : pattern 0xff00ff00 detected
+echo 0 > /dev/acq400.${site}.knobs/sync_en
+echo 0 > /dev/acq400.${site}.knobs/idelay_en
+EOF
+
+        idx=$((idx + 1))
+    done
+
+    echo "echo acq428_init.job 99"
+} > /tmp/acq428_init.job
+chmod a+rx /tmp/acq428_init.job
+nice /tmp/acq428_init.job &
+
+if grep -q -- '\-XRM' /tmp/fpga_status; then
+    echo "XRM detected. Applying xrm_d37_mode to all acq428 sites..."
+    for site in $*;
+    do
+        echo 1 > /dev/acq400.${site}.knobs/xrm_d37_mode
+    done
+fi
+
+echo +++acq428.init 99

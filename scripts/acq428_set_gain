@@ -1,0 +1,53 @@
+#!/bin/sh
+
+SITE=${SITE:-1}
+
+id=$(basename $0)
+
+if [ "$id" = "gains" ]; then
+	GAINS=""
+	for ic in $(seq 1 16)
+	do
+            val=$(/etc/acq400/$SITE/gain$ic)
+	    GAINS="${GAINS}${val}"
+	done
+	echo $GAINS	
+	exit 0
+fi
+CH=${id#gain}
+KNOB2=/dev/acq428/$SITE/ADC_${CH}_A2
+KNOB1=/dev/acq428/$SITE/ADC_${CH}_A1
+KNOB0=/dev/acq428/$SITE/ADC_${CH}_A0
+
+set_gain() {
+	set.sys $KNOB2 $1
+	set.sys $KNOB1 $2
+	set.sys $KNOB0 $3
+}
+
+get_gain() {
+    bits=$(cat $KNOB2)$(cat $KNOB1)$(cat $KNOB0)
+	case $bits in
+	111) echo 7;; # 16
+	110) echo 6;; # 8
+	101) echo 5;; # 4
+	100) echo 4;; # 2
+	011) echo 3;; # 1
+	010) echo 2;; # 0.5
+	001) echo 1;; # 0.25
+        000) echo 0;; # 0.125
+	*)  echo -1;;
+	esac
+}
+
+case $1 in
+7) set_gain 1 1 1;; # 16
+6) set_gain 1 1 0;; # 8
+5) set_gain 1 0 1;; # 4
+4) set_gain 1 0 0;; # 2
+3) set_gain 0 1 1;; # 1
+2) set_gain 0 1 0;; # 0.5
+1) set_gain 0 0 1;; # 0.25
+0) set_gain 0 0 0;; # 0.125
+*) get_gain;;
+esac

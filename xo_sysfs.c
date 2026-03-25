@@ -580,6 +580,7 @@ MAKE_DAC_RANGE(REF, 4);                  /* 1<<4 */
 
 MAKE_BITS(dac_range_en, AO420_RANGE, MAKE_BITS_FROM_MASK, AO422_RANGE_EN);
 MAKE_BITS(dac_ref5v,   AO420_RANGE, MAKE_BITS_FROM_MASK, AO422_RANGE_REF5);
+MAKE_BITS(xrm_d37_mode, DAC_CTRL, MAKE_BITS_FROM_MASK, DAC_CTRL_CHMAP_REVERSE);
 
 /*
  * GO : Gain + Offset
@@ -1312,6 +1313,7 @@ const struct attribute *ao420_common_attrs[] = {
 	&dev_attr_read_latency.attr,
 	&dev_attr_dac_dec.attr,
 	&dev_attr_delta_dac_setpoint.attr,
+        &dev_attr_xrm_d37_mode.attr,
 	NULL
 };
 

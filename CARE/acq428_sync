@@ -1,0 +1,92 @@
+#!/usr/bin/python
+
+import sys
+import spidev
+
+DEVICE_NUMBER = 0
+
+try:
+    DEVICE_NUMBER = int(sys.argv[1])
+except:
+    print(f"usage: {sys.argv[0]} <device_number>")
+    sys.exit(1)
+
+spi = spidev.SpiDev()
+spi.open(1, DEVICE_NUMBER)
+spi.max_speed_hz = 10000000
+spi.mode = 0b00
+
+
+"""
+reg | field   | bits | setting | desc |
+0x13|TP_MODE_A| 3-2  |   00    | Fixed pattern from the TP0_A register |
+0x13|TP_EN_A  |  1   |    1    | 1 : Data output is the digital test pattern for ADC A |
+"""
+TP_MODE_A = 0x0 << 2 # shift this << 2
+TP_EN_A = 0x1 << 1 # shift this << 1
+
+"""
+reg  | field      | bits  | setting | desc |
+0x14 | TP0_A[15:0]| 15-0  | 0xfff0  | All bits high at the start |
+"""
+TP0_A = 0xF000
+
+"""
+reg  | field        | bits | setting | desc |
+0x15 | TP0_A[23:16] |  7-0 | 0x00    | All bits 0 |
+"""
+TP0_A_HIGH_BYTE = 0xFF
+
+# The above is for registers 0x13, 0x14, 0x15
+# Rinse and repeat the above for registers 0x18, 0x19, 0x1A
+"""
+reg | field   | bits |setting| desc |
+0x18|TP_MODE_B|  3-2 |   00  | Fixed pattern from the TP0_B register |
+0x18|TP_EN_B  | 1    |    1  | 1 : Data output is the digital test pattern for ADC B |
+"""
+TP_MODE_B = 0x0 << 2 # shift this << 2
+TP_EN_B = 0x1 << 1 # shift this << 1
+
+"""
+reg  | field   | bits | setting | desc |
+0x19 | TP0_B[15:0] | 15-0 | 0x0000 | All bits 0 |
+"""
+TP0_B = 0x0000
+
+"""
+reg  | field        | bits | setting | desc |
+0x1A | TP0_B[23:16] | 7-0  | 0x00    | All bits 0 |
+"""
+TP0_B_HIGH_BYTE = 0x00
+
+reg13 = 0x00 | TP_MODE_A | TP_EN_A
+reg14 = 0x00 | TP0_A
+reg15 = 0x00 | TP0_A_HIGH_BYTE
+reg18 = 0x00 | TP_MODE_B | TP_EN_B
+reg19 = 0x00 | TP0_B
+reg1A = 0x00 | TP0_B_HIGH_BYTE
+
+
+def register_write(addr, data, dev=None):
+	data_high_byte = data >> 8
+	data_low_byte = data & 255
+	s = [addr, data_high_byte, data_low_byte]
+	chain = s+s+s+s+s+s+s+s
+
+	if not dev:
+		response = spi.xfer3(chain)
+	else:
+		response = dev.xfer3(chain)
+	return response
+
+responses = []
+responses.append(register_write(0x13, reg13))
+responses.append(register_write(0x14, reg14))
+responses.append(register_write(0x15, reg15))
+responses.append(register_write(0x18, reg18))
+responses.append(register_write(0x19, reg19))
+responses.append(register_write(0x1A, reg1A))
+
+for response in responses:
+    resp = map(hex, response)
+    #print(list(resp))
