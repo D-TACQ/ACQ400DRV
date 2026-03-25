@@ -110,11 +110,12 @@ EOF
 chmod a+rx /tmp/acq428_init.job
 nice /tmp/acq428_init.job &
 
-echo +++acq428.init 99
-
-if grep -q '\-XRM'; then
-    for site in $*
+if grep -q -- '\-XRM' /tmp/fpga_status; then
+    echo "XRM detected. Applying xrm_d37_mode to all acq428 sites..."
+    for site in $*;
     do
-        set.site $site xrm_d37_mode 1
+        echo 1 > /dev/acq400.${site}.knobs/xrm_d37_mode
     done
 fi
+
+echo +++acq428.init 99

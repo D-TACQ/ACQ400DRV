@@ -96,7 +96,7 @@ if { $::argc > 0 } {
 		set gpio1 [get_gpio1 $site 22]
 		link_gpio $site $LNAMES1 $OUTPUTS1 $gpio1
 		link_gpio $site $LNAMES2 $OUTPUTS2 [expr $gpio1 + 16]
-                exec /bin/ash -c "grep -q -- -XRM /tmp/fpga_status && set.site $site xrm_d37_mode 1"
+                exec /bin/ash -c "grep -q -- '-XRM' /tmp/fpga_status && echo 1 > /dev/acq400.$site.knobs/xrm_d37_mode"
 		if {[lsearch $ACQ427_4_SITES $site] >= 0 } {
 			puts "acq427_4 action:$site"
 			hook_aosite $site $site
