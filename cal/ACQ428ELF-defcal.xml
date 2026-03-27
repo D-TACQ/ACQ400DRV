@@ -7,28 +7,28 @@
       <SampleRate>10000 kHz</SampleRate>
     </Info>
     <Data AICHAN="16" SW="gain%d" code_max="32767" code_min="-32768" ranges="G0=25.6V,G1=12.8V,G2=6.4V,G3=3.2V,G4=1.6V,G5=0.8V,G6=0.4V,G7=0.2V">
-      <Range name="12.8V" sw="+/-12V8">
+      <Range name="12.8V" sw="1">
         <Nominal eoff="0" eslo="0.0001953125" max="12.8" min="-12.8" roff="0"/>
       </Range>
-      <Range name="6.4V" sw="+/-6V4">
+      <Range name="6.4V" sw="2">
         <Nominal eoff="0" eslo="9.765625e-05" max="6.4" min="-6.4" roff="0"/>
       </Range>
-      <Range name="3.2V" sw="+/-3V2">
+      <Range name="3.2V" sw="3">
         <Nominal eoff="0" eslo="4.8828125e-05" max="3.2" min="-3.2" roff="0"/>
       </Range>
-      <Range name="1.6V" sw="+/-1V6">
+      <Range name="1.6V" sw="4">
         <Nominal eoff="0" eslo="2.44140625e-05" max="1.6" min="-1.6" roff="0"/>
       </Range>
-      <Range name="25.6V" sw="+/-25V6">
+      <Range name="25.6V" sw="5">
         <Nominal eoff="0" eslo="0.000390625" max="25.6" min="-25.6" roff="0"/>
       </Range>
-      <Range name="0.8V" sw="+/-0V8">
+      <Range name="0.8V" sw="6">
         <Nominal eoff="0" eslo="1.220703125e-05" max="0.8" min="-0.8" roff="0"/>
       </Range>
-      <Range name="0.4V" sw="+/-0V4">
+      <Range name="0.4V" sw="7">
         <Nominal eoff="0" eslo="6.103515625e-06" max="0.4" min="-0.4" roff="0"/>
       </Range>
-      <Range name="0.2V" sw="+/-0V2">
+      <Range name="0.2V" sw="8">
         <Nominal eoff="0" eslo="3.0517578125e-06" max="0.2" min="-0.2" roff="0"/>
       </Range>
     </Data>
