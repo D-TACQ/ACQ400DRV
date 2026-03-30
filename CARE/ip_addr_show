@@ -1,4 +1,6 @@
-DEV=${1:-eth0}
+DEVS="${*:-eth0}"
 
-ip addr show dev $DEV | grep 'inet.*'$DEV'$' | tr / \  | awk '{ print $2}'
+for dev in $DEVS; do
+ip addr show dev $dev | grep 'inet.*'$dev'$' | tr / \  | awk '{ print $2}'
+done
 
