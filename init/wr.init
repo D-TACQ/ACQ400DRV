@@ -123,10 +123,10 @@ init_wrtd() {
 	done
 
 	if [ $site -eq 11 ]; then
-		WRSFP=SFP3
-		[ "$(cat /etc/acq400/0/MODEL)" = "acq1102" ] && WRSFP=SPF2
+		WRSFP=3
+		[ "$(cat /etc/acq400/0/MODEL)" = "acq1102" ] && WRSFP=2
 
-		ln -s /dev/gpio/MGT482/${WRSFP}/TX_DISABLE ${edir}/sfp_tx_disable
+		ln -s /dev/gpio/MGT482/SFP${WRSFP}/TX_DISABLE ${edir}/sfp_tx_disable
 		echo $WRSFP > ${edir}/wrsfp
 	fi
  	
