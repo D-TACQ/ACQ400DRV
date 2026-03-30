@@ -114,34 +114,36 @@ EOF
 
 init_wrtd() {
 	site=${1:-11}
+	edir=/etc/acq400/${site}
 	S11KNOBS=""
 	[ $site -eq 11 ] && S11KNOBS="WRTD_RX WRTD_RX_MATCHES WRTD_RX_MATCHES1 WRTD_RX_DOUBLETAP WRTD_DELAY01"
 	for kb in WRTD_DELTA_NS WRTD_VERBOSE WRTD_TICKNS WRTD_TX  \
 		WRTD_ID WRTD_TX_MASK ${S11KNOBS}; do
-		ln -s /usr/local/CARE/wrtd_env /etc/acq400/${site}/$kb
+		ln -s /usr/local/CARE/wrtd_env ${edir}/$kb
 	done
 
 	if [ $site -eq 11 ]; then
-	       txdis="/dev/gpio/MGT482/SFP3/TX_DISABLE"
-               model=$(cat /etc/acq400/0/MODEL)
-               [ "$model" = "acq1102" ] && txdis=/dev/gpio/MGT/SFP2/TX_DISABLE
-	       ln -s $txdis /etc/acq400/11/sfp_tx_disable
+		WRSFP=SFP3
+		[ "$(cat /etc/acq400/0/MODEL)" = "acq1102" ] && WRSFP=SPF2
+
+		ln -s /dev/gpio/MGT482/${WRSFP}/TX_DISABLE ${edir}/sfp_tx_disable
+		echo $WRSFP > ${edir}/wrsfp
 	fi
  	
-	ln -s /usr/local/CARE/wrtd_tx 			/etc/acq400/${site}
-	ln -s /usr/local/CARE/wrtd_tx_immediate /etc/acq400/${site}
-#	ln -s /usr/local/CARE/wrtd_txi 			/etc/acq400/${site}
-#	ln -s /usr/local/CARE/wrtd_txq 			/etc/acq400/${site}
-	ln -s /usr/local/bin/wrtd				/etc/acq400/${site}/wrtd_txq
-	ln -s /usr/local/bin/wrtd				/etc/acq400/${site}/wrtd_txi
-	ln -s /usr/local/bin/wrtd				/etc/acq400/${site}/wrtd_txa
+	ln -s /usr/local/CARE/wrtd_tx 			${edir}
+	ln -s /usr/local/CARE/wrtd_tx_immediate 	${edir}
+#	ln -s /usr/local/CARE/wrtd_txi 			${edir}
+#	ln -s /usr/local/CARE/wrtd_txq 			${edir}
+	ln -s /usr/local/bin/wrtd			${edir}/wrtd_txq
+	ln -s /usr/local/bin/wrtd			${edir}/wrtd_txi
+	ln -s /usr/local/bin/wrtd			${edir}/wrtd_txa
 	
-	ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_reset_tx
-	ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_commit_tx
+	ln -s /usr/local/CARE/wrtd_commit 		${edir}/wrtd_reset_tx
+	ln -s /usr/local/CARE/wrtd_commit 		${edir}/wrtd_commit_tx
 	
 	if [ $site -eq 11 ]; then
-		ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_reset_rx
-		ln -s /usr/local/CARE/wrtd_commit 		/etc/acq400/${site}/wrtd_commit_rx
+		ln -s /usr/local/CARE/wrtd_commit 	${edir}/wrtd_reset_rx
+		ln -s /usr/local/CARE/wrtd_commit 	${edir}/wrtd_commit_rx
 	fi
 }
 
