@@ -452,7 +452,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_ACQ427(adev) \
 	(GET_MOD_ID(adev) == MOD_ID_ACQ427ELF ||\
 	 GET_MOD_ID(adev) == MOD_ID_ACQ427ELF_2000)
-#define IS_ACQ423(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ423ELF)
+#define IS_ACQ423(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ423ELF || GET_MOD_ID(adev) == MOD_ID_FLASHELF)
 
 #define IS_ACQ465(adev)	(GET_MOD_ID(adev) == MOD_ID_ACQ465ELF)
 
@@ -629,7 +629,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_RAD_CELF(adev)	(GET_MOD_ID(adev) == MOD_ID_RAD_CELF || GET_MOD_ID(adev) == MOD_ID_DDS_WERA)
 
 #define IS_OCTOBEE(adev)  (GET_MOD_ID(adev) == MOD_ID_OCTOBEE)
-
+#define IS_FLASHELF(adev) (GET_MOD_ID(adev) == MOD_ID_FLASHELF)
 #define HAS_AI(adev) 	(IS_ADC(adev) || IS_BOLO8(adev) || IS_PIG_CELF(adev) || IS_QEN(adev) )
 
 #define HAS_ATD(adev)	(IS_ACQ430(adev) && (GET_MOD_ID_VERSION(adev)&0x1) != 0)

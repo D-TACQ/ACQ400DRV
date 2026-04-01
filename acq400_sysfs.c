@@ -1768,6 +1768,7 @@ static const char* _lookup_id(struct acq400_dev *adev)
 		{ MOD_ID_DI460ELF,      "di460elf"      },
 		{ MOD_ID_TIMBUS,        "timbus"        },
 		{ MOD_ID_OCTOBEE,       "octobee"       },
+		{ MOD_ID_FLASHELF,      "flashelf"      },
 	};
 #define NID	(sizeof(idlut)/sizeof(struct IDLUT_ENTRY))
 	int ii;
