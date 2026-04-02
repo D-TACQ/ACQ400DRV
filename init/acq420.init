@@ -294,6 +294,7 @@ customize_acq420()
 
 BOLO8_SITES=""
 ACQ423_SITES=""
+FLASHELF_SITES=""
 ACQ425_SITES=""
 ACQ427_SITES=""
 ACQ437_SITES=""
@@ -627,6 +628,9 @@ build_knobs_device() {
     ${MOD_ID_ACQ423ELF})
         set_max_min_khz ${site} 200 10
         ACQ423_SITES="${ACQ423_SITES} $site";;
+    ${MOD_ID_FLASHELF})
+        set_max_min_khz ${site} 200 10
+        FLASHELF_SITES="${FLASHELF_SITES} $site";;
     ${MOD_ID_ACQ426ELF})
         set_max_min_khz ${site} 1000 1
         ACQ426_SITES="${ACQ426_SITES} $site";;
