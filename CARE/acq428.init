@@ -29,7 +29,7 @@ D428=/dev/acq428
 EK=/etc/acq400
 
 for site in $*; do
-        /usr/local/CARE/load.overlay acq428_s${site}_overlay /mnt/local/acq428_s${site}_overlay.dtb
+        /usr/local/CARE/load.overlay acq428_s${site}_overlay /mnt/dtb.d/acq428_s${site}_overlay.dtb
         mkdir -p ${D428}/${site}
         echo 
 done
