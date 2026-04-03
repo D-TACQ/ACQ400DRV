@@ -2387,16 +2387,18 @@ static const struct attribute *acq426_attrs[] = {
 // TODO: what do we need to do with this for acq428?
 MAKE_BITS(idelay_en, ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_IDELAY_EN);
 MAKE_BITS(sync_en,  ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_SYNC_EN);
-MAKE_BITS(adc_resolution, ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_RESOLUTION_18B);
 MAKE_BITS(xrm_d37_mode, ACQ428_BANK, MAKE_BITS_FROM_MASK, ACQ428_BANK_XRM_D37_MODE);
+MAKE_BITS(acq428_calib_debug, ACQ428_CALIB_DEBUG, MAKE_BITS_FROM_MASK, 0xffffffff);
+MAKE_BITS(adc_clk_sel, ADC_CTRL, MAKE_BITS_FROM_MASK, ACQ428_ADC_CTRL_CLK_SEL);
 
 static const struct attribute *acq428_attrs[] = {
 	&dev_attr_idelay_en.attr,
 	&dev_attr_sync_en.attr,
         &dev_attr_xrm_d37_mode.attr,
-        &dev_attr_adc_resolution.attr,
 	&dev_attr_adc_18b.attr,
 	&dev_attr_adc_conv_time.attr,
+        &dev_attr_acq428_calib_debug.attr,
+        &dev_attr_adc_clk_sel.attr,
 	NULL
 };
 SCOUNT_KNOB(CLK_EXT, 	ACQ2006_CLK_COUNT(0));
