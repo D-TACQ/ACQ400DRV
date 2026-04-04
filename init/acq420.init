@@ -211,6 +211,7 @@ set_max_min_khz() {
 }
 
 IS_ACQ427=0
+IS_ACQ428=0
 customize_acq420()
 {
     source  /dev/sites/$1/details
@@ -229,6 +230,7 @@ customize_acq420()
             ACQ420FMC)  echo ACQ420FMC detected;;
             ACQ425?LF)  echo $field detected;;
             ACQ427ELF)  IS_ACQ427=1; echo ACQ427ELF detected;;
+            ACQ428ELF) IS_ACQ428=1; echo ACQ428ELF detected;;
             *)
                 echo "ERROR: model $field not recognized";;
             esac;;
@@ -297,6 +299,7 @@ ACQ427_SITES=""
 ACQ437_SITES=""
 ACQ400T_SITES=""
 ACQ426_SITES=""
+ACQ428_SITES=""
 ACQ465_SITES=""
 DI460_SITES=""
 AO420_SITES=""
@@ -494,6 +497,15 @@ build_knobs_acq425_device() {
         customize_acq420 $site
 }
 
+build_knobs_acq428_device() {
+    site=$1; mtype=$2 dk=$3 ek=$4
+
+    [ "x$ACQ428_SITES" != "x" ] && ACQ428_SITES="${ACQ428_SITES} "
+    ACQ428_SITES="${ACQ428_SITES}$site"
+    create_gx ${ek}/ 16
+    customize_acq420 $site
+}
+
 build_knobs_dio_device() {
         site=$1; mtype=$2 dk=$3 ek=$4
 
@@ -502,7 +514,7 @@ build_knobs_dio_device() {
         case $mtype in
         ${MOD_ID_DIO482TD})
                 ;;
-        ${MOD_ID_DIO482TD_PG}|${MOD_ID_DIO482ELF_XRM})
+        ${MOD_ID_DIO482TD_PG})
                 num_pg=4;
                 if [ ! -z $DIO482TD_PG5 ] && [ "$DIO482TD_PG5" != "no" ]; then
                         num_pg=5;
@@ -514,7 +526,7 @@ build_knobs_dio_device() {
                         fi
                 fi
                 echo $num_pg >${ek}/num_pg;;
-        ${MOD_ID_DIO482FMC})
+        ${MOD_ID_DIO482FMC}|${MOD_ID_DIO482ELF_XRM})
                 source  /dev/sites/${site}/details
                 mv=$(cat ${dk}/module_variant)
                 case $mv in
@@ -618,6 +630,9 @@ build_knobs_device() {
     ${MOD_ID_ACQ426ELF})
         set_max_min_khz ${site} 1000 1
         ACQ426_SITES="${ACQ426_SITES} $site";;
+    ${MOD_ID_ACQ428ELF})
+        set_max_min_khz ${site} 1000 1
+        build_knobs_acq428_device $site $mtype $dk $ek;;
     ${MOD_ID_ACQ465ELF})
         set_max_min_khz ${site} 1400 1
         ACQ465_SITES="${ACQ465_SITES} $site";;
@@ -936,6 +951,17 @@ build_knobs() {
                 echo "++ Warning using patch $acq426_init"
         fi
         $acq426_init ${ACQ426_SITES}
+    fi
+    if [ "x${ACQ428_SITES}" != "x" ]; then
+        for site in $ACQ428_SITES; do
+            web_append acq428.$site nomon
+        done
+        acq428_init=$ULC/acq428.init
+        if [ -e /mnt/local/acq428.init ]; then
+            acq428_init=/mnt/local/acq428.init
+            echo "++ Warning using patch $acq428_init"
+        fi
+        $acq428_init ${ACQ428_SITES}
     fi
     if [ "x${ACQ427_SITES}" != "x" ]; then
         case $IS_ACQ427 in

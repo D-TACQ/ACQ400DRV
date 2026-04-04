@@ -1,0 +1,87 @@
+#!/usr/local/bin/expect
+# acq428 gains
+
+set LNAMES1 [ list \
+        ADC_5_A2 ADC_5_A0 ADC_5_A1 \
+        ADC_6_A2 ADC_6_A0 ADC_6_A1 \
+        ADC_1_A2 ADC_1_A0 ADC_1_A1 \
+        ADC_2_A2 ADC_2_A0 ADC_2_A1 \
+        ADC_8_A1 ADC_8_A0 ADC_8_A2 \
+        ADC_7_A1 ADC_7_A0 ADC_7_A2 \
+        ADC_4_A1 ADC_4_A0 ADC_4_A2 \
+        ADC_3_A1 ADC_3_A0 ADC_3_A2 ]
+
+set LNAMES2 [ list \
+        ADC_13_A2 ADC_13_A0 ADC_13_A1 \
+        ADC_14_A2 ADC_14_A0 ADC_14_A1 \
+        ADC_9_A2 ADC_9_A0 ADC_9_A1 \
+        ADC_10_A2 ADC_10_A0 ADC_10_A1 \
+        ADC_16_A1 ADC_16_A0 ADC_16_A2 \
+        ADC_15_A1 ADC_15_A0 ADC_15_A2 \
+        ADC_12_A1 ADC_12_A0 ADC_12_A2 \
+        ADC_11_A1 ADC_11_A0 ADC_11_A2 ]
+
+proc link_gpio {lnames site gpio1} {
+        set gpio2 [expr $gpio1 + 23]
+        for {set ix 0} {[expr $gpio1+$ix <= $gpio2]} {incr ix} {
+                set name [lindex $lnames $ix]
+                if { [string length $name] > 0 } {
+                        set gpx [expr $gpio1 + $ix]
+#                       puts "lname $name pin $pin gpio $gpx"
+                        exec set.sys /sys/class/gpio/export $gpx
+                        exec set.sys  /sys/class/gpio/gpio$gpx/direction out
+                        exec ln -s /sys/class/gpio/gpio$gpx/value \
+                                /dev/acq428/$site/$name
+                }
+        }
+}
+
+#set fp [open /etc/sysconfig/i2c_site2bus r]
+#set I2C_CHAN_OFFSET [string trim [read $fp] ]
+#close $fp
+set I2C_CHAN_OFFSET "0"
+
+proc get_gpio1 {site bus addr} {
+        set baddr "$bus-00$addr"
+        puts $baddr
+        set gpath "/sys/bus/i2c/devices/$baddr/gpio/gpiochip"
+        set gpiochip [glob "$gpath*"]
+        set pin1 [string range $gpiochip \
+                        [string length $gpath] [string length $gpiochip]]
+        #       puts "get_gpio1 returning $pin1"
+        return $pin1
+}
+
+set SITES ""
+
+if { $::argc == 2 } {
+        # Read the arguments: 1st is Site, 2nd is Bus
+        set site [lindex $::argv 0]
+        set bus [lindex $::argv 1]
+
+        puts "Configuring Site: $site using I2C Bus: $bus"
+
+        exec mkdir -p /dev/acq428/$site
+
+        # We now pass the $bus variable into get_gpio1
+        link_gpio $LNAMES1 $site [get_gpio1 $site $bus 22]
+        link_gpio $LNAMES2 $site [get_gpio1 $site $bus 23]
+
+        for {set ic 1} {$ic <= 16} {incr ic} {
+                file delete -force /etc/acq400/$site/gain$ic
+                exec ln -s /usr/local/bin/acq428_set_gain \
+                        /etc/acq400/$site/gain$ic
+        }
+        file delete -force      /etc/acq400/$site/gains
+        exec ln -s /usr/local/bin/acq428_set_gain \
+                        /etc/acq400/$site/gains
+        set fp [open "/etc/acq400/$site/groups" a+]
+        puts $fp {gain=gain[0-9]*}
+        close $fp
+} elseif { $::argc > 0 } {
+       puts "Error: You must provide two arguments: <Site> <Bus>"
+       puts "Example: ./acq428gpio.init 1 2"
+} else {
+        puts "usage acq428gpio.init site1[ site 2...]"
+}
+

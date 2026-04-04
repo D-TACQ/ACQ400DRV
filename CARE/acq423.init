@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo +++acq423.init $*  begin 01
+
 if [ -e /dev/shm/is_d37 ]; then
         echo +++ set d37 mode for sites $*
 	for site in $*
@@ -8,4 +10,11 @@ if [ -e /dev/shm/is_d37 ]; then
 	done
 fi
 
+if grep -q -- '-XRM' /tmp/fpga_status; then
+    for site in $*;
+    do
+        echo 1 > /dev/acq400.${site}.knobs/xrm_d37_mode
+    done
+fi
 
+echo +++acq423.init 99

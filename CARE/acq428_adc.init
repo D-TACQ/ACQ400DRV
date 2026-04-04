@@ -1,0 +1,11 @@
+#!/bin/sh
+
+logger -t acq428_adc.init 01 SITE $SITE
+
+dk=/dev/acq400.${SITE}.knobs
+
+logger -t acq428_adc.init 99
+
+
+
+

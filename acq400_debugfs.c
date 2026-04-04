@@ -260,6 +260,22 @@ void acq426_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(ACQ465_DEBUG);
 }
 
+void acq428_createDebugfs(struct acq400_dev* adev, char* pcursor)
+{
+    adc_createDebugfs(adev, pcursor);
+
+    DBG_REG_CREATE(ADC_SITE_CONTROL);
+    DBG_REG_CREATE(ADC_TRANSLEN);
+    DBG_REG_CREATE(ACQ428_EVENT_SAMPLE_CTR);
+    DBG_REG_CREATE(ACQ428_BANK);
+    DBG_REG_CREATE(ACQ428_CALIB_DEBUG);
+    DBG_REG_CREATE(ACQ428_DCLK_STATUS);
+    DBG_REG_CREATE(ACQ428_CALIB_POINT_1);
+    DBG_REG_CREATE(ACQ428_CALIB_POINT_2);
+    DBG_REG_CREATE(ACQ428_CALIB_WINDOW_1);
+    DBG_REG_CREATE(ACQ428_CALIB_WINDOW_2);
+}
+
 void acq494_createDebugfs(struct acq400_dev* adev, char* pcursor)
 {
 	DBG_REG_CREATE(MOD_ID);
@@ -520,6 +536,9 @@ void acq400_createDebugfs(struct acq400_dev* adev)
 		case MOD_ID_ACQ426ELF:
 			acq426_createDebugfs(adev, pcursor);
 			break;
+                case MOD_ID_ACQ428ELF:
+                        acq428_createDebugfs(adev, pcursor);
+                        break;
 		default:
 			acq420_createDebugfs(adev, pcursor);
 			break;

@@ -57,6 +57,16 @@
 #define ACQ426_CAL_POINT	(ADC_BASE+0x38)
 #define ACQ426_CAL_WIN		(ADC_BASE+0x3c)
 
+#define ADC_SITE_CONTROL        (ADC_BASE+0x2c)
+#define ACQ428_EVENT_SAMPLE_CTR (ADC_BASE+0x30)
+#define ACQ428_CLKDIV           (ADC_BASE+0x40)
+#define ACQ428_DCLK_STATUS      (ADC_BASE+0x5c)
+#define ACQ428_CALIB_DEBUG      (ADC_BASE+0x58)
+#define ACQ428_CALIB_POINT_1    (ADC_BASE+0x60)
+#define ACQ428_CALIB_POINT_2    (ADC_BASE+0x64)
+#define ACQ428_CALIB_WINDOW_1   (ADC_BASE+0x68)
+#define ACQ428_CALIB_WINDOW_2   (ADC_BASE+0x6c)
+
 #define ADC_CLKDIV		(ADC_BASE+0x40)
 #define DAC_CLKDIV		ADC_CLKDIV
 #define ADC_GAIN		(ADC_BASE+0x44)
@@ -75,6 +85,7 @@
 
 #define ACQ425_BANK             (ADC_BASE+0x44) /* MUST MATCH ACQ435_MODE in address and meaning! */
 #define ACQ423_BANK		(ADC_BASE+0x44)
+#define ACQ428_BANK		(ADC_BASE+0x44)
 #define AO420_DACSPI		(ADC_BASE+0x48)
 
 #define DAC_424_SNOOP		(ADC_BASE+0x4C)
@@ -82,9 +93,11 @@
 
 #define ADC_TRANSLEN		(ADC_BASE+0x50)
 #define ADC_ACC_DEC		(ADC_BASE+0x54)
+#define ADC_ACCUM_SHIFT         (ADC_BASE+0x54)
 #define DAC_DEC			ADC_ACC_DEC
 
 #define ADC_NACC_SAMPLES	(ADC_BASE+0x100)
+#define ADC_SAMPLE_RAM          (ADC_BASE+0x100)
 
 #define PWM_SOURCE_CLK_CTRL	(ADC_BASE+0x58)
 
@@ -196,6 +209,7 @@
 #define ADC_CTRL_RAMP_EN 	(1 << 5)	/* Deprecated, sadly. Use SPAD */
 #define ADC_CTRL_ADC_EN		(1 << 4)
 
+#define DAC_CTRL_CHMAP_REVERSE  (1 << 21)
 #define DAC_CTRL_AWG_ABORT	(1 << 12)
 #define DAC_CTRL_RTM_MODE	(1 <<10)
 #define DAC_CTRL_LL		(1 << 8)	/* AO420FMC, AO424ELF  */
@@ -219,6 +233,12 @@
 #define ACQ426_BCSR_BSY		(1<<30)
 #define ACQ426_BCSR_VSET	(1<<1)
 #define ACQ426_BCSR_VA_EN	(1<<0)
+
+#define ACQ428_ADC_CTRL_RESOLUTION_18B	(1 << 6)
+#define ACQ428_ADC_CTRL_IDELAY_EN (1 << 16)
+#define ACQ428_ADC_CTRL_SYNC_EN (1 << 17)
+#define ACQ428_ADC_CTRL_CLK_SEL (1 << 19)
+#define ACQ428_BANK_XRM_D37_MODE    (1<<6)
 
 #define DAC_CTRL_DAC_EN		ADC_CTRL_ADC_EN
 #define DAC_CTRL_DAC_RST	ADC_CTRL_ADC_RST
@@ -440,6 +460,8 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define IS_ACQ494(adev)	(GET_MOD_ID(adev) == MOD_ID_ACQ494FMC)
 
 #define IS_ACQ426(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ426ELF)
+
+#define IS_ACQ428(adev) (GET_MOD_ID(adev) == MOD_ID_ACQ428ELF)
 
 #define IS_ACQ42X(adev) _is_acq42x(adev)
 
@@ -963,6 +985,7 @@ enum DIO432_MODE { DIO432_DISABLE, DIO432_IMMEDIATE, DIO432_CLOCKED };
 #define DAC_424_CGEN_DISABLE_X		(0xf)
 
 /* ACQ423 */
+#define ACQ423_BANK_XRM_D37_MODE	(1<<6)
 #define ACQ423_BANK_D37_MODE		(1<<5)
 #define ACQ423_BANK_ODD_CHAN		(1<<4)
 

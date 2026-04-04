@@ -580,6 +580,7 @@ MAKE_DAC_RANGE(REF, 4);                  /* 1<<4 */
 
 MAKE_BITS(dac_range_en, AO420_RANGE, MAKE_BITS_FROM_MASK, AO422_RANGE_EN);
 MAKE_BITS(dac_ref5v,   AO420_RANGE, MAKE_BITS_FROM_MASK, AO422_RANGE_REF5);
+MAKE_BITS(xrm_d37_mode, DAC_CTRL, MAKE_BITS_FROM_MASK, DAC_CTRL_CHMAP_REVERSE);
 
 /*
  * GO : Gain + Offset
@@ -1312,6 +1313,7 @@ const struct attribute *ao420_common_attrs[] = {
 	&dev_attr_read_latency.attr,
 	&dev_attr_dac_dec.attr,
 	&dev_attr_delta_dac_setpoint.attr,
+        &dev_attr_xrm_d37_mode.attr,
 	NULL
 };
 
@@ -1413,6 +1415,27 @@ static ssize_t _show_byte_is_output(
 	);
 }
 
+static ssize_t _show_byte_is_output_xrm(
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+	u32 byte_is_output = IS_DIO482_PG(adev)? dio432_get_direction(adev): xo_dev->dio432.byte_is_output;
+
+	return sprintf(buf, "%d,%d,%d,%d,%d,%d,%d,%d\n",
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(0),
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(1),
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(2),
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(3),
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(4),
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(5),
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(6),
+			byte_is_output&DIO432_CPLD_CTRL_OUTPUT(7)
+	);
+}
+
 static ssize_t show_byte_is_output(
 	struct device * dev,
 	struct device_attribute *attr,
@@ -1421,7 +1444,9 @@ static ssize_t show_byte_is_output(
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	if (IS_DIO482_CNTR(adev)){
 		return sprintf(buf, "0,0,0,0");
-	}else{
+	}else if (IS_DIO482ELF_XRM(adev)){
+            return _show_byte_is_output_xrm(dev, attr, buf);
+        }else{
 		return _show_byte_is_output(dev, attr, buf);
 	}
 }
@@ -1438,7 +1463,27 @@ static ssize_t store_byte_is_output(
 		return -ENODEV;
 	}else if (xo_dev->dio432.mode != DIO432_DISABLE){
 		return -EBUSY;
-	}else{
+	}else if (IS_DIO482ELF_XRM(adev)){
+		int bytes[8];
+
+		if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d", bytes+0, bytes+1, bytes+2, bytes+3, bytes+4, bytes+5, bytes+6, bytes+7) == 8){
+			unsigned byte_is_output = 0;
+			int ib = 0;
+			for (ib = 0; ib <= 7; ++ib){
+				if (bytes[ib]){
+					byte_is_output |= DIO432_CPLD_CTRL_OUTPUT(ib);
+				}
+			}
+			if (IS_DIO482_PG(adev)){
+				dio432_set_direction(adev, byte_is_output);
+			}else{
+				xo_dev->dio432.byte_is_output = byte_is_output;
+			}
+			return count;
+		}else{
+			return -EINVAL;
+		}
+        }else{
 		int bytes[4];
 
 		if (sscanf(buf, "%d,%d,%d,%d", bytes+0, bytes+1, bytes+2, bytes+3) == 4){

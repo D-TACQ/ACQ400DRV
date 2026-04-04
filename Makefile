@@ -12,6 +12,7 @@ obj-m += pl330_fs.o
 
 obj-m += bolo8_drv.o
 obj-m += acq425_drv.o
+obj-m += acq428_drv.o
 obj-m += acq480.o
 obj-m += acq400t.o
 #obj-m += acq4xx_fs.o
@@ -78,6 +79,8 @@ mgt400-objs := mgt400_drv.o mgt400_sysfs.o mgt400_procfs.o mgt400_debugfs.o \
 acq480-objs := acq480_drv.o hbm.o zynq_peripheral_spi_shim.o
 
 acq426-objs := acq426_drv.o hbm.o zynq_peripheral_spi_shim.o
+
+acq428-objs := acq428_drv.o hbm.o zynq_peripheral_spi_shim.o
 
 acq465-objs := acq465_drv.o hbm.o zynq_peripheral_spi_shim.o
 

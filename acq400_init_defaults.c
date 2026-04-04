@@ -341,6 +341,23 @@ void acq426_onStart(struct acq400_dev *adev)
 	//acq420_enable_interrupt(adev);
 }
 
+void acq428_onStart(struct acq400_dev *adev)
+{
+	u32 status = acq400rd32(adev, ADC_FIFO_STA);
+
+	dev_dbg(DEVP(adev), "acq428_onStart()");
+
+	if ((status&ADC_FIFO_STA_ACTIVE) != 0){
+		dev_err(DEVP(adev), "ERROR: ADC_FIFO_STA_ACTIVE set %08x", status);
+		acq420_disable_fifo(adev);
+	}
+
+	acq400wr32(adev, ADC_HITIDE, 	adev->hitide);
+	acq420_enable_fifo(adev);
+	acq420_reset_fifo(adev);
+	adev->fifo_isr_done = 0;
+	//acq420_enable_interrupt(adev);
+}
 
 void acq420_disable_fifo(struct acq400_dev *adev)
 {
@@ -676,6 +693,22 @@ static void acq426_init_defaults(struct acq400_dev *adev)
 	acq400wr32(adev, ADC_CLKDIV, 16);
 	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
 	adev->onStart = acq426_onStart;
+	adev->onStop = acq420_disable_fifo;
+}
+
+static void acq428_init_defaults(struct acq400_dev *adev)
+{
+	u32 adc_ctrl = acq400rd32(adev, ADC_CTRL);
+	adev->nchan_enabled = 16;
+	dev_info(DEVP(adev), "%s device init", "acq428elf");
+
+	adev->booleans.data32 = 0;
+	adev->word_size = 4;  // TODO: check the rest of the settings
+	adev->hitide = 128;
+	adev->lotide = adev->hitide - 4;
+	// acq400wr32(adev, ADC_CLKDIV, 16); // clkdiv not required
+	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
+	adev->onStart = acq428_onStart;
 	adev->onStop = acq420_disable_fifo;
 }
 
@@ -1140,7 +1173,11 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 	if (IS_ACQ42X(adev)){
 		if IS_ACQ426(adev){
 			acq426_init_defaults(adev);
-		}else{
+		}
+                else if IS_ACQ428(adev){
+                        acq428_init_defaults(adev);
+                }
+                else{
 			acq420_init_defaults(adev);
 		}
 	}else if (IS_DIO(adev) || IS_DIO422AQB(adev)){
@@ -1211,6 +1248,8 @@ void acq400_mod_init_defaults(struct acq400_dev* adev)
 		case MOD_ID_DIO482TD_PG:
 			dio482td_init_defaults(adev);
 			break;
+                case MOD_ID_ACQ428ELF:
+                        acq428_init_defaults(adev);
 		default:
 			dev_warn(DEVP(adev), "no custom init for module type %x",
 						(adev)->mod_id>>MOD_ID_TYPE_SHL);
