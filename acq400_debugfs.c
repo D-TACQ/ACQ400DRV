@@ -211,6 +211,9 @@ void acq420_createDebugfs(struct acq400_dev* adev, char* pcursor)
 		DBG_REG_CREATE(ACQ423_SAMPLE_RAM_27);
 		DBG_REG_CREATE(ACQ423_SAMPLE_RAM_29);
 		DBG_REG_CREATE(ACQ423_SAMPLE_RAM_31);
+                if (IS_FLASHELF(adev)){
+                    DBG_REG_CREATE(FLASH_GPIO);
+                }
 	}else if (IS_ACQ424(adev)){
 		DBG_REG_CREATE(ACQ424_SHOT_LENGTH);
 		DBG_REG_CREATE(ACQ424_CLK_MIN_MAX);
