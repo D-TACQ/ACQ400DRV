@@ -1,0 +1,45 @@
+#!/bin/sh
+# acq428_train_monitor
+# Usage: ./acq428_train_monitor <site_number>
+
+SITE=${1:-1}
+LOG="logger -t acq428_monitor"
+POLL_INTERVAL=1 # Adjust based on how fast you need to react vs CPU load
+
+# Define the exact register/variable name for your ACQ428
+TRAIN_BIT_REG="frame_ok" 
+
+do_retrain() {
+    $LOG "site:$SITE - $TRAIN_BIT_REG dropped LOW. Initiating retrain sequence."
+    
+    # Optional: Set a busy flag so other processes know training is active
+    # set.site $SITE SIG:CLK:TRAIN_BSY 1
+
+    # Execute your new training routine. 
+    # (Assuming a similar convention to the old 'SITE=$site acq480_train')
+    SITE=$SITE /usr/local/CARE/acq428_retrain | $LOG
+    
+    # If acq428_train is asynchronous, you would add a wait loop here 
+    # similar to the wait_training_done() function in your original script.
+    
+    # set.site $SITE SIG:CLK:TRAIN_BSY 0
+    $LOG "site:$SITE - Retrain sequence complete."
+}
+
+$LOG "Starting monitor for site:$SITE on register:$TRAIN_BIT_REG"
+
+while true; do
+    # Read the current status of the bit
+    # Assuming get.site returns '1' for OK and '0' for low/loss of training
+    CURRENT_STATUS=$(get.site $SITE $TRAIN_BIT_REG)
+
+    if [ "$CURRENT_STATUS" = "0" ]; then
+        do_retrain
+        
+        # Give the hardware a moment to settle before resuming polling
+        sleep 2
+    fi
+
+    usleep 500000 # 500ms poll. Using usleep keeps CPU usage negligible.
+done
+
