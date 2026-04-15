@@ -2400,6 +2400,7 @@ static const struct attribute *acq428_attrs[] = {
 	&dev_attr_adc_conv_time.attr,
         &dev_attr_acq428_calib_debug.attr,
         &dev_attr_adc_clk_sel.attr,
+        &dev_attr_frame_ok.attr,
 	NULL
 };
 SCOUNT_KNOB(CLK_EXT, 	ACQ2006_CLK_COUNT(0));
