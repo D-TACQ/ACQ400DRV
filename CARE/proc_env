@@ -1,0 +1,19 @@
+#!/bin/sh
+# usage
+# proc_env PID        : dump a readable version of process PID environment
+# source proc_env PID : pull PID's env into current shell
+
+PID=${1:-1}
+
+proc_dump_env() {
+	(cat /proc/$PID/environ; echo) | tr '\000' '\n'
+}
+
+if [ "$(basename $0)" = "proc_env" ]; then
+	proc_dump_env
+else
+	for kvp in $(proc_dump_env); do
+		export $kvp
+	done
+fi
+
