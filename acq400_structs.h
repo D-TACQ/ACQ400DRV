@@ -663,6 +663,7 @@ static inline int _is_acq42x(struct acq400_dev *adev) {
 	case MOD_ID_ACQ427ELF_2000:
         case MOD_ID_ACQ428ELF:
 	case MOD_ID_ACQ423ELF:
+        case MOD_ID_FLASHELF:
 		return true;
 	default:
 		return false;

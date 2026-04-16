@@ -100,6 +100,8 @@ fi
 echo Calibration good for site $site : pattern 0xff00ff00 detected
 echo 0 > /dev/acq400.${site}.knobs/sync_en
 echo 0 > /dev/acq400.${site}.knobs/idelay_en
+
+/usr/local/CARE/acq428_train_monitor $site &
 EOF
 
         idx=$((idx + 1))

@@ -1,0 +1,27 @@
+#!/bin/sh
+SITE=${1:-1}
+SPI_TARGET=$(( SITE * 16 ))
+
+echo 0 > /dev/acq400.${SITE}.knobs/idelay_en
+echo 0 > /dev/acq400.${SITE}.knobs/sync_en
+echo "retrain link for site ${SITE}..."
+/usr/local/CARE/acq428_idelay ${SPI_TARGET}
+echo 1 > /dev/acq400.${SITE}.knobs/idelay_en
+/usr/local/CARE/acq428_sync ${SPI_TARGET}
+echo 1 > /dev/acq400.${SITE}.knobs/sync_en
+/usr/local/CARE/acq428_data ${SPI_TARGET}
+echo "checking calib_debug for ff00ff00 on site ${SITE}"
+
+DEBUG_FILE="/sys/kernel/debug/acq400/acq400.${SITE}/ACQ428_CALIB_DEBUG.0x58"
+PATTERN=$(cat "$DEBUG_FILE")
+
+if [ "$PATTERN" != "0xff00ff00" ]; then
+    echo "Error: Calibration pattern mismatch on site ${SITE}! Expected 0xff00ff00, got $PATTERN"
+    echo 0 > /dev/acq400.${SITE}.knobs/sync_en
+    echo 0 > /dev/acq400.${SITE}.knobs/idelay_en
+    exit 1
+fi
+
+echo "Calibration good for site ${SITE} : pattern 0xff00ff00 detected"
+echo 0 > /dev/acq400.${SITE}.knobs/sync_en
+echo 0 > /dev/acq400.${SITE}.knobs/idelay_en
