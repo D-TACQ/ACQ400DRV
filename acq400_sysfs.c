@@ -3996,7 +3996,7 @@ int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const st
 			specials[nspec++] = dio422_attrs;
 		}else{
 			specials[nspec++] = dio432_attrs;
-			if (IS_DIO482FMC(adev) || IS_DIO482TD(adev)){
+			if (IS_DIO482FMC(adev) || IS_DIO482TD(adev) || IS_DIO482ELF_XRM(adev)){
 				specials[nspec++] = dio482_attrs;
 				if (GET_MOD_IDV(adev)==MOD_IDV_PWM2){
 					specials[nspec++] = pwm2_attrs;
