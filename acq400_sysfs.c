@@ -1768,6 +1768,7 @@ static const char* _lookup_id(struct acq400_dev *adev)
 		{ MOD_ID_DI460ELF,      "di460elf"      },
 		{ MOD_ID_TIMBUS,        "timbus"        },
 		{ MOD_ID_OCTOBEE,       "octobee"       },
+		{ MOD_ID_FLASHELF,      "flashelf"      },
 	};
 #define NID	(sizeof(idlut)/sizeof(struct IDLUT_ENTRY))
 	int ii;
@@ -3747,6 +3748,58 @@ static const struct attribute *multipath_sc_attrs[] = {
 	NULL
 };
 
+MAKE_BITS(gpio_dir_1, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00010000);
+MAKE_BITS(gpio_dir_2, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00020000);
+MAKE_BITS(gpio_dir_3, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00040000);
+MAKE_BITS(gpio_dir_4, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00080000);
+MAKE_BITS(gpio_dir_5, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00100000);
+MAKE_BITS(gpio_dir_6, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00200000);
+MAKE_BITS(gpio_dir_7, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00400000);
+MAKE_BITS(gpio_dir_8, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00800000);
+MAKE_BITS(gpio_out_1, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000100);
+MAKE_BITS(gpio_out_2, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000200);
+MAKE_BITS(gpio_out_3, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000400);
+MAKE_BITS(gpio_out_4, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000800);
+MAKE_BITS(gpio_out_5, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00001000);
+MAKE_BITS(gpio_out_6, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00002000);
+MAKE_BITS(gpio_out_7, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00004000);
+MAKE_BITS(gpio_out_8, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00008000);
+MAKE_BITS(gpio_in_1, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000001);
+MAKE_BITS(gpio_in_2, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000002);
+MAKE_BITS(gpio_in_3, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000004);
+MAKE_BITS(gpio_in_4, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000008);
+MAKE_BITS(gpio_in_5, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000010);
+MAKE_BITS(gpio_in_6, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000020);
+MAKE_BITS(gpio_in_7, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000040);
+MAKE_BITS(gpio_in_8, FLASH_GPIO, MAKE_BITS_FROM_MASK, 0x00000080);
+
+static const struct attribute *flashelf_attrs[] = {
+	&dev_attr_gpio_dir_1.attr,
+	&dev_attr_gpio_dir_2.attr,
+	&dev_attr_gpio_dir_3.attr,
+	&dev_attr_gpio_dir_4.attr,
+	&dev_attr_gpio_dir_5.attr,
+	&dev_attr_gpio_dir_6.attr,
+	&dev_attr_gpio_dir_7.attr,
+	&dev_attr_gpio_dir_8.attr,
+	&dev_attr_gpio_out_1.attr,
+	&dev_attr_gpio_out_2.attr,
+	&dev_attr_gpio_out_3.attr,
+	&dev_attr_gpio_out_4.attr,
+	&dev_attr_gpio_out_5.attr,
+	&dev_attr_gpio_out_6.attr,
+	&dev_attr_gpio_out_7.attr,
+	&dev_attr_gpio_out_8.attr,
+	&dev_attr_gpio_in_1.attr,
+	&dev_attr_gpio_in_2.attr,
+	&dev_attr_gpio_in_3.attr,
+	&dev_attr_gpio_in_4.attr,
+	&dev_attr_gpio_in_5.attr,
+	&dev_attr_gpio_in_6.attr,
+	&dev_attr_gpio_in_7.attr,
+	&dev_attr_gpio_in_8.attr,
+	NULL
+};
 
 extern const struct attribute *spadcop_attrs[];
 
@@ -3927,6 +3980,9 @@ int _acq400_createSysfsMOD(struct device *dev, struct acq400_dev *adev, const st
 	}else if (IS_ACQ423(adev)){
 		specials[nspec++] = acq423_emulate_attrs;
 		specials[nspec++] = acq423_attrs;
+                if (IS_FLASHELF(adev)){
+                    specials[nspec++] = flashelf_attrs;
+                }
 	}else if (IS_ACQ424(adev)){
 		specials[nspec++] = acq424_attrs + (legacy_emulate_acq196==1? 0: 1);
 	}else if (IS_ACQ42X(adev)){
