@@ -63,8 +63,12 @@ void incr_push(struct acq400_dev *adev, struct XO_dev* xo_dev)
 
 void _dma_async_issue_pending(struct acq400_dev *adev, struct dma_chan *chan, int line)
 {
+	if (!chan) {
+		dev_err(DEVP(adev), "CRITICAL: Attempted to issue DMA on NULL channel at line %d\n", line);
+		return;
+	}
 	dev_dbg(DEVP(adev), "xo_data_loop()#%d dma_async_issue_pending %d", line, chan->chan_id);
-	dma_async_issue_pending(chan);			\
+	dma_async_issue_pending(chan);
 	++adev->stats.xo.dma_buffers_out;
 }
 
