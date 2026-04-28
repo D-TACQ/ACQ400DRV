@@ -35,7 +35,7 @@ while { 1 } {
 		}
 		timeout {
 			if {[ expr $to_count & 0x3 ] == 2 } {
-				puts "timeout $to_count"
+				puts "wait_until_state timeout $to_count cur_state $cur_state wstate $wstate"
 			}
 			set cur_state [lindex [split [exec cat /dev/shm/state]] $LINDEX_STATE ]
 			if { $cur_state == $wstate } {
