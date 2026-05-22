@@ -30,6 +30,8 @@ source $ULB/mod_id.sh
 
 HAS_MGTDRAM=none
 
+ln -s $DROOT/dynamic_debug/control /dev/ddc
+
 if [ -e /mnt/local/acq400_stream ]; then
     echo override from /mnt/local/acq400_stream
     cp /mnt/local/acq400_stream $ULB
@@ -43,7 +45,7 @@ if [ -e /mnt/local/sysconfig/acq400.sh ]; then
     echo "source /mnt/local/sysconfig/acq400.sh"
     source /mnt/local/sysconfig/acq400.sh
 fi
-ln -s $DROOT/dynamic_debug/control /dev/ddc
+
 
 source /tmp/u-boot_env
 if [ "x${EBREAK}" = "xyes" ]; then
