@@ -37,7 +37,7 @@
 #define PL330_MAX_IRQS		32
 #define PL330_MAX_PERI		32
 
-#define REVID	"1203"
+#define REVID	"2601"
 
 enum pl330_srccachectrl {
 	SCCTRL0,	/* Noncacheable and nonbufferable */
@@ -274,6 +274,7 @@ enum pl330_reqtype {
 
 /* Use this _only_ to wait on transient states */
 #define UNTIL(t, s)	while (!(_state(t) & (s))) cpu_relax();
+
 
 #ifdef PL330_DEBUG_MCGEN
 static unsigned cmd_line;
@@ -1148,6 +1149,8 @@ static void _stop(struct pl330_thread *thrd)
 		  || _state(thrd) == PL330_STATE_STOPPED)
 		return;
 
+	dev_dbg(thrd->dmac->pinfo->dev, "%s:%d, emit_KILL", __func__, __LINE__);
+
 	_emit_KILL(0, insn);
 
 	/* Stop generating interrupts for SEV */
@@ -1310,6 +1313,15 @@ static int _bursts(unsigned dry_run, u8 buf[],
 {
 	int off = 0;
 
+#ifdef PGMCOMOUT
+	if (dry_run){
+		printk(KERN_DEBUG "%s:%s rqtype %d %s\n",
+				__FILE__, __FUNCTION__, pxs->r->rqtype,
+				pxs->r->rqtype==1? "MEMTODEV":
+				pxs->r->rqtype==2? "DEV2MEM":
+				pxs->r->rqtype==0? "MEMTOMEM": "FAULT");
+	}
+#endif
 	switch (pxs->r->rqtype) {
 	case MEMTODEV:
 		off += _ldst_memtodev(dry_run, &buf[off], pxs, cyc);
@@ -1387,10 +1399,13 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 	 * flushp to kickoff
 	 *
 	 */
+
 	if (pxs->r->cfg->ends_flushp){
+		printk("%s:%d _emit_FLP not now!\n", __FILE__, __LINE__);
 		off += _emit_FLUSHP(dry_run, &buf[off], CTRL_FLAGS_TO_PRI(pxs->r->cfg->ends_flushp));
 	}
 	if (pxs->r->cfg->starts_wfp){
+		printk("%s:%d _emit_WFP not now!\n", __FILE__, __LINE__);
 		off += _emit_WFP(dry_run, &buf[off], ALWAYS, CTRL_FLAGS_TO_PRI(pxs->r->cfg->starts_wfp));
 	}
 
@@ -1752,6 +1767,7 @@ static int pl330_update(const struct pl330_info *pi)
 	unsigned long flags;
 	void __iomem *regs;
 	u32 val;
+	u32 inten;
 	int id, ev, ret = 0;
 
 	if (!pi || !pi->pl330_data)
@@ -1762,11 +1778,13 @@ static int pl330_update(const struct pl330_info *pi)
 
 	spin_lock_irqsave(&pl330->lock, flags);
 
+	inten = readl(regs + INTEN);
 	val = readl(regs + FSM) & 0x1;
 	if (val)
 		pl330->dmac_tbd.reset_mngr = true;
 	else
 		pl330->dmac_tbd.reset_mngr = false;
+
 
 	val = readl(regs + FSC) & ((1 << pi->pcfg.num_chan) - 1);
 	pl330->dmac_tbd.reset_chan |= val;
@@ -1774,10 +1792,10 @@ static int pl330_update(const struct pl330_info *pi)
 		int i = 0;
 		while (i < pi->pcfg.num_chan) {
 			if (val & (1 << i)) {
-				dev_info(pi->dev,
-					"Reset Channel-%d\t CS-%x FTC-%x\n",
-						i, readl(regs + CS(i)),
-						readl(regs + FTC(i)));
+				u32 cs = readl(regs + CS(i));
+				u32 ftc = readl(regs + FTC(i));
+				dev_info(pi->dev, "Reset ch-%d\t CS-%x FTC-%x STOP\n", i, cs, ftc);
+
 				_stop(&pl330->channels[i]);
 			}
 			i++;
@@ -1801,7 +1819,7 @@ static int pl330_update(const struct pl330_info *pi)
 	for (ev = 0; ev < pi->pcfg.num_chan; ev++) {
 		if (val & (1 << ev)) { /* Event occurred */
 			struct pl330_thread *thrd;
-			u32 inten = readl(regs + INTEN);
+			//u32 inten = readl(regs + INTEN);
 			int active;
 
 			/* Clear the event */
@@ -1815,6 +1833,10 @@ static int pl330_update(const struct pl330_info *pi)
 			thrd = &pl330->channels[id];
 
 			active = thrd->req_running;
+
+			dev_dbg(pi->dev, "%s:%d ev:%x id:%x thrd:%p active:%d\n",
+					__func__, __LINE__, ev, id, thrd, active);
+
 			if (active == -1) /* Aborted */
 				continue;
 
@@ -2838,6 +2860,8 @@ pl330_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dst,
 		return NULL;
 	}
 
+	dev_dbg(&chan->dev->device, "%s  chan:%d dst:0x%08x src:0x%08x, len:%u flags:0x%08lx",
+			__FUNCTION__, chan->chan_id, dst, src, len, flags);
 
 	pi = &pch->dmac->pif;
 
@@ -2862,11 +2886,18 @@ pl330_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dst,
 	}else{
 		desc->rqcfg.set_ev = 0;
 	}
+
 	desc->rqcfg.ends_flushp =
 		(flags&DMA_CHANNEL_ENDS_FLUSHP) >> DMA_CHANNEL_ENDS_FLUSHP_SHL;
 	desc->rqcfg.starts_wfp =
 		(flags&DMA_CHANNEL_STARTS_WFP) >> DMA_CHANNEL_STARTS_WFP_SHL;
 	desc->req.rqtype = MEMTOMEM;
+
+	dev_dbg(&chan->dev->device, "%s  chan:%d SI:%d DI:%d WEV:%08x SEV:%08x FLP:%08x WFP:%08x",
+			__FUNCTION__, chan->chan_id,
+			desc->rqcfg.src_inc, desc->rqcfg.dst_inc,
+			desc->rqcfg.wait_ev, desc->rqcfg.set_ev,
+			desc->rqcfg.ends_flushp, desc->rqcfg.starts_wfp);
 
 	/* Select max possible burst size */
 	burst = pi->pcfg.data_bus_width / 8;
