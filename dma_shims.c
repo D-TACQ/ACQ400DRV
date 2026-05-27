@@ -155,8 +155,8 @@ int dma_memcpy(
 				adev, adev->pdev->dev.id);
 		return -1;
 	}
-	dev_dbg(DEVP(adev), "dma_memcpy() chan:%d src:%08x dest:%08x len:%d\n",
-			dmac->chan_id, src, dest, len);
+	dev_dbg(DEVP(adev), "dma_memcpy() chan:%d src:%08x dest:%08x len:%d flags:%08lx\n",
+			dmac->chan_id, src, dest, len, flags);
 	cookie = dma_async_memcpy(dmac, src, dest, len, flags);
 	dev_dbg(DEVP(adev), "dma_memcpy() wait cookie:%d\n", cookie);
 	dma_sync_wait(dmac, cookie);
