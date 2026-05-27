@@ -67,7 +67,7 @@ int hb_copy_from_mode = 1;    // mode 2 no-go, pl330 is NFG.
 module_param(hb_copy_from_mode, int, 0644);
 MODULE_PARM_DESC(hb_copy_from_mode, "0: no copy, 1:memcpy, 2:dma");
 
-int hb_dma_flags = 0;
+int hb_dma_flags = 0x3;				/* DMA_PREP_INTERRUPT|DMA_CTRL_ACK dmaengine.h */
 module_param(hb_dma_flags, int, 0644);
 MODULE_PARM_DESC(hb_dma_flags, "magic combo to unpick pl330");
 
@@ -422,12 +422,14 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	switch(cmd){
 	case ACQ400_HB_COPYFROM: {
-		unsigned src_buf = arg;
+		unsigned src_buf = arg&0x0ff;
+		unsigned usr_len = arg >> 24;
 		struct HBM *src_hbm = adev->hb[src_buf];
+		size_t copy_len = usr_len != 0? usr_len: src_hbm->len;
 
 	        dev_dbg(DEVP(adev), "%s: dst:%d src:%d 0x%08x := %08x %d %s()",
 	        		__FUNCTION__, dst_buf, src_buf,
-				dst_hbm->pa, src_hbm->pa, src_hbm->len,
+				dst_hbm->pa, src_hbm->pa, copy_len,
 				hb_copy_from_mode==0? "STUB":
 				hb_copy_from_mode==1? "memcpy":
 				hb_copy_from_mode==2? "DMA": "undefined" );
@@ -438,14 +440,14 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		case 2:
 			if (adev->dma_chan[DMACHAN_MEMCPY] != 0){
 				unsigned flags = hb_dma_flags;
-				//flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
-				dma_memcpy(adev, dst_hbm->pa, src_hbm->pa, src_hbm->len, flags);
+				//flags |= DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
+				dma_memcpy(adev, dst_hbm->pa, src_hbm->pa, copy_len, flags);
 				break;
 			}else{
 				hb_copy_from_mode = 1;  // fall thru
 			}
 		case 1:
-			memcpy(dst_hbm->va, src_hbm->va, src_hbm->len);
+			memcpy(dst_hbm->va, src_hbm->va, copy_len);
 			break;
 		}
 

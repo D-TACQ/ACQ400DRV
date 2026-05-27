@@ -28,6 +28,6 @@
 
 #define ACQ400_FS_STRIDE	0xa400f001
 
-#define ACQ400_HB_COPYFROM	0xa400e001
+#define ACQ400_HB_COPYFROM	0xa400e001    // arg u32 [user_len<<24] | buffer
 
 #endif /* ACQ400_FS_IOCTL_H_ */
