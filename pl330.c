@@ -37,7 +37,7 @@
 #define PL330_MAX_IRQS		32
 #define PL330_MAX_PERI		32
 
-#define REVID	"2601"
+#define REVID	"2602"
 
 enum pl330_srccachectrl {
 	SCCTRL0,	/* Noncacheable and nonbufferable */
@@ -1572,6 +1572,7 @@ static inline u32 _prepare_ccr(const struct pl330_reqcfg *rqc)
 		ccr |= (((rqc->brst_len - 1) & 0xf) << CC_SRCBRSTLEN_SHFT);
 		ccr |= (((rqc->brst_len - 1) & 0xf) << CC_DSTBRSTLEN_SHFT);
 		ccr |= (rqc->brst_size << CC_SRCBRSTSIZE_SHFT);
+		ccr |= (rqc->brst_size << CC_DSTBRSTSIZE_SHFT);
 	}
 	ccr |= (rqc->scctl << CC_SRCCCTRL_SHFT);
 	ccr |= (rqc->dcctl << CC_DSTCCTRL_SHFT);
@@ -1654,8 +1655,14 @@ static int pl330_submit_req(void *ch_id, struct pl330_req *r)
 			r->cfg->nonsecure = 1;
 
 		ccr = _prepare_ccr(r->cfg);
+		dev_dbg(thrd->dmac->pinfo->dev,
+				"%s:%d back from _prepare_ccr bl:%u bs:%u ccr:%08x",
+				__func__, __LINE__, r->cfg->brst_len, r->cfg->brst_size, ccr);
 	} else {
 		ccr = readl(regs + CC(thrd->id));
+		dev_dbg(thrd->dmac->pinfo->dev,
+				"%s:%d use default ccr:%08x",
+						__func__, __LINE__, ccr);
 	}
 
 	/* If this req doesn't have valid xfer settings */
@@ -1789,16 +1796,21 @@ static int pl330_update(const struct pl330_info *pi)
 	val = readl(regs + FSC) & ((1 << pi->pcfg.num_chan) - 1);
 	pl330->dmac_tbd.reset_chan |= val;
 	if (val) {
-		int i = 0;
-		while (i < pi->pcfg.num_chan) {
-			if (val & (1 << i)) {
-				u32 cs = readl(regs + CS(i));
-				u32 ftc = readl(regs + FTC(i));
-				dev_info(pi->dev, "Reset ch-%d\t CS-%x FTC-%x STOP\n", i, cs, ftc);
+		int ii;
+		for (ii = 0; ii < pi->pcfg.num_chan; ++ii) {
+			if (val & (1 << ii)) {
+				u32 cs = readl(regs + CS(ii));
+				u32 ftc = readl(regs + FTC(ii));
+				u32 cc  = readl(regs + CC(ii));
+				u32 sa = readl(regs + SA(ii));
+				u32 da = readl(regs + DA(ii));
 
-				_stop(&pl330->channels[i]);
+				_stop(&pl330->channels[ii]);
+
+				dev_info(pi->dev, "Reset ch-%d CS:%x FTC:%x CC:%08x "
+						  "DA:0x%08x SA:0x%08x STOP\n",
+						  	  ii, cs, ftc, cc, da, sa);
 			}
-			i++;
 		}
 	}
 
