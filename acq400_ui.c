@@ -426,7 +426,7 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		unsigned src_buf = arg&0x1ff;
 		unsigned usr_len = arg >> 10;
 		struct HBM *src_hbm = adev->hb[src_buf];
-		size_t copy_len = usr_len != 0? usr_len: src_hbm->len;
+		size_t copy_len = usr_len != 0? usr_len*sizeof(unsigned): src_hbm->len;
 
 	        dev_dbg(DEVP(adev), "%s: dst:%d src:%d 0x%08x := %08x %d %s()",
 	        		__FUNCTION__, dst_buf, src_buf,
@@ -451,8 +451,6 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			memcpy(dst_hbm->va, src_hbm->va, copy_len);
 			break;
 		}
-
-
 		return 0;
 	}
 	default:
