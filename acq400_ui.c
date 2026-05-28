@@ -421,9 +421,10 @@ acq400_hb_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         struct HBM *dst_hbm = adev->hb[dst_buf];
 
 	switch(cmd){
+	case ACQ400_HB_COPYFROM_LEN:
 	case ACQ400_HB_COPYFROM: {
-		unsigned src_buf = arg&0x0ff;
-		unsigned usr_len = arg >> 24;
+		unsigned src_buf = arg&0x1ff;
+		unsigned usr_len = arg >> 10;
 		struct HBM *src_hbm = adev->hb[src_buf];
 		size_t copy_len = usr_len != 0? usr_len: src_hbm->len;
 
