@@ -77,11 +77,11 @@ EOF
     idx=1
     for site in $*; do
         offset=$((idx * 16))
-
+        maxrate=$(cat /etc/acq400/${site}/MAXRATE)
 
         cat - <<EOF
 echo "run link calibration for site $site..."
-/usr/local/CARE/acq428_adc_init $offset
+/usr/local/CARE/acq428_adc_init $offset $maxrate
 /usr/local/CARE/acq428_idelay $offset
 echo 1 > /dev/acq400.${site}.knobs/idelay_en
 /usr/local/CARE/acq428_sync $offset
