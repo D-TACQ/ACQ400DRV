@@ -9,11 +9,12 @@ import spidev
 try:
     DEVICE_NUMBER = int(sys.argv[1])
     ADC_MODEL = sys.argv[2].upper()
-    if ADC_MODEL not in ["5M", "10M"]:
+    if ADC_MODEL not in ["5M", "10M", "5OSR2"]:
         raise ValueError
-except:
-    print(f"Usage: {sys.argv[0]} <device_number> <5M | 10M>")
+except ValueError as e:
+    print(f"Usage: {sys.argv[0]} <device_number> <5M | 10M | 5OSR2>")
     print("Example: ./acq428_adc_init 16 5M")
+    print(f"{e}")
     sys.exit(1)
 
 # ---------------------------------------------------------
@@ -71,18 +72,21 @@ def register_write(addr, data, dev=None):
 adc_sequences = {
     "10M": [
         # 10MSPS Sequence (Initial debug configuration) ADS92X8
-        # Addr, Data 
-        (0x12, 0x0007), # DATA_LANES (bits 2-0 = 111) 
+        # Addr, Data
+        (0x00, 0x0001), # adc reset
+        (0x0D, 0x2042), # Put OSR on
+        (0x12, 0x0007), # DATA_LANES (bits 2-0 = 111)
         (0xC0, 0x0000), # CLK1 (bit 12 = 0)
         (0xC1, 0x0000), # CLK2 (bit 0 = 0), DATA_RATE (bit 8 = 0)
         (0xC5, 0x0000), # CLK3 (bit 0 = 0), CLK4 (bits 3-2 = 00)
         (0xFB, 0x0002), # CLK5 (bit 1 = 1) -> 0x1 << 1 = 0x02
         (0x1C, 0x0000), # CLK6 (bits 7-6 = 00)
-        (0x0D, 0x2042), # Put OSR on
     ],
     "5M": [
         # 5MSPS Sequence ADS92X7
         # Addr, Data
+        (0x00, 0x0001), # adc reset
+        (0x0D, 0x2002), # Make sure OSR is off...
         (0x04, 0x000B), # INIT_1 (bits 3-0 = B) -> Enter Init Mode
         (0x12, 0x0007), # DATA_LANES (bits 2-0 = 111)
         (0xC0, 0x1000), # CLK1 (bit 12 = 1) -> 0x1 << 12 = 0x1000
@@ -93,9 +97,26 @@ adc_sequences = {
         (0x1C, 0x00C0), # CLK6 (bits 7-6 = 11) -> 0x3 << 6 = 0x00C0
         (0x03, 0x0002), # Bank select switch to bank 1
         (0x04, 0x0000), # INIT_1 (bits 3-0 = 0) -> Exit Init Mode
-        (0x0D, 0x2002), # Make sure OSR is off...
+    ],
+    "5OSR2": [
+        # 5MSPS Sequence ADS92X7
+        # Addr, Data
+        (0x00, 0x0001), # adc reset
+        (0x04, 0x000B), # INIT_1 (bits 3-0 = B) -> Enter Init Mode
+        (0x12, 0x0007), # DATA_LANES (bits 2-0 = 111)
+        (0xC0, 0x1000), # CLK1 (bit 12 = 1) -> 0x1 << 12 = 0x1000
+        (0xC1, 0x0000), # CLK2 (bit 0 = 0), DATA_RATE (bit 8 = 0)
+        (0xC4, 0x0022), #
+        (0xC5, 0x022C), # CLK3 (bit 9 = 1), CLK4 (bits 3-2 = 11) -> 0x020C
+        (0xFB, 0x0000), # CLK5 (bit 1 = 0)
+        (0x03, 0x0010), # Bank select switch to bank 2
+        (0x1C, 0x00C0), # CLK6 (bits 7-6 = 11) -> 0x3 << 6 = 0x00C0
+        (0x03, 0x0002), # Bank select switch to bank 1
+        (0x04, 0x0000), # INIT_1 (bits 3-0 = 0) -> Exit Init Mode
+        (0x0D, 0x2042), #
     ]
 }
+
 
 # ---------------------------------------------------------
 # Execute Selected Sequence
