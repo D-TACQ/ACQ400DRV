@@ -3,21 +3,30 @@
 import sys
 import spidev
 
-DEVICE_NUMBER = 0
-
+# ---------------------------------------------------------
+# Argument Parsing
+# ---------------------------------------------------------
 try:
     DEVICE_NUMBER = int(sys.argv[1])
+    ADC_MODEL = sys.argv[2].upper()
+    if ADC_MODEL not in ["5M", "10M"]:
+        raise ValueError
 except:
-    print(f"usage: {sys.argv[0]} <device_number>")
+    print(f"Usage: {sys.argv[0]} <device_number> <5M | 10M>")
+    print("Example: ./acq428_adc_init 16 5M")
     sys.exit(1)
 
+# ---------------------------------------------------------
+# SPI Setup
+# ---------------------------------------------------------
 spi = spidev.SpiDev()
 spi.open(1, DEVICE_NUMBER)
 spi.max_speed_hz = 10000000
 spi.mode = 0b00
 
-# daisy chain chip init
-
+# ---------------------------------------------------------
+# Daisy Chain Chip Init
+# ---------------------------------------------------------
 # 0x1C writes 7 into bits 2-6 of register 0x01
 s = [0x01, 0x00, 0x1C]
 z = [0x00, 0x00, 0x00]
@@ -33,7 +42,6 @@ f8 = s+s+s+s+s+s+s+s
 
 chain24 = [f1,f2,f3,f4,f5,f6,f7,f8]
 
-
 responses = []
 for frame in chain24:
     responses.append(spi.xfer3(frame))
@@ -42,114 +50,66 @@ for response in responses:
     resp = map(hex, response)
     #print(list(resp))
 
-
-# ADC init
-
-"""
-reg | field   | bits | setting | desc |
-0x33| gain error cal | 13 + 6 | 1 + 1 | gain error calibration enabled
-"""
-GAIN_ERROR_CAL = 0x2040
-
-"""
-reg | field | bits
-0x04| all   | 0x0B
-
-initialization pattern
-"""
-INIT = 0x0B
-DEINIT = 0x00
-
-"""
-reg | field   | bits | setting | desc |
-0x12|DATA_LANES|2-0|111|2: ADC A and B data output on DOUTA and DOUTB respectively; 24 bits per ADC|
-"""
-DATA_LANES = 0x02
-
-"""
-reg  | field | bits  | setting | desc |
-0xC0 | CLK1  | 12    | 0x0     | 0 : Configuration for DATA_LANES = 0 or 2 |
-"""
-CLK1 = 0x0 << 12
-
-"""
-reg  | field        | bits | setting | desc |
-0xC1 | CLK2      | 0 | 0x0 | 0 : Configuration for DATA_LANES = 2 or 7 |
-0xC1 | DATA_RATE | 8 | 0x0 | 0 : Double data rate (DDR) |
-"""
-CLK2 = 0x0 << 8
-DATA_RATE = 0x0
-
-"""
-reg | field | bits | setting| desc |
-0xC5| CLK3  | 0   |   0x0  | 0 : Configuration for DATA_LANES = 0 or 2 |
-0xC5| CLK4  | 3-2 |   0x0  | Not applicable for ADS92X8 |
-"""
-CLK3 = 0x0 << 9 # shift this << 2
-CLK4 = 0x0 << 1 # shift this << 1
-
-"""
-reg  | field   | bits | setting | desc |
-0xFB | CLK5 | 1 | 0x1 | 1 : 24-bit 1-lane SDR and DDR modes |
-"""
-CLK5 = 0x1 << 1
-
-"""
-reg  | field| bits | setting | desc |
-0x1C | CLK6 | 7-6  | 0x00    | Not applicable for the ADS92X8 |
-"""
-CLK6 = 0x03
-
-"""
-reg  | field  | bits | setting | desc |
-0x0D | OSR_EN | 6    | 1    | 1 : Data averaging enabled |
-"""
-OSR_EN = 0x01 << 6
-
-"""
-reg  | field  | bits | setting | desc |
-0xC4 | OSR_INIT2 | 5-4  | 0x2    | 2 : Configuration for enabling data averaging |
-0xC4 | OSR_INIT3 | 1    | 0x1    | 1 : Configuration for enabling data averaging |
-"""
-OSR_INIT2 = 0x02 << 5
-OSR_INIT3 = 0x01 << 1
-
-
-# values on reset OR'd with the values we want
-reg33 = 0x00 | GAIN_ERROR_CAL
-reg04 = 0x00 | INIT
-reg0D = 0x2002 | OSR_EN
-#regC4 = 0x00 | OSR_INIT2 | OSR_INIT3   only for 4 or greater OSR
-reg12 = 0x02 | DATA_LANES
-regC0 = 0x00 | CLK1
-regC1 = 0x00 | CLK2 | DATA_RATE
-regC5 = 0x00 | CLK3 | CLK4
-regFB = 0x00 | CLK5
-reg1C = 0x00 | CLK6
-reg04_deinit = 0x00 | DEINIT
-
+# ---------------------------------------------------------
+# ADC Register Write Helper
+# ---------------------------------------------------------
 def register_write(addr, data, dev=None):
-	data_high_byte = data >> 8
-	data_low_byte = data & 255
-	s = [addr, data_high_byte, data_low_byte]
-	chain = s+s+s+s+s+s+s+s
+    data_high_byte = data >> 8
+    data_low_byte = data & 255
+    s = [addr, data_high_byte, data_low_byte]
+    chain = s+s+s+s+s+s+s+s
 
-	if not dev:
-		response = spi.xfer3(chain)
-	else:
-		response = dev.xfer3(chain)
-	return response
+    if not dev:
+        response = spi.xfer3(chain)
+    else:
+        response = dev.xfer3(chain)
+    return response
 
+# ---------------------------------------------------------
+# ADC Initialization Sequences
+# ---------------------------------------------------------
+adc_sequences = {
+    "10M": [
+        # 10MSPS Sequence (Initial debug configuration) ADS92X8
+        # Addr, Data 
+        (0x12, 0x0007), # DATA_LANES (bits 2-0 = 111) 
+        (0xC0, 0x0000), # CLK1 (bit 12 = 0)
+        (0xC1, 0x0000), # CLK2 (bit 0 = 0), DATA_RATE (bit 8 = 0)
+        (0xC5, 0x0000), # CLK3 (bit 0 = 0), CLK4 (bits 3-2 = 00)
+        (0xFB, 0x0002), # CLK5 (bit 1 = 1) -> 0x1 << 1 = 0x02
+        (0x1C, 0x0000), # CLK6 (bits 7-6 = 00)
+        (0x0D, 0x2042), # Put OSR on
+    ],
+    "5M": [
+        # 5MSPS Sequence ADS92X7
+        # Addr, Data
+        (0x04, 0x000B), # INIT_1 (bits 3-0 = B) -> Enter Init Mode
+        (0x12, 0x0007), # DATA_LANES (bits 2-0 = 111)
+        (0xC0, 0x1000), # CLK1 (bit 12 = 1) -> 0x1 << 12 = 0x1000
+        (0xC1, 0x0000), # CLK2 (bit 0 = 0), DATA_RATE (bit 8 = 0)
+        (0xC5, 0x020C), # CLK3 (bit 9 = 1), CLK4 (bits 3-2 = 11) -> 0x020C
+        (0xFB, 0x0000), # CLK5 (bit 1 = 0)
+        (0x03, 0x0010), # Bank select switch to bank 2
+        (0x1C, 0x00C0), # CLK6 (bits 7-6 = 11) -> 0x3 << 6 = 0x00C0
+        (0x03, 0x0002), # Bank select switch to bank 1
+        (0x04, 0x0000), # INIT_1 (bits 3-0 = 0) -> Exit Init Mode
+        (0x0D, 0x2002), # Make sure OSR is off...
+    ]
+}
 
-responses = []
-responses.append(register_write(0x0D, reg0D))  #do we need to switch on OSR
-responses.append(register_write(0x12, reg12))
-responses.append(register_write(0xC0, regC0))
-responses.append(register_write(0xC1, regC1))
-responses.append(register_write(0xC5, regC5))
-responses.append(register_write(0xFB, regFB))
+# ---------------------------------------------------------
+# Execute Selected Sequence
+# ---------------------------------------------------------
+print(f"Executing SPI configuration sequence for {ADC_MODEL}...")
 
-for response in responses:
-	resp = map(hex, response)
-	#print(list(resp)[24:])
+active_sequence = adc_sequences[ADC_MODEL]
+adc_responses = []
 
+for reg_addr, reg_data in active_sequence:
+    adc_responses.append(register_write(reg_addr, reg_data))
+
+for response in adc_responses:
+    resp = map(hex, response)
+    #print(list(resp)[24:])
+
+print("Sequence execution complete.")
