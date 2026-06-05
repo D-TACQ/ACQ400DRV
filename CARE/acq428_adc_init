@@ -75,7 +75,7 @@ adc_sequences = {
         # Addr, Data
         (0x00, 0x0001), # adc reset
         (0x0D, 0x2042), # Put OSR on
-        (0x12, 0x0007), # DATA_LANES (bits 2-0 = 111)
+        (0x12, 0x0002), # DATA_LANES (bits 2-0 = 010)
         (0xC0, 0x0000), # CLK1 (bit 12 = 0)
         (0xC1, 0x0000), # CLK2 (bit 0 = 0), DATA_RATE (bit 8 = 0)
         (0xC5, 0x0000), # CLK3 (bit 0 = 0), CLK4 (bits 3-2 = 00)
