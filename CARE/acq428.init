@@ -94,6 +94,8 @@ PATTERN=\`cat "\$DEBUG_FILE"\`
 
 if [ "\$PATTERN" != "0xff00ff00" ]; then
     echo "Error: Calibration pattern mismatch on site $site! Expected 0xff00ff00, got \$PATTERN"
+    echo 0 > /dev/acq400.${site}.knobs/sync_en
+    echo 0 > /dev/acq400.${site}.knobs/idelay_en
     exit 1
 fi
 
