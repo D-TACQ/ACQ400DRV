@@ -1200,8 +1200,16 @@ load_mgt() {
 load_mgt_mtca() {
     C93=$(grep filename /tmp/fpga_status | awk '{ print $5 }' |
           awk -F _ '{ for (ii=1; ii<=NF; ++ii) if($ii ~ /93[0-9][0-9]/) print $ii; }')
+    C94=$(grep filename /tmp/fpga_status | awk '{ print $5 }' |
+          awk -F _ '{ for (ii=1; ii<=NF; ++ii) if($ii ~ /94[0-9][0-9]/) print $ii; }')
     if [ ! -z $C93 ]; then
         echo "MTCA COMMS module $C93 detected"
+        /usr/local/CARE/load.overlay mgtC_overlay
+        LOAD_MGT_REQUEST=1
+    fi
+    if [ ! -z $C94 ]; then
+        echo "MTCA COMMS module $C94 detected"
+        /usr/local/CARE/load.overlay acq2x06_enable_mgtAB
         /usr/local/CARE/load.overlay mgtC_overlay
         LOAD_MGT_REQUEST=1
     fi

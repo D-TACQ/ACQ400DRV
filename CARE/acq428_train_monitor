@@ -4,7 +4,7 @@
 
 SITE=${1:-1}
 LOG="logger -t acq428_monitor"
-POLL_INTERVAL=1 # Adjust based on how fast you need to react vs CPU load
+POLL_INTERVAL=3000000 # Adjust based on how fast you need to react vs CPU load
 
 # Define the exact register/variable name for your ACQ428
 TRAIN_BIT_REG="frame_ok" 
@@ -17,7 +17,7 @@ do_retrain() {
 
     # Execute your new training routine. 
     # (Assuming a similar convention to the old 'SITE=$site acq480_train')
-    SITE=$SITE /usr/local/CARE/acq428_retrain | $LOG
+    /usr/local/CARE/acq428_retrain $SITE | $LOG
     
     # If acq428_train is asynchronous, you would add a wait loop here 
     # similar to the wait_training_done() function in your original script.
@@ -40,6 +40,6 @@ while true; do
         sleep 2
     fi
 
-    usleep 500000 # 500ms poll. Using usleep keeps CPU usage negligible.
+    usleep $POLL_INTERVAL # 500ms poll. Using usleep keeps CPU usage negligible.
 done
 

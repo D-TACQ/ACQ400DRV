@@ -77,11 +77,11 @@ EOF
     idx=1
     for site in $*; do
         offset=$((idx * 16))
-
+        maxrate=$(cat /etc/acq400/${site}/MAXRATE)
 
         cat - <<EOF
 echo "run link calibration for site $site..."
-/usr/local/CARE/acq428_adc_init $offset
+/usr/local/CARE/acq428_adc_init $offset $maxrate
 /usr/local/CARE/acq428_idelay $offset
 echo 1 > /dev/acq400.${site}.knobs/idelay_en
 /usr/local/CARE/acq428_sync $offset
@@ -94,6 +94,8 @@ PATTERN=\`cat "\$DEBUG_FILE"\`
 
 if [ "\$PATTERN" != "0xff00ff00" ]; then
     echo "Error: Calibration pattern mismatch on site $site! Expected 0xff00ff00, got \$PATTERN"
+    echo 0 > /dev/acq400.${site}.knobs/sync_en
+    echo 0 > /dev/acq400.${site}.knobs/idelay_en
     exit 1
 fi
 
