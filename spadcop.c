@@ -195,7 +195,7 @@ int _spad_cop_set(int ispad, const char* buf)
 				sc->enabled = enable;
 				return _spad_cop_enable(ispad, site, reg, usecs);
 			}else{
-				return -1;
+				return -EINVAL;
 			}
 		}else{
 			spadCopStop(sc);
@@ -203,7 +203,7 @@ int _spad_cop_set(int ispad, const char* buf)
 			return 0;
 		}
 	}else{
-		return -1;
+		return -EINVAL;
 	}
 }
 int spad_cop_set(int ispad, const char* buf)
