@@ -1,0 +1,37 @@
+#!/usr/bin/expect -f
+# connect to procserv, send it a ^X to kill the process and clean up.
+
+if { $::argc > 0 } {
+	set PORT [ lindex $::argv 0 ]
+} else {
+# kill transient by default
+	set PORT 2225     
+}
+# Set a timeout in seconds just in case the connection hangs
+set timeout 5
+
+puts "connecting to $PORT"
+spawn telnet localhost $PORT
+
+# Wait for telnet to confirm the connection is open then HAT-X it
+
+expect {
+    "Escape character is" {
+        # Send Ctrl-X
+        send "\x18"
+
+        # Give the system a brief moment to register the command
+        sleep 1
+    }
+    timeout {
+        puts "\nError: Connection timed out."
+        exit 1
+    }
+    eof {
+        puts "\nError: Connection closed unexpectedly."
+        exit 1
+    }
+}
+
+exit 0
+
