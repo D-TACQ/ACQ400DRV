@@ -683,9 +683,16 @@ build_knobs_device() {
 install_cal() {
     site=$1
     caldef=/dev/sites/${site}/caldef.xml
+    is_data32=0
+    knobd=/dev/acq400.$1.knobs
+    is_data32=$(get.sys ${knobd}/data32)
     if [ ! -e ${caldef} ]; then
         source  /dev/sites/${site}/details
-        calcal=/mnt/local/cal/$FRU_SERIAL.xml   
+        if [ "${is_data32}" -eq 1 ]; then
+            calcal=/mnt/local/cal/$FRU_SERIAL-data32.xml
+        else
+            calcal=/mnt/local/cal/$FRU_SERIAL.xml
+        fi
         if [ -e ${calcal} ]; then
             echo "Calibration found site:$site ${calcal}"
             cp ${calcal} ${caldef}
@@ -870,8 +877,8 @@ build_knobs() {
     fi
     for dir in $spd/*acq4?0fmc $spd/*acq400pmod; do
         if [ -e ${dir}/site ]; then
-            install_cal $(cat ${dir}/site)
             build_knobs_device ${dir}
+            install_cal $(cat ${dir}/site)
         fi
     done
      
