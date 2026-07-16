@@ -5,7 +5,6 @@
       <CalDate>20180313_081110</CalDate>
       <Model>ACQ427ELF</Model>
       <SerialNum>E42730000</SerialNum>
-      <SampleRate>1000000 Hz</SampleRate>
     </Info>
     <Data AICHAN="8" SW="gain%d" code_max="8388607" code_min="-8388608">
       <Range name="10V" sw="0">

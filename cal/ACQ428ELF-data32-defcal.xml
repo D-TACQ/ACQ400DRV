@@ -2,9 +2,8 @@
 <ACQ>
   <AcqCalibration>
     <Info>
-      <Model>ACQ428ELF N=16 M=0D</Model>
+      <Model>ACQ428ELF</Model>
       <SerialNum>E42810000</SerialNum>
-      <SampleRate>5,005,892.0 Hz</SampleRate>
     </Info>
     <Data AICHAN="16" SW="gain%d" code_max="8388607" code_min="-8388608" ranges="G0=25.6V,G1=12.8V,G2=6.4V,G3=3.2V,G4=1.6V,G5=0.8V,G6=0.4V,G7=0.2V">
       <Range name="25.6V" sw="0">

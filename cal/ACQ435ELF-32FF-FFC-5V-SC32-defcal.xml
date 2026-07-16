@@ -5,7 +5,6 @@
       <CalDate>20210416_111522 FAKE</CalDate>
       <Model>ACQ435ELF</Model>
       <SerialNum>E43510000</SerialNum>
-      <SampleRate>40000000 kHz</SampleRate>
 	  <ELFX>ACQ435ELFX-SC32</ELFX>
     </Info>
     <Data AICHAN="32" SW="hi_res_mode,gain%d" code_max="8388607" code_min="-8388608" ranges="G0=1,G1=10,G2=100,G3=1000">

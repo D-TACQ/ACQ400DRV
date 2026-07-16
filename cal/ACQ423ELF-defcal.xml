@@ -3,13 +3,8 @@
   <AcqCalibration>
     <Info>
       <CalDate>20180618_142123</CalDate>
-      <Carrier>acq2106_094</Carrier>
       <Model>ACQ423ELF</Model>
       <SerialNum>E42310000</SerialNum>
-      <Temperature>32.5</Temperature>
-      <SampleRate>200000 Hz</SampleRate>
-      <FirmwareRev>acq4xx-614-20180608131252</FirmwareRev>
-      <FPGAInfo>ACQ2106_TOP_09_09_09_09_09_09 2018/06/0</FPGAInfo>
     </Info>
     <Data AICHAN="32" SW="gain%d" code_max="32767" code_min="-32768">
       <Range name="+/- 10V" sw="6">

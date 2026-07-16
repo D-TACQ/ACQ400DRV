@@ -3,13 +3,8 @@
   <AcqCalibration>
     <Info>
       <CalDate>20180525_114333</CalDate>
-      <Carrier>acq2106_087</Carrier>
       <Model>ACQ482ELF</Model>
       <SerialNum>E48210000</SerialNum>
-      <Temperature>30.5</Temperature>
-      <SampleRate>50000000 kHz</SampleRate>
-      <FirmwareRev>acq4xx-607-20180503135345 PATCHED</FirmwareRev>
-      <FPGAInfo>ACQ2106_TOP_08_08_08_08_08_08_9011_64B</FPGAInfo>
     </Info>
     <Data AICHAN="8" DG="ACQ480:GAIN:%02d" SW="default" code_max="32764" code_min="-32768">
       <Range name="2.5V" sw="default">
