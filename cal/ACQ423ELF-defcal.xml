@@ -14,9 +14,6 @@
     <Data AICHAN="32" SW="gain%d" code_max="32767" code_min="-32768">
       <Range name="+/- 10V" sw="6">
         <Nominal eoff="0" eslo="0.00030517578125" max="10" min="-10" roff="0"/>
-        <!-- 
-        <Calibrated ch="1" eoff="0.000225727683107" eslo="0.000305135662151" max="9.99860596938" min="-9.99845964968"/>
-         -->
       </Range>
       <Range name="+/- 5V" sw="2">
         <Nominal eoff="0" eslo="0.000152587" max="5" min="-5" roff="0"/>

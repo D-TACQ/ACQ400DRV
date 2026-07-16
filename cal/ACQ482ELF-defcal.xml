@@ -14,9 +14,6 @@
     <Data AICHAN="8" DG="ACQ480:GAIN:%02d" SW="default" code_max="32764" code_min="-32768">
       <Range name="2.5V" sw="default">
         <Nominal eoff="0" eslo="7.62939453125e-05" max="2.5" min="-2.5" roff="0"/>
-        <!-- 
-        <Calibrated ch="1" eoff="0.000937244368024" eslo="7.9447505095e-05" max="2.60419364382" min="-2.60239860258"/>
-         -->
       </Range>
     </Data>
   </AcqCalibration>
