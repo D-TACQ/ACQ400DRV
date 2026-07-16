@@ -3,13 +3,9 @@
   <AcqCalibration>
     <Info>
       <CalDate>20180313_081110</CalDate>
-      <Carrier>acq1001_321</Carrier>
       <Model>ACQ427ELF</Model>
-      <SerialNum>E42730007</SerialNum>
-      <Temperature>32.5</Temperature>
+      <SerialNum>E42730000</SerialNum>
       <SampleRate>1000000 Hz</SampleRate>
-      <FirmwareRev>acq4xx-602-20180221181520</FirmwareRev>
-      <FPGAInfo>ACQ1001_TOP_07_40 2018/03/05</FPGAInfo>
     </Info>
     <Data AICHAN="8" SW="gain%d" code_max="8388607" code_min="-8388608">
       <Range name="10V" sw="0">

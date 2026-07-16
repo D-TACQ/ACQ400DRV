@@ -3,13 +3,9 @@
   <AcqCalibration>
     <Info>
       <CalDate>20210416_111522 FAKE</CalDate>
-      <Carrier>acq2106_269</Carrier>
       <Model>ACQ435ELF</Model>
-      <SerialNum>E43510221</SerialNum>
-      <Temperature>32.0</Temperature>
+      <SerialNum>E43510000</SerialNum>
       <SampleRate>40000000 kHz</SampleRate>
-      <FirmwareRev>acq400-381-20210415170500</FirmwareRev>
-      <FPGAInfo>ACQ2106_02_ff_02_ff_02_ff_9011_WR</FPGAInfo>
 	  <ELFX>ACQ435ELFX-SC32</ELFX>
     </Info>
     <Data AICHAN="32" SW="hi_res_mode,gain%d" code_max="8388607" code_min="-8388608" ranges="G0=1,G1=10,G2=100,G3=1000">
