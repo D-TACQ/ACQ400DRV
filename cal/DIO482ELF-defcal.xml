@@ -4,7 +4,6 @@
 <!-- calibration data -->
 <AcqCalibration>
     <Info>
-        <CalDate>20230612</CalDate>
         <Version>B1007</Version>
         <Model>DIO482</Model>
 	<SerialNum>E48220000</SerialNum>
