@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<ACQ>
+  <AcqCalibration>
+    <Info>
+      <Model>ACQ426ELF</Model>
+      <SerialNum>E42610000</SerialNum>
+      <SampleRate>1000000 kHz</SampleRate>
+    </Info>
+    <Data AICHAN="32" SW="gain%d" code_max="8388607" code_min="-8388608" ranges="G0=10,G1=5,G2=2.5">
+      <Range name="+/-10V" sw="+/-10V">
+        <Nominal eoff="0" eslo="1.1920928955078125e-06" max="10" min="-10" roff="0"/>
+      </Range>
+      <Range name="+/-5V" sw="+/-5V">
+        <Nominal eoff="0" eslo="5.960464477539062e-07" max="5" min="-5" roff="0"/>
+      </Range>
+      <Range name="+/-2V5" sw="+/-2V5">
+        <Nominal eoff="0" eslo="2.980232238769531e-07" max="2.5" min="-2.5" roff="0"/>
+      </Range>
+      <Range name="0-10V" sw="0-10V">
+        <Nominal eoff="0" eslo="5.960464477539062e-07" max="10" min="0" roff="0"/>
+      </Range>
+      <Range name="0-5V" sw="0-5V">
+        <Nominal eoff="0" eslo="2.980232238769531e-07" max="5" min="0" roff="0"/>
+      </Range>
+      <Range name="0-12V5" sw="0-12V5">
+        <Nominal eoff="0" eslo="7.450580596923828e-07" max="12.5" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-12V5" sw="+/-12V5">
+        <Nominal eoff="0" eslo="1.4901161193847656e-06" max="12.5" min="-12.5" roff="0"/>
+      </Range>
+      <Range name="0-20V" sw="0-20V">
+        <Nominal eoff="0" eslo="1.1920928955078125e-06" max="20" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-20V" sw="+/-20V">
+        <Nominal eoff="0" eslo="2.384185791015625e-06" max="20" min="-20" roff="0"/>
+      </Range>
+      <Range name="0-25V" sw="0-25V">
+        <Nominal eoff="0" eslo="1.4901161193847656e-06" max="25" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-25V" sw="+/-25V">
+        <Nominal eoff="0" eslo="2.9802322387695312e-06" max="25" min="-25" roff="0"/>
+      </Range>
+      <Range name="0-40V" sw="0-40V">
+        <Nominal eoff="0" eslo="2.384185791015625e-06" max="40" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-40V" sw="+/-40V">
+        <Nominal eoff="0" eslo="4.76837158203125e-06" max="40" min="-40" roff="0"/>
+      </Range>
+    </Data>
+  </AcqCalibration>
+  <ModelSpec>
+    <ChannelBlockMask>
+      <BlockWidth>32</BlockWidth>
+      <BlockSet>1</BlockSet>
+      <MaxDeviceRate>1000000 S/sec</MaxDeviceRate>
+    </ChannelBlockMask>
+  </ModelSpec>
+</ACQ>
