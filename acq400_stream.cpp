@@ -91,6 +91,7 @@
 #include "local.h"		/* chomp() hopefully, not a lot of other garbage */
 #include "knobs.h"
 #include "acq-util.h"
+#include "ChannelMask.h"
 #include "ES.h"
 #include "Knob.h"
 
@@ -3608,9 +3609,6 @@ public:
 };
 
 
-const unsigned MAXBIT = 256;
-typedef std::bitset<MAXBIT> ChannelMask;
-
 #include <sstream>
 
 
@@ -3622,7 +3620,7 @@ class SubsetStreamHeadClientChannelMask: public SubsetStreamHeadClientImpl<T> {
 
 	static char* _cm2def(ChannelMask& _cm){
 		char* def = new char[32];
-		snprintf(def, 32, "%d", get_channelcount(_cm));
+		snprintf(def, 32, "%d", _cm.get_channelcount());
 		return def;
 	}
 	T* csample;		// contiguous sample bounce buffer
@@ -3641,8 +3639,8 @@ public:
 	SubsetStreamHeadClientChannelMask<T>(ChannelMask& _cm):
 		SubsetStreamHeadClientImpl<T>(_cm2def(_cm)),
 		cm(_cm),
-		topchan(get_topchan(_cm)),
-		firstchan(get_firstchan(_cm)){
+		topchan(cm.get_topchan()),
+		firstchan(cm.get_firstchan()){
 		csample = new T[this->len];
 
 		if (verbose){
@@ -3673,19 +3671,10 @@ int SubsetStreamHeadClientChannelMask<T>::verbose = getenv_default("SubsetStream
 
 SubsetStreamHeadClient* SubsetStreamHeadClient::instance(const char* def)
 {
-	ChannelMask *cm;
+	ChannelMask::max_chan = G::nchan;
+	ChannelMask *cm = ChannelMask::factory(def);
 
-	if (is_number_comma_string(def)){
-		cm = new ChannelMask(intListToBitset(def));
-	}else if (strncmp(def, "0x", 2) == 0){
-		cm = new ChannelMask(hexStrToBin(def+2));  // arbitrary mask, hex definition
-	}else if (strncmp(def, "0b", 2) == 0){
-		cm = new ChannelMask(def+2);		   // arbitrary mask, binary definition
-	}else{
-		cm = 0;					   // else range [from] to
-	}
-
-	if (cm){
+	if (cm->is_bitset()){
 		if (G::wordsize == 4){
 			return new SubsetStreamHeadClientChannelMask<int>(*cm);    // arbitrary mask <int>
 		}else{
