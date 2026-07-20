@@ -10,11 +10,13 @@
 
 #include <bitset>
 #include "hex_char_to_bin.h"
+#include "Env"
 
 
 const unsigned MAXBIT = 64;
 typedef std::bitset<MAXBIT> ChannelMask;
 
+int NCHAN = Env::getenv("")
 
 int main(int argc, char* argv[]){
 	ChannelMask *cm;

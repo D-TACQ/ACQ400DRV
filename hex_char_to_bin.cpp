@@ -6,7 +6,6 @@
  */
 
 #include <string>
-
 #include <ctype.h>
 
 static std::string hexCharToBin( char c ) {
