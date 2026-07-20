@@ -237,8 +237,8 @@ udp_client: udp_client.o
 acq400_stream: acq400_stream.o  hex_char_to_bin.o
 	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 
-subset_mask_tester: subset_mask_tester.o  hex_char_to_bin.o
-	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
+subset_mask_tester: subset_mask_tester.o  hex_char_to_bin.o Env.o
+	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
 
 bb: bb.o tcp_server.o
 	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
@@ -379,6 +379,9 @@ awg_composer: awg_composer.o knobs.o
 			
 rtpackage:
 	tar cvzf dmadescfs-$(DC).tgz dmadescfs* scripts/load.dmadescfs
+
+channel_mask_unit_test.x86: channel_mask_unit_test.o ChannelMask.o hex_char_to_bin.o Env.o
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
 
 LIBSRCS = acq-util.c knobs.cpp acq_rt.cpp Buffer.cpp ES.cpp
 
