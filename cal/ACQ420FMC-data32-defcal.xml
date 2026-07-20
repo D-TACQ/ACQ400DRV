@@ -5,10 +5,9 @@
 <!-- calibration data -->
 <AcqCalibration>
     <Info>
-        <CalDate>20170126</CalDate>
         <Version>B1007</Version>
         <Model>ACQ420FMC</Model>
-	<SerialNum>F42010058</SerialNum>
+	<SerialNum>F42010000</SerialNum>
     </Info>
     <Data AICHAN="4" code_min="-8388608" code_max="8388607" SW="gains">
         <Range name="1.25" sw="3">

@@ -1401,11 +1401,11 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 	 */
 
 	if (pxs->r->cfg->ends_flushp){
-		printk("%s:%d _emit_FLP not now!\n", __FILE__, __LINE__);
+		// printk("%s:%d _emit_FLP not now!\n", __FILE__, __LINE__);
 		off += _emit_FLUSHP(dry_run, &buf[off], CTRL_FLAGS_TO_PRI(pxs->r->cfg->ends_flushp));
 	}
 	if (pxs->r->cfg->starts_wfp){
-		printk("%s:%d _emit_WFP not now!\n", __FILE__, __LINE__);
+		// printk("%s:%d _emit_WFP not now!\n", __FILE__, __LINE__);
 		off += _emit_WFP(dry_run, &buf[off], ALWAYS, CTRL_FLAGS_TO_PRI(pxs->r->cfg->starts_wfp));
 	}
 

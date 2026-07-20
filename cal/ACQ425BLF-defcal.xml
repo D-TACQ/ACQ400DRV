@@ -5,7 +5,6 @@
 <!-- calibration data -->
 <AcqCalibration>
     <Info>
-        <CalDate>20141225</CalDate>
         <Version>B1007</Version>
         <Model>ACQ425BLF</Model>
 	<SerialNum>B42510000</SerialNum>
@@ -16,10 +15,6 @@
         </Range>
 		<Range name="2" sw="2">
 			<Nominal min="-2" max="2" eoff="0" eslo="61.035156e-6" />
-<!-- example
-		<Calibrated ch="1" min="-2.2" max="2.2" />
-		<Calibrated ch="2" min="-2.10" max="2.10" />
--->
 		</Range>
         <Range name="5" sw="1">
             <Nominal min="-5" max="5" eoff="0" eslo="152.58789e-6" />

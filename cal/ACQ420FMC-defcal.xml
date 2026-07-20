@@ -8,10 +8,9 @@
 <!-- calibration data -->
 <AcqCalibration>
     <Info>
-        <CalDate>20141225</CalDate>
         <Version>B1008</Version>
         <Model>ACQ420FMC</Model>
-	<SerialNum>F42010001</SerialNum>
+	<SerialNum>F42010000</SerialNum>
     </Info>
      <Data AICHAN="4" SW="gain%d" code_max="32767" code_min="-32768">
       <Range name="10V" sw="0">

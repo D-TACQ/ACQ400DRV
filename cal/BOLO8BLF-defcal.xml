@@ -5,7 +5,6 @@
 <!-- calibration data -->
 <AcqCalibration>
     <Info>
-        <CalDate>20141225</CalDate>
         <Version>B1007</Version>
         <Model>BOLO8BLF</Model>
 	<SerialNum>BE4010000</SerialNum>

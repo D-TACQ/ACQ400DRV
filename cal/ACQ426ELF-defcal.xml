@@ -2,19 +2,49 @@
 <ACQ>
   <AcqCalibration>
     <Info>
-      <CalDate>20251008_123829</CalDate>
       <Model>ACQ426ELF</Model>
       <SerialNum>E42610000</SerialNum>
+      <SampleRate>1000000 kHz</SampleRate>
     </Info>
-    <Data AICHAN="32" SW="gain%d" code_max="32767" code_min="-32768">
-	<Range name="+/- 10V" sw="+/-10V">
+    <Data AICHAN="32" SW="gain%d" code_max="32767" code_min="-32768" ranges="G0=10,G1=5,G2=2.5">
+      <Range name="+/-10V" sw="+/-10V">
         <Nominal eoff="0" eslo="0.00030517578125" max="10" min="-10" roff="0"/>
       </Range>
-      <Range name="+/- 5V" sw="+/-5V">
-        <Nominal eoff="0" eslo="0.000152587" max="5" min="-5" roff="0"/>
+      <Range name="+/-5V" sw="+/-5V">
+        <Nominal eoff="0" eslo="0.000152587890625" max="5" min="-5" roff="0"/>
       </Range>
-      <Range name="+/- 2V5" sw="+/-2V5">
-        <Nominal eoff="0" eslo="0.000076293" max="2.5" min="-2.5" roff="0"/>
+      <Range name="+/-2V5" sw="+/-2V5">
+        <Nominal eoff="0" eslo="7.62939453125e-05" max="2.5" min="-2.5" roff="0"/>
+      </Range>
+      <Range name="0-10V" sw="0-10V">
+        <Nominal eoff="0" eslo="0.000152587890625" max="10" min="0" roff="0"/>
+      </Range>
+      <Range name="0-5V" sw="0-5V">
+        <Nominal eoff="0" eslo="7.62939453125e-05" max="5" min="0" roff="0"/>
+      </Range>
+      <Range name="0-12V5" sw="0-12V5">
+        <Nominal eoff="0" eslo="0.00019073486328125" max="12.5" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-12V5" sw="+/-12V5">
+        <Nominal eoff="0" eslo="0.0003814697265625" max="12.5" min="-12.5" roff="0"/>
+      </Range>
+      <Range name="0-20V" sw="0-20V">
+        <Nominal eoff="0" eslo="0.00030517578125" max="20" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-20V" sw="+/-20V">
+        <Nominal eoff="0" eslo="0.0006103515625" max="20" min="-20" roff="0"/>
+      </Range>
+      <Range name="0-25V" sw="0-25V">
+        <Nominal eoff="0" eslo="0.0003814697265625" max="25" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-25V" sw="+/-25V">
+        <Nominal eoff="0" eslo="0.000762939453125" max="25" min="-25" roff="0"/>
+      </Range>
+      <Range name="0-40V" sw="0-40V">
+        <Nominal eoff="0" eslo="0.0006103515625" max="40" min="0" roff="0"/>
+      </Range>
+      <Range name="+/-40V" sw="+/-40V">
+        <Nominal eoff="0" eslo="0.001220703125" max="40" min="-40" roff="0"/>
       </Range>
     </Data>
   </AcqCalibration>

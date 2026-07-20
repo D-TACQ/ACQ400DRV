@@ -2,59 +2,21 @@
 <ACQ>
   <AcqCalibration>
     <Info>
-      <CalDate>20180313_081110</CalDate>
-      <Carrier>acq1001_321</Carrier>
       <Model>ACQ427ELF</Model>
-      <SerialNum>E42730007</SerialNum>
-      <Temperature>32.5</Temperature>
-      <SampleRate>1000000 Hz</SampleRate>
-      <FirmwareRev>acq4xx-602-20180221181520</FirmwareRev>
-      <FPGAInfo>ACQ1001_TOP_07_40 2018/03/05</FPGAInfo>
+      <SerialNum>E42730000</SerialNum>
     </Info>
     <Data AICHAN="8" SW="gain%d" code_max="8388607" code_min="-8388608">
       <Range name="10V" sw="0">
         <Nominal eoff="0" eslo="1.19209289551e-06" max="10" min="-10" roff="0"/>
-        <Calibrated ch="1" eoff="-1.994285625e-06" eslo="1.19556059e-06" max="10.0290859399" min="-10.029091124"/>
-        <Calibrated ch="2" eoff="0.000149521199279" eslo="1.195565182e-06" max="10.0292759759" min="-10.028978129"/>
-        <Calibrated ch="3" eoff="0.000186230684193" eslo="1.195490383e-06" max="10.028685226" min="-10.0283139601"/>
-        <Calibrated ch="4" eoff="-0.000140940397176" eslo="1.19568043e-06" max="10.0299522845" min="-10.0302353609"/>
-        <Calibrated ch="5" eoff="0.000432103155676" eslo="1.195529482e-06" max="10.0292590846" min="-10.0283960738"/>
-        <Calibrated ch="6" eoff="0.000431154794635" eslo="1.195585851e-06" max="10.0297309936" min="-10.0288698796"/>
-        <Calibrated ch="7" eoff="0.000493399574354" eslo="1.195248822e-06" max="10.0269660345" min="-10.0259804306"/>
-        <Calibrated ch="8" eoff="-0.000161449836631" eslo="1.195361056e-06" max="10.0272526721" min="-10.0275767671"/>
       </Range>
       <Range name="5V" sw="1">
         <Nominal eoff="0" eslo="1.19209289551e-06" max="5" min="-5" roff="0"/>
-        <Calibrated ch="1" eoff="-7.510987662e-06" eslo="5.97795757e-07" max="5.01466616075" min="-5.01468178052"/>
-        <Calibrated ch="2" eoff="0.000122519998098" eslo="5.97706971e-07" max="5.01405140088" min="-5.01380695859"/>
-        <Calibrated ch="3" eoff="5.1902821655e-05" eslo="5.97708828e-07" max="5.01399636134" min="-5.01389315341"/>
-        <Calibrated ch="4" eoff="-9.9598761429e-05" eslo="5.97791003e-07" max="5.01453419354" min="-5.01473398886"/>
-        <Calibrated ch="5" eoff="0.000253652253259" eslo="5.97713359e-07" max="5.01423611955" min="-5.01372941276"/>
-        <Calibrated ch="6" eoff="0.000144416586794" eslo="5.97775783e-07" max="5.01465053429" min="-5.01436229889"/>
-        <Calibrated ch="7" eoff="0.000161150490459" eslo="5.97646404e-07" max="5.01358195861" min="-5.01326025528"/>
-        <Calibrated ch="8" eoff="-0.000106080285349" eslo="5.97670229e-07" max="5.0135145864" min="-5.01372734464"/>
       </Range>
       <Range name="2.5V" sw="2">
         <Nominal eoff="0" eslo="1.19209289551e-06" max="2.5" min="-2.5" roff="0"/>
-        <Calibrated ch="1" eoff="9.3175851e-06" eslo="2.98919591e-07" max="2.50752829108" min="-2.50750995483"/>
-        <Calibrated ch="2" eoff="0.000129285113578" eslo="2.9881909e-07" max="2.50680519522" min="-2.50654692381"/>
-        <Calibrated ch="3" eoff="9.408045927e-06" eslo="2.98865667e-07" max="2.5070760343" min="-2.50705751708"/>
-        <Calibrated ch="4" eoff="-6.3309174047e-05" eslo="2.98925103e-07" max="2.50750190233" min="-2.5076288196"/>
-        <Calibrated ch="5" eoff="0.000181085218343" eslo="2.98839901e-07" max="2.50703157063" min="-2.50666969903"/>
-        <Calibrated ch="6" eoff="5.3140224379e-05" eslo="2.98948796e-07" max="2.50781710299" min="-2.50771112149"/>
-        <Calibrated ch="7" eoff="4.0645488414e-05" eslo="2.9881819e-07" max="2.50670900585" min="-2.50662801369"/>
-        <Calibrated ch="8" eoff="-3.172148278e-05" eslo="2.98857992e-07" max="2.50697052221" min="-2.50703426404"/>
       </Range>
       <Range name="1.25V" sw="3">
         <Nominal eoff="0" eslo="1.19209289551e-06" max="1.25" min="-1.25" roff="0"/>
-        <Calibrated ch="1" eoff="2.3079264946e-05" eslo="1.4943758e-07" max="1.25359620892" min="-1.25355019982"/>
-        <Calibrated ch="2" eoff="0.000135744671156" eslo="1.49431451e-07" max="1.25365746055" min="-1.25338612064"/>
-        <Calibrated ch="3" eoff="-6.787017648e-06" eslo="1.49427483e-07" max="1.25348164287" min="-1.25349536633"/>
-        <Calibrated ch="4" eoff="-4.2229950479e-05" eslo="1.49432854e-07" max="1.25349125514" min="-1.25357586448"/>
-        <Calibrated ch="5" eoff="0.000136768630625" eslo="1.49434703e-07" max="1.25368576426" min="-1.25341237643"/>
-        <Calibrated ch="6" eoff="5.428939992e-06" eslo="1.49443716e-07" max="1.25363003108" min="-1.25361932265"/>
-        <Calibrated ch="7" eoff="-1.9541558178e-05" eslo="1.4941297e-07" max="1.25334714447" min="-1.253386377"/>
-        <Calibrated ch="8" eoff="6.268029666e-06" eslo="1.49427281e-07" max="1.25349300342" min="-1.25348061679"/>
       </Range>
     </Data>
   </AcqCalibration>

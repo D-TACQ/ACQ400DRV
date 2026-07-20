@@ -5,7 +5,6 @@
 <!-- calibration data -->
 <AcqCalibration>
     <Info>
-        <CalDate>20141225</CalDate>
         <Version>B1007</Version>
         <Model>ACQ481ELF</Model>
 	<SerialNum>E48110000</SerialNum>
