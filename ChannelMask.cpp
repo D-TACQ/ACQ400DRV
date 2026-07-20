@@ -116,7 +116,6 @@ ChannelMask::ChannelMask(int start, int length):
 		ChannelMask_t& cm = *this;
 
 		for (int ii = 0; ii < max_chan; ++ii){
-			printf("%d %s\n", ii, ii>=start && ii<=start+length? "true": "false");
 			cm[ii] = ii>=start && ii<=start+length? true: false;
 		}
 		_is_bitset = true;
