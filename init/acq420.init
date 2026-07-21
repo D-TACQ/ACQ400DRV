@@ -499,6 +499,13 @@ build_knobs_acq425_device() {
         create_gx ${ek}/ 16
         customize_acq420 $site
 }
+build_knobs_acq426_device() {
+        site=$1; mtype=$2 dk=$3 ek=$4
+
+        [ "x$ACQ426_SITES" != "x" ] && ACQ426_SITES="${ACQ426_SITES} "
+        ACQ426_SITES="${ACQ426_SITES}$site"
+        customize_acq420 $site
+}
 
 build_knobs_acq428_device() {
     site=$1; mtype=$2 dk=$3 ek=$4
@@ -636,6 +643,7 @@ build_knobs_device() {
     ${MOD_ID_ACQ426ELF})
         set_max_min_khz ${site} 1000 1
         ACQ426_SITES="${ACQ426_SITES} $site";;
+        build_knobs_acq426_device $site $mtype $dk $ek;;
     ${MOD_ID_ACQ428ELF})
         set_max_min_khz ${site} 1000 1
         build_knobs_acq428_device $site $mtype $dk $ek;;
