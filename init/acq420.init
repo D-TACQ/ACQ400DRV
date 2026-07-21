@@ -888,7 +888,6 @@ build_knobs() {
     for dir in $spd/*acq4?0fmc $spd/*acq400pmod; do
         if [ -e ${dir}/site ]; then
             build_knobs_device ${dir}
-            install_cal $(cat ${dir}/site)
         fi
     done
      
@@ -1027,6 +1026,11 @@ build_knobs() {
 		echo ACQ400T : "calling $ULC/acq400t.init ${ACQ400T_SITES}"
 		$ULC/acq400t.init ${ACQ400T_SITES}
     fi
+    for dir in $spd/*acq4?0fmc $spd/*acq400pmod; do
+        if [ -e ${dir}/site ]; then
+            install_cal $(cat ${dir}/site)
+        fi
+    done
     has_sfp=0
     for dir in ${spd}/*mgt400; do
         if [ -e ${dir}/site ]; then
