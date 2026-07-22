@@ -121,7 +121,7 @@ APPS := mmap acq400_stream permute acq435_decode \
 # dropped
 # multi_event 
 
-LIBINC = acq-util.h Buffer.h ES.h split2.h
+LIBINC = acq-util.h Buffer.h ES.h split2.h ChannelMask.h hex_char_to_bin.h Env.h
 LIBACQSO = libacq.so
 LIBACQSONAME = libacq.so.1
 
@@ -234,11 +234,11 @@ watchdog_PIL: watchdog_PIL.o
 udp_client: udp_client.o
 	$(CC) -o $@ $^ $(LDFLAGS) -lpopt
 	
-acq400_stream: acq400_stream.o  hex_char_to_bin.o
+acq400_stream: acq400_stream.o
 	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
 
-subset_mask_tester: subset_mask_tester.o  hex_char_to_bin.o
-	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
+subset_mask_tester: subset_mask_tester.o  hex_char_to_bin.o Env.o
+	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
 
 bb: bb.o tcp_server.o
 	$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS) -lacq  -lpopt -lpthread -lrt
@@ -380,7 +380,11 @@ awg_composer: awg_composer.o knobs.o
 rtpackage:
 	tar cvzf dmadescfs-$(DC).tgz dmadescfs* scripts/load.dmadescfs
 
-LIBSRCS = acq-util.c knobs.cpp acq_rt.cpp Buffer.cpp ES.cpp
+channel_mask_unit_test.x86: channel_mask_unit_test.o ChannelMask.o hex_char_to_bin.o Env.o
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpopt
+
+LIBSRCS = acq-util.c knobs.cpp acq_rt.cpp Buffer.cpp ES.cpp \
+	ChannelMask.cpp hex_char_to_bin.cpp Env.cpp
 
 ../include:
 	mkdir -p ../include

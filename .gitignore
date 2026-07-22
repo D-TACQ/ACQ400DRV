@@ -147,4 +147,5 @@ acq480_train
 decimate
 decimate.cpp
 soft_wrtd_x86
+setenv.zynq
 
