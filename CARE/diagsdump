@@ -17,7 +17,8 @@ showcat /tmp/fpga_status
 show dmesg; dmesg
 show logread; logread
 for file in /dev/shm/*.xml; do
-showcat $file
+	show $file
+	sed -e s'/<v><!\[CDATA\[/\n/' -e s'/\]\]>.*<\/v>//' $file
 done
 show /var/log/epics.log; nbcat /var/log/epics.log
 
