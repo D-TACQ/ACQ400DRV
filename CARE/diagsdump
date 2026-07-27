@@ -1,6 +1,14 @@
 #!/bin/sh
 source /etc/profile
 
+if [ "x$1" = "xHNFILE" ]; then
+	HNFILE=/tmp/$(hostname).diagsdump
+	echo writing to $HNFILE
+	$0 > $HNFILE 2>/dev/null
+	ls -l $HNFILE
+	exit 0
+fi
+
 show() {
 	echo -----------------------------------------------------------------------------------------
         echo diagsdump:file $1
@@ -14,12 +22,21 @@ showcat() {
 echo $(hostname) $(date)
 showcat /mnt/VERSION
 showcat /tmp/fpga_status
-show dmesg; dmesg
-show logread; logread
+showcat /mnt/local/rc.user
+for file in /mnt/local/sysconfig/*; do
+	showcat $file
+done
 for file in /dev/shm/*.xml; do
 	show $file
 	sed -e s'/<v><!\[CDATA\[/\n/' -e s'/\]\]>.*<\/v>//' $file
 done
-show /var/log/epics.log; nbcat /var/log/epics.log
+for file in /tmp/st.cmd /tmp/records.dbl /tmp/xrm_st.cmd /tmp/xrm_records.db; do
+	[ -e $file ] && showcat $file
+done
+for file in /tmp/*.log; do
+	show $file
+	nbcat $file
+done
 
-
+show dmesg; dmesg
+show logread; logread
