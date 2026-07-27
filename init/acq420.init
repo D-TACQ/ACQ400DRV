@@ -499,6 +499,13 @@ build_knobs_acq425_device() {
         create_gx ${ek}/ 16
         customize_acq420 $site
 }
+build_knobs_acq426_device() {
+        site=$1; mtype=$2 dk=$3 ek=$4
+
+        [ "x$ACQ426_SITES" != "x" ] && ACQ426_SITES="${ACQ426_SITES} "
+        ACQ426_SITES="${ACQ426_SITES}$site"
+        customize_acq420 $site
+}
 
 build_knobs_acq428_device() {
     site=$1; mtype=$2 dk=$3 ek=$4
@@ -635,7 +642,8 @@ build_knobs_device() {
         FLASHELF_SITES="${FLASHELF_SITES} $site";;
     ${MOD_ID_ACQ426ELF})
         set_max_min_khz ${site} 1000 1
-        ACQ426_SITES="${ACQ426_SITES} $site";;
+        ACQ426_SITES="${ACQ426_SITES} $site"
+        build_knobs_acq426_device $site $mtype $dk $ek;;
     ${MOD_ID_ACQ428ELF})
         set_max_min_khz ${site} 1000 1
         build_knobs_acq428_device $site $mtype $dk $ek;;
@@ -690,8 +698,10 @@ install_cal() {
         source  /dev/sites/${site}/details
         if [ "${is_data32}" -eq 1 ]; then
             calcal=/mnt/local/cal/$FRU_SERIAL-data32.xml
+	    echo "data32 set to 1 and loading ${calcal}..."
         else
             calcal=/mnt/local/cal/$FRU_SERIAL.xml
+	    echo "data32 set to 0 and loading ${calcal}..."
         fi
         if [ -e ${calcal} ]; then
             echo "Calibration found site:$site ${calcal}"
@@ -878,7 +888,6 @@ build_knobs() {
     for dir in $spd/*acq4?0fmc $spd/*acq400pmod; do
         if [ -e ${dir}/site ]; then
             build_knobs_device ${dir}
-            install_cal $(cat ${dir}/site)
         fi
     done
      
@@ -1017,6 +1026,11 @@ build_knobs() {
 		echo ACQ400T : "calling $ULC/acq400t.init ${ACQ400T_SITES}"
 		$ULC/acq400t.init ${ACQ400T_SITES}
     fi
+    for dir in $spd/*acq4?0fmc $spd/*acq400pmod; do
+        if [ -e ${dir}/site ]; then
+            install_cal $(cat ${dir}/site)
+        fi
+    done
     has_sfp=0
     for dir in ${spd}/*mgt400; do
         if [ -e ${dir}/site ]; then
