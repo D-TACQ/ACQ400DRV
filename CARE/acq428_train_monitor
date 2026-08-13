@@ -38,6 +38,7 @@ while true; do
 
 	if [ "$CURRENT_FRAME_STATUS" = "0" ]; then
 	    do_retrain
+	    echo "acq428 in site ${SITE} retraining" > /dev/kmsg
 	    # Give the hardware a moment to settle before resuming polling
 	    sleep 2
 	fi
