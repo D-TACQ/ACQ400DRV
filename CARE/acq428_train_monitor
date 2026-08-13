@@ -4,24 +4,23 @@
 
 SITE=${1:-1}
 LOG="logger -t acq428_monitor"
-POLL_INTERVAL=3000000 # Adjust based on how fast you need to react vs CPU load
+POLL_INTERVAL=3000000 # Adjust based on how fast a reaction required
 
-# Define the exact register/variable name for your ACQ428
 TRAIN_BIT_REG="frame_ok" 
 
 do_retrain() {
     $LOG "site:$SITE - $TRAIN_BIT_REG dropped LOW. Initiating retrain sequence."
     
-    # Optional: Set a busy flag so other processes know training is active
+    # Set a busy flag so other processes know training is active
+    # This flag still needs to be implemented
     # set.site $SITE SIG:CLK:TRAIN_BSY 1
 
-    # Execute your new training routine. 
-    # (Assuming a similar convention to the old 'SITE=$site acq480_train')
+    # Execute training routine. 
     /usr/local/CARE/acq428_retrain $SITE | $LOG
     
-    # If acq428_train is asynchronous, you would add a wait loop here 
-    # similar to the wait_training_done() function in your original script.
-    
+    # If acq428_train is asynchronous, add a wait loop here 
+    # similar to wait_training_done() in acq480_streamd.0.conf.
+
     # set.site $SITE SIG:CLK:TRAIN_BSY 0
     $LOG "site:$SITE - Retrain sequence complete."
 }
@@ -29,17 +28,21 @@ do_retrain() {
 $LOG "Starting monitor for site:$SITE on register:$TRAIN_BIT_REG"
 
 while true; do
-    # Read the current status of the bit
-    # Assuming get.site returns '1' for OK and '0' for low/loss of training
-    CURRENT_STATUS=$(get.site $SITE $TRAIN_BIT_REG)
+    # if running a shot do nothing
+    CURRENT_STATE=$((get.site 0 state))
+    if [ "$CURRENT_STATE" = "0 0 0 0 0" ]; then
 
-    if [ "$CURRENT_STATUS" = "0" ]; then
-        do_retrain
-        
-        # Give the hardware a moment to settle before resuming polling
-        sleep 2
+	# Read the current status of the bit
+	# Assuming get.site returns '1' for OK and '0' for loss of training
+	CURRENT_FRAME_STATUS=$(get.site $SITE $TRAIN_BIT_REG)
+
+	if [ "$CURRENT_FRAME_STATUS" = "0" ]; then
+	    do_retrain
+	    # Give the hardware a moment to settle before resuming polling
+	    sleep 2
+	fi
     fi
 
-    usleep $POLL_INTERVAL # 500ms poll. Using usleep keeps CPU usage negligible.
+    usleep $POLL_INTERVAL
 done
 
