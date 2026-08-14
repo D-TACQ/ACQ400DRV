@@ -29,7 +29,7 @@ $LOG "Starting monitor for site:$SITE on register:$TRAIN_BIT_REG"
 
 while true; do
     # if running a shot do nothing
-    CURRENT_STATE=$((get.site 0 state))
+    CURRENT_STATE=$(get.site 0 state)
     if [ "$CURRENT_STATE" = "0 0 0 0 0" ]; then
 
 	# Read the current status of the bit
