@@ -1,6 +1,8 @@
 #!/bin/bash
 
 KS=$PWD/../acq400_kernel
+# below works for pgm
+KS=${HOME}/PROJECTS/ACQ400_ESW_TOP/ACQ400DRV/../acq400_kernel
 if [ ! -d $KS ]; then
 	KS=~/PROJECTS/ACQ400/linux-xlnx
 	if [ ! -d $KS ]; then

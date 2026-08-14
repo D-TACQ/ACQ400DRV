@@ -1461,6 +1461,8 @@ case $FPGA_DSP in
     /usr/local/init/anatrg.init 14;;
 9804)
     /usr/local/init/fir-subrate-append.init 14;;
+981B)
+    /usr/local/init/xrm-permit.init 14;;
 98*)
     echo "non-universal DSP $FPGA_DSP detected, assume local package setup available";;
 esac

@@ -1,0 +1,3 @@
+#!/bin/sh
+mmap -f /dev/mem -M 0x80000000 -l 0xf000 -r 0xf000 | hexdump -e '"%04_ax: " 8/4 "%08x " "\n"'
+

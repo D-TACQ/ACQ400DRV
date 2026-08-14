@@ -1,0 +1,38 @@
+#!/bin/sh
+# skeletal fix .. web monitor only. All the action in xrmIoc.
+
+SITE=${1:-1}
+
+echo +++ xrm-permit.init $SITE
+
+# from anatrig.init
+/usr/local/CARE/acq400_dspfs.init acq400_dspfs.ko acq400dsp1
+
+# from atd-dsp1.init
+cat /usr/local/CARE/ATD-DSP/atd-dsp-regdef >/dev/dsp1/.create
+mkdir -p /etc/acq400/14/
+ln -s /dev/dsp1/* /etc/acq400/14/
+
+DRVROOT=/sys/bus/platform/devices/80000000.dsp1
+
+ln -s $DRVROOT/status /etc/acq400/14/status
+
+# MODULE ENABLE, INTEN.
+echo 0x11 > /dev/dsp1/ATD_CSR
+echo 1 > /dev/dsp1/ATD_INTCSR
+
+echo "DSP sites 14, 15 active on 4224, 4225"
+/usr/local/init/acq400_knobs.init start
+
+
+WEB_APPEND_JOB=${WEB_APPEND_JOB:-/tmp/acq420-web-append.job}
+
+cat - >> $WEB_APPEND_JOB <<EOF
+nice /usr/local/CARE/ATD-DSP/monitor_dsp1 2>&1 >/dev/null &
+nice /usr/local/CARE/XRM-PERMIT/monitor_permit_thresholds $SITE 2>&1 >/dev/null &
+/usr/local/bin/add_webpage_site acq400.14 14
+/usr/local/bin/add_webpage_site permit_regs nomon
+EOF
+chmod a+rx $WEB_APPEND_JOB
+
+

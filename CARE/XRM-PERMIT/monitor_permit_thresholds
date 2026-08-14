@@ -1,0 +1,39 @@
+#!/bin/sh
+
+SITE=${1:-1}
+
+#httpd doesn't like names with periods..
+XMLNAME=permit_regs
+
+cCrR() {
+cat - <<EOF
+        <pageFormat>
+                <noCols>$1</noCols>
+                <colItems>$2</colItems>
+        </pageFormat> 
+EOF
+}
+
+C2R100=/dev/shm/c2r100
+
+[ -e $C9R100 ] || cCrR 2 100 > $C2R100
+
+
+dump_regs() {
+        /usr/local/CARE/XRM-PERMIT/permit_th_mon
+}
+
+monitor() {
+	while [ 1 ]
+	do
+		[ $ADDED_WEB -eq 0 ] && add_web				
+		dump_regs | ROW_LIMIT=0 fs2xml -k '' -o /dev/shm/$XMLNAME-new.xml -s $C2R100
+                mv /dev/shm/$XMLNAME-new.xml  /dev/shm/$XMLNAME.xml 
+		sleep 2		
+	done
+}
+
+monitor
+
+
+
