@@ -1,0 +1,16 @@
+#!/bin/sh
+# skeletal fix .. web monitor only. All the action in xrmIoc.
+
+SITE=${1:-1}
+
+echo +++ xrm-permit.init $SITE
+
+WEB_APPEND_JOB=${WEB_APPEND_JOB:-/tmp/acq420-web-append.job}
+
+cat - >> $WEB_APPEND_JOB <<EOF
+nice /usr/local/CARE/XRM-PERMIT/monitor_permit_thresholds $SITE &
+/usr/local/bin/add_webpage_site acq400.14 14
+EOF
+chmod a+rx $WEB_APPEND_JOB
+
+

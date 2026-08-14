@@ -1,0 +1,52 @@
+#!/bin/sh
+
+SITE=${1:-1}
+DEV=acq400.${SITE}.atd
+
+#httpd doesn't like names with periods..
+XMLNAME=acq40014
+
+cCrR() {
+cat - <<EOF
+        <pageFormat>
+                <noCols>$1</noCols>
+                <colItems>$2</colItems>
+        </pageFormat> 
+EOF
+}
+
+C9R46=/dev/shm/c2rR20
+
+[ -e $C9R46 ] || cCrR 9 46 > $C9R46
+
+dump_regs() {
+        /usr/local/CARE/XRM-PERMIT/permit_th_mon
+}
+
+ADDED_WEB=0
+
+add_web() {
+if [ -e /var/www/d-tacq/acq_main_page.html ]; then
+	grep -q $DEV /var/www/d-tacq/acq_main_page.html
+	if [ $? -ne 0 ]; then
+		sed -ie '/TABAPPEND/ {
+a       <li><a title="'$DEV'" href="acq_info_page.html">'$DEV'</a></li>
+}' /var/www/d-tacq/acq_main_page.html
+	fi
+	ADDED_WEB=1
+fi
+}
+
+monitor() {
+	while [ 1 ]
+	do
+		[ $ADDED_WEB -eq 0 ] && add_web				
+		dump_regs | fs2xml -k '' -o /dev/shm/$XMLNAME.xml -s $C9R46
+		sleep 2		
+	done
+}
+
+monitor
+
+
+
