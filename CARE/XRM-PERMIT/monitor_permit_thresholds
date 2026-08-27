@@ -21,7 +21,7 @@ C2R100=/dev/shm/c2r100
 
 dump_regs() {
 	if [ -e /tmp/permit_shadow ]; then
-		sleep 1
+		usleep 500000
 		/usr/local/CARE/XRM-PERMIT/permit_th_mon_shadow
 	else
 		sleep 3
