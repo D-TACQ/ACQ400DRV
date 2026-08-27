@@ -241,6 +241,7 @@ void ui(int argc, const char** argv)
 	int rc;
 	unsigned dist_s1 = 0;
 
+	get_local_env("/dev/shm/transient_settings");
 	get_local_env("/dev/shm/awg_settings");
 	G::auto_soft_trigger = Env::getenv("SOFT_TRIGGER", 0);
 

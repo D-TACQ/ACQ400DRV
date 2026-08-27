@@ -68,7 +68,7 @@
 #include "File.h"
 
 #include "tcp_server.h"
-#include "split2.h"
+#include "Knob.h"
 
 
 using namespace std;
@@ -535,27 +535,6 @@ void set_dist_awg(unsigned dist_s1)
 	system(cmd);
 }
 
-typedef std::vector<std::string> VS;
-
-void init_auto_soft_trig(void)
-{
-	FILE *fp = fopen("/dev/shm/transient_settings", "r");
-	if (fp != 0){
-		char text_line[128];
-		int nc;
-		if ((nc = fread(text_line, 1, 128, fp)) > 0){
-			text_line[nc-1] = '\0';
-			VS args;
-			split2(text_line, args, ' ');
-			for (std::string st: args){
-				int enable = 0;
-				if (sscanf(st.c_str(), "SOFT_TRIGGER=%d", &enable) == 1){
-					G::auto_soft_trigger = enable==1;
-				}
-			}
-		}
-	}
-}
 RUN_MODE ui(int argc, const char** argv)
 {
 	poptContext opt_context =
@@ -572,7 +551,10 @@ RUN_MODE ui(int argc, const char** argv)
 	getKnob(-1, BUFLEN, &Buffer::bufferlen);
 	getKnob(-1, "/etc/acq400/0/dist_bufferlen_play", &G::play_bufferlen);
 	getKnob(-1, "/etc/acq400/0/playloop_len_disable", &G::playloop_len_disable);
-	init_auto_soft_trig();
+	
+	get_local_env("/dev/shm/transient_settings");
+	get_local_env("/dev/shm/awg_settings");
+	G::auto_soft_trigger = Env::getenv("SOFT_TRIGGER", 0);
 
 	int rc;
 	int seg_bufs = 0;
