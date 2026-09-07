@@ -1,0 +1,6 @@
+#!/bin/sh
+cat /tmp/permit_shadow |
+	hexdump -ve '"%04_ax: " 8/4 "%08x " "\n"' |
+        egrep -e ^00[0246] -e^01[0123456] -e ^e[012]
+
+
