@@ -694,9 +694,10 @@ install_cal() {
     is_data32=0
     knobd=/dev/acq400.$1.knobs
     is_data32=$(get.sys ${knobd}/data32)
+    is_acq426_acq428=$(get.sys ${knobd}/module_type)
     if [ ! -e ${caldef} ]; then
         source  /dev/sites/${site}/details
-        if [ "${is_data32}" -eq 1 ]; then
+        if [ "${is_data32}" -eq 1 ] && [ "${is_acq426_acq428}" = "12" -o "${is_acq426_acq428}" = "13" ]; then
             calcal=/mnt/local/cal/$FRU_SERIAL-data32.xml
 	    echo "data32 set to 1 and loading ${calcal}..."
         else
