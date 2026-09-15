@@ -846,10 +846,13 @@ build_mgt400() {
 
     ch=$(cat /etc/acq400/${site}/name )
     ch=${ch#*.}
-    
+
     ln -s $knobs /dev/acq400.${ch}.knobs
     ln -s /etc/acq400/${site} /etc/acq400/${ch}
-    
+
+    ln -s /sys/kernel/debug/mgt400/mgt400.${ch}/PCIE_CTRL.0x1004 /etc/acq400/${ch}/PCIE_CTRL
+    ln -s /sys/devices/soc0/amba/40000000.acq2006sc/aggsta_backpressure /etc/acq400/${ch}/aggsta_backpressure
+
     if [ -e /dev/acq400.${site}.knobs/module_type ]; then
         mt=$(cat /dev/acq400.${site}.knobs/module_type)
         case ${mt} in

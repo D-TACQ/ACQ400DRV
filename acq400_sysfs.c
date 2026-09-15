@@ -3253,6 +3253,7 @@ static DEVICE_ATTR(name, S_IRUGO, show_aggsta_##name, 0)
 SHOW_AGGSTA(aggsta_fifo_count, AGGSTA_FIFO_COUNT);
 SHOW_AGGSTA(aggsta_fifo_stat,  AGGSTA_FIFO_STAT);
 SHOW_AGGSTA(aggsta_engine_stat, AGGSTA_ENGINE_STAT);
+SHOW_AGGSTA(aggsta_backpressure, AGGSTA_BACKPRESSURE);
 
 static ssize_t store_estop(
 	struct device * dev,
@@ -3511,6 +3512,7 @@ static const struct attribute *sc_common_attrs[] = {
 	&dev_attr_aggsta_fifo_count.attr,
 	&dev_attr_aggsta_fifo_stat.attr,
 	&dev_attr_aggsta_engine_stat.attr,
+	&dev_attr_aggsta_backpressure.attr,
 	&dev_attr_mod_en.attr,
 	&dev_attr_psu_sync.attr,
 	&dev_attr_counter_latch.attr,
