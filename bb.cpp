@@ -391,6 +391,45 @@ int _load() {
 	return _load_pad(nsamples);
 }
 
+#define AXI_BUS_BS	3		/* 64 bit bus: 1<<3 = 8 bytes	*/
+#define AXI_FIFO_BS	2		/* FIFO port:  1<<2 = 4 bytes	*/
+
+/* Mirror pl330_prep_dma_memcpy + _prepare_ccr(dst_inc=0) for AWG play.
+ * Returns the SRC SIZ*LEN quantum; if ok != 0, sets whether the length is safe.
+ *
+ * Two independent failure modes:
+ *  1. bytes % quantum != 0  -> Bad Desc(2) / -EINVAL (setup rejected)
+ *  2. bl odd                -> MFIFO imbalance, channel fault at run time
+ *     (FIFO remap: SRC keeps size, halves len; DST keeps len, halves size.
+ *      Odd bl truncates on the >>, so SRC and DST bytes-per-burst diverge.)
+ */
+static unsigned pl330_awg_quantum(unsigned bytes, bool* ok)
+{
+	unsigned bs, bl, src_bl, q;
+
+	for (bs = AXI_BUS_BS; bs > 0; --bs){
+		if (bytes % (1<<bs) == 0) break;
+	}
+	for (bl = 16; bl > 1; --bl){
+		if (bytes % (bl<<bs) == 0) break;
+	}
+	src_bl = bs > AXI_FIFO_BS?
+		(((bl >> (bs-AXI_FIFO_BS)) - 1)&0xf) + 1: 1;
+	q = (1<<bs) * src_bl;
+
+	if (ok){
+		*ok = !(bl & 1) && bytes % q == 0;
+	}
+	return q;
+}
+
+static bool pl330_awg_len_ok(unsigned bytes)
+{
+	bool ok;
+	pl330_awg_quantum(bytes, &ok);
+	return ok;
+}
+
 int _load_by_buffer() {
 	unsigned spb = G::play_bufferlen/G::sample_size;
 	unsigned nsamples = 0;
@@ -402,8 +441,33 @@ int _load_by_buffer() {
 			nsamples += nread;
 		}else{
 			if (buf == 1 && nread < spb){
-				fprintf(stderr, "single buffer no pad %d < %d\n", nsamples, spb);
-				return nsamples; 		// NO PAD, PING only
+				/*
+				 * PING-only: append whole samples until the DMAC will
+				 * accept the byte count.
+				 */
+				unsigned nsam0 = nsamples;
+				unsigned bytes0 = nsamples*G::sample_size;
+
+				if (nsamples > 0){
+					#define MAXSAMPLE 384
+					static char zero[MAXSAMPLE] = {};
+					char* base = Buffer::the_buffers[0]->getBase();
+					const char* last = base + nsamples*G::sample_size - G::sample_size;
+
+					if (G::pad == G_PAD_ZERO){
+						last = zero;
+					}
+					while (nsamples < spb &&
+					       !pl330_awg_len_ok(nsamples*G::sample_size)){
+						memcpy(base + nsamples*G::sample_size,
+						       last, G::sample_size);
+						nsamples++;
+					}
+				}
+				printf("single buffer %u samples %u bytes quantum:%u pad:%u -> %u samples %u bytes\n",
+					nsam0, bytes0, pl330_awg_quantum(bytes0, 0),
+					nsamples-nsam0, nsamples, nsamples*G::sample_size);
+				return nsamples; 		// PING only
 			}
 			if (ferror(G::fp_in)){
 				syslog(LOG_DEBUG, "bb fread ERROR exit");
