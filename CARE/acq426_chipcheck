@@ -3,7 +3,7 @@
 SITE=${SITE:-1}
 SITE=${1:-$SITE}
 
-echo acq465_chipcheck SITE $SITE
+echo acq426_chipcheck SITE $SITE
 
 check_chip() {
 	reg=/dev/acq426/reg.$1.$2
