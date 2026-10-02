@@ -2488,8 +2488,30 @@ acq400_allocate_module_device(struct acq400_dev* adev)
 
 static int acq400_remove(struct platform_device *pdev);
 
+int count_list(struct list_head *listp) {
+	struct HBM *cursor;
+	int ecount = 0;
+
+	list_for_each_entry(cursor, listp, list){
+		++ecount;
+	}
+
+	return ecount;
+}
+
 static int _coalesce_buffers(struct acq400_dev* adev)
 {
+	LIST_HEAD(tmp);
+	mutex_lock(&adev->list_mutex);
+	dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
+			__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
+	list_splice_init(&adev->EMPTIES, &tmp);
+	dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
+			__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
+	list_splice_init(&tmp, &adev->EMPTIES);
+	dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
+			__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
+	mutex_unlock(&adev->list_mutex);
 	return 0;
 }
 static int coalesce_buffers(struct acq400_dev* adev, int coal_factor)
