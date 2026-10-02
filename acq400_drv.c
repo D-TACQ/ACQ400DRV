@@ -19,11 +19,12 @@
 #include "acq400_debugfs.h"
 #include "acq400_lists.h"
 #include "acq400_ui.h"
+#include <linux/list_sort.h>
 
 #include "dmaengine.h"
 
 
-#define REVID 			"3.958"
+#define REVID 			"3.962"
 #define MODULE_NAME             "acq420"
 
 /* Define debugging for use during our driver bringup */
@@ -2499,19 +2500,68 @@ int count_list(struct list_head *listp) {
 	return ecount;
 }
 
-static int _coalesce_buffers(struct acq400_dev* adev)
+int hbm_pa_compare(void* priv, struct list_head* a, struct list_head* b)
 {
-	LIST_HEAD(tmp);
-	mutex_lock(&adev->list_mutex);
-	dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
-			__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
-	list_splice_init(&adev->EMPTIES, &tmp);
-	dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
-			__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
-	list_splice_init(&tmp, &adev->EMPTIES);
-	dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
-			__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
-	mutex_unlock(&adev->list_mutex);
+	struct HBM* hbm_a = container_of(a, struct HBM, list);
+	struct HBM* hbm_b = container_of(b, struct HBM, list);
+
+	if (hbm_a->pa > hbm_b->pa){
+		return 1;
+	}else if (hbm_a->pa < hbm_b->pa){
+		return -1;
+	}else{
+		return 0;
+	}
+}
+static int _coalesce_buffers(struct acq400_dev* adev, struct list_head* tmp_list)
+{
+	struct HBM *cur;
+	struct HBM *htmp;
+	struct HBM *b0, *b1;
+	enum { GET_B0, GET_B1 } state = GET_B0;
+	int _nbuffers = 0;
+	int _bufferlen = 0;
+
+
+
+	list_for_each_entry_safe(cur, htmp, tmp_list, list){
+		dev_dbg(DEVP(adev), "%s state:%d consider ix %d %x %d\n",
+				__FUNCTION__, state, cur->ix, cur->pa, cur->len);
+		switch(state){
+		case GET_B0:
+			b0 = cur;
+			state = GET_B1;
+			break;
+		case GET_B1:
+			b1 = cur;
+			if (b1->pa == b0->pa + b0->len){
+				if (b0->len != b1->len){
+					dev_warn(DEVP(adev), "WARNING: adjacent buffer length mismatch");
+				}
+
+				b0->len += b1->len;
+				list_move_tail(&b0->list, &adev->EMPTIES);
+				++_nbuffers;
+				if (_bufferlen == 0){
+					_bufferlen = b0->len;
+				}
+
+				if (b0->len != _bufferlen){
+					dev_warn(DEVP(adev), "WARNING: buffer length change");
+				}
+			}else{
+				dev_warn(DEVP(adev), "WARNING: buffers not contiguous, discard");
+			}
+			state = GET_B0;
+			break;
+		}
+	}
+
+	/** @@todo : don't like changing these params, but user-land programs (Buffer.h) have history of using
+	 * the per-module parameter rather than, as would be better, the per-site attribute.
+	 */
+	nbuffers = _nbuffers;
+	bufferlen = _bufferlen;
 	return 0;
 }
 static int coalesce_buffers(struct acq400_dev* adev, int coal_factor)
@@ -2522,7 +2572,19 @@ static int coalesce_buffers(struct acq400_dev* adev, int coal_factor)
 	if (coal_factor == 0){
 		return 0;
 	}else{
-		_coalesce_buffers(adev);
+
+		LIST_HEAD(tmp);
+		mutex_lock(&adev->list_mutex);
+
+		list_splice_init(&adev->EMPTIES, &tmp);
+
+		_coalesce_buffers(adev, &tmp);
+
+		//list_splice_init(&tmp, &adev->EMPTIES);
+		dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
+				__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
+		mutex_unlock(&adev->list_mutex);
+
 		return coalesce_buffers(adev, coal_factor-1); /** @@attention: recursion! */
 	}
 }
@@ -2545,7 +2607,11 @@ static int allocate_hbm(struct acq400_dev* adev, int nb, int bl, int dir)
 	 * pull a pair from EMPTIES, check contiguous, make a new composite hbm, push the composite back to empties
          * contiguous IF  buf0->pa+buf0->len == buf1->pa
 	 */
-	coalesce_buffers(adev, buffer_coal);
+	if (buffer_coal){
+		/** it turns out that buffers allocate in roughly reverse order.. sort them */
+		list_sort(0, &adev->EMPTIES, hbm_pa_compare);
+		coalesce_buffers(adev, buffer_coal);
+	}
 
 	dev_info(DEVP(adev), "setting nbuffers %d\n", ix);
 	ix = 0;
