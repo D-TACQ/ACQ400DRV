@@ -23,7 +23,7 @@
 #include "dmaengine.h"
 
 
-#define REVID 			"3.957"
+#define REVID 			"3.958"
 #define MODULE_NAME             "acq420"
 
 /* Define debugging for use during our driver bringup */
@@ -140,6 +140,10 @@ MODULE_PARM_DESC(DMA_TIMEOUT, "default DMA TIMEOUT in jiffies");
 int subrate_nmax = 1;
 module_param(subrate_nmax, int, 0444);
 MODULE_PARM_DESC(subrate_nmax, "number of subrate outputs to average over [max 256]");
+
+int buffer_coal = 0;
+module_param(buffer_coal, int, 0444);
+MODULE_PARM_DESC(buffer_coal, "coalesce adjacent buffers to make one big physically contiguous buffer.  1: do it once, 2: do it twice ..");
 
 /* GLOBALS */
 
@@ -2484,7 +2488,22 @@ acq400_allocate_module_device(struct acq400_dev* adev)
 
 static int acq400_remove(struct platform_device *pdev);
 
+static int _coalesce_buffers(struct acq400_dev* adev)
+{
+	return 0;
+}
+static int coalesce_buffers(struct acq400_dev* adev, int coal_factor)
+{
+	dev_info(DEVP(adev), "%s coal_factor:%d bufferlen:%d nbuffers:%d",
+		__FUNCTION__, coal_factor, bufferlen, nbuffers);
 
+	if (coal_factor == 0){
+		return 0;
+	}else{
+		_coalesce_buffers(adev);
+		return coalesce_buffers(adev, coal_factor-1); /** @@attention: recursion! */
+	}
+}
 
 static int allocate_hbm(struct acq400_dev* adev, int nb, int bl, int dir)
 {
@@ -2499,6 +2518,12 @@ static int allocate_hbm(struct acq400_dev* adev, int nb, int bl, int dir)
 	    nb -= reserve_buffers;
 	}
 	ix += hbm_allocate(DEVP(adev), ix, nb, bl, &adev->EMPTIES, dir);
+
+	/** buffer_coal[esce] : combine n contiguous buffers into one.
+	 * pull a pair from EMPTIES, check contiguous, make a new composite hbm, push the composite back to empties
+         * contiguous IF  buf0->pa+buf0->len == buf1->pa
+	 */
+	coalesce_buffers(adev, buffer_coal);
 
 	dev_info(DEVP(adev), "setting nbuffers %d\n", ix);
 	ix = 0;
