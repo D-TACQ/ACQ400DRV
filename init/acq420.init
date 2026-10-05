@@ -697,12 +697,12 @@ install_cal() {
     is_acq426_acq428=$(get.sys ${knobd}/module_type)
     if [ ! -e ${caldef} ]; then
         source  /dev/sites/${site}/details
-        if [ "${is_data32}" -eq 1 ] && [ "${is_acq426_acq428}" = "12" -o "${is_acq426_acq428}" = "13" ]; then
+        if [ "${is_data32}" -eq 1 ] && [ "${is_acq426_acq428}" = "C" -o "${is_acq426_acq428}" = "D" ]; then
             calcal=/mnt/local/cal/$FRU_SERIAL-data32.xml
-	    echo "data32 set to 1 and loading ${calcal}..."
+	    echo "data32 set to 1 AND an acq426 or acq428. Loading ${calcal}..."
         else
             calcal=/mnt/local/cal/$FRU_SERIAL.xml
-	    echo "data32 set to 0 and loading ${calcal}..."
+	    echo "data32 set to 0 OR not an acq426 or acq428. Loading ${calcal}..."
         fi
         if [ -e ${calcal} ]; then
             echo "Calibration found site:$site ${calcal}"
