@@ -1,0 +1,34 @@
+#!/bin/sh
+
+input="$1"
+dir=`basename "$input"`
+dir="${dir}.export"
+
+mkdir -p "$dir"
+
+awk -v outdir="$dir" '
+/^--------- Diagsdump / {
+    path = $0
+    sub(/^--------- Diagsdump /, "", path)
+    sub(/ ---------$/, "", path)
+
+    n = split(path, parts, "/")
+    file = parts[n]
+
+    if (file == "")
+        file = parts[n-1]
+
+    out = outdir "/" file
+    next
+}
+
+/^--------- End / {
+    close(out)
+    out = ""
+    next
+}
+
+out != "" {
+    print > out
+}
+' "$input"
