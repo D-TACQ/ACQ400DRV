@@ -19,11 +19,12 @@
 #include "acq400_debugfs.h"
 #include "acq400_lists.h"
 #include "acq400_ui.h"
+#include <linux/list_sort.h>
 
 #include "dmaengine.h"
 
 
-#define REVID 			"3.957"
+#define REVID 			"3.962"
 #define MODULE_NAME             "acq420"
 
 /* Define debugging for use during our driver bringup */
@@ -140,6 +141,10 @@ MODULE_PARM_DESC(DMA_TIMEOUT, "default DMA TIMEOUT in jiffies");
 int subrate_nmax = 1;
 module_param(subrate_nmax, int, 0444);
 MODULE_PARM_DESC(subrate_nmax, "number of subrate outputs to average over [max 256]");
+
+int buffer_coal = 0;
+module_param(buffer_coal, int, 0444);
+MODULE_PARM_DESC(buffer_coal, "coalesce adjacent buffers to make one big physically contiguous buffer.  1: do it once, 2: do it twice ..");
 
 /* GLOBALS */
 
@@ -2484,7 +2489,105 @@ acq400_allocate_module_device(struct acq400_dev* adev)
 
 static int acq400_remove(struct platform_device *pdev);
 
+int count_list(struct list_head *listp) {
+	struct HBM *cursor;
+	int ecount = 0;
 
+	list_for_each_entry(cursor, listp, list){
+		++ecount;
+	}
+
+	return ecount;
+}
+
+int hbm_pa_compare(void* priv, struct list_head* a, struct list_head* b)
+{
+	struct HBM* hbm_a = container_of(a, struct HBM, list);
+	struct HBM* hbm_b = container_of(b, struct HBM, list);
+
+	if (hbm_a->pa > hbm_b->pa){
+		return 1;
+	}else if (hbm_a->pa < hbm_b->pa){
+		return -1;
+	}else{
+		return 0;
+	}
+}
+static int _coalesce_buffers(struct acq400_dev* adev, struct list_head* tmp_list)
+{
+	struct HBM *cur;
+	struct HBM *htmp;
+	struct HBM *b0, *b1;
+	enum { GET_B0, GET_B1 } state = GET_B0;
+	int _nbuffers = 0;
+	int _bufferlen = 0;
+
+
+
+	list_for_each_entry_safe(cur, htmp, tmp_list, list){
+		dev_dbg(DEVP(adev), "%s state:%d consider ix %d %x %d\n",
+				__FUNCTION__, state, cur->ix, cur->pa, cur->len);
+		switch(state){
+		case GET_B0:
+			b0 = cur;
+			state = GET_B1;
+			break;
+		case GET_B1:
+			b1 = cur;
+			if (b1->pa == b0->pa + b0->len){
+				if (b0->len != b1->len){
+					dev_warn(DEVP(adev), "WARNING: adjacent buffer length mismatch");
+				}
+
+				b0->len += b1->len;
+				list_move_tail(&b0->list, &adev->EMPTIES);
+				++_nbuffers;
+				if (_bufferlen == 0){
+					_bufferlen = b0->len;
+				}
+
+				if (b0->len != _bufferlen){
+					dev_warn(DEVP(adev), "WARNING: buffer length change");
+				}
+			}else{
+				dev_warn(DEVP(adev), "WARNING: buffers not contiguous, discard");
+			}
+			state = GET_B0;
+			break;
+		}
+	}
+
+	/** @@todo : don't like changing these params, but user-land programs (Buffer.h) have history of using
+	 * the per-module parameter rather than, as would be better, the per-site attribute.
+	 */
+	nbuffers = _nbuffers;
+	bufferlen = _bufferlen;
+	return 0;
+}
+static int coalesce_buffers(struct acq400_dev* adev, int coal_factor)
+{
+	dev_info(DEVP(adev), "%s coal_factor:%d bufferlen:%d nbuffers:%d",
+		__FUNCTION__, coal_factor, bufferlen, nbuffers);
+
+	if (coal_factor == 0){
+		return 0;
+	}else{
+
+		LIST_HEAD(tmp);
+		mutex_lock(&adev->list_mutex);
+
+		list_splice_init(&adev->EMPTIES, &tmp);
+
+		_coalesce_buffers(adev, &tmp);
+
+		//list_splice_init(&tmp, &adev->EMPTIES);
+		dev_info(DEVP(adev), "%s %d count EMPTIES:%d tmp:%d",
+				__FUNCTION__, __LINE__, count_list(&adev->EMPTIES), count_list(&tmp));
+		mutex_unlock(&adev->list_mutex);
+
+		return coalesce_buffers(adev, coal_factor-1); /** @@attention: recursion! */
+	}
+}
 
 static int allocate_hbm(struct acq400_dev* adev, int nb, int bl, int dir)
 {
@@ -2499,6 +2602,16 @@ static int allocate_hbm(struct acq400_dev* adev, int nb, int bl, int dir)
 	    nb -= reserve_buffers;
 	}
 	ix += hbm_allocate(DEVP(adev), ix, nb, bl, &adev->EMPTIES, dir);
+
+	/** buffer_coal[esce] : combine n contiguous buffers into one.
+	 * pull a pair from EMPTIES, check contiguous, make a new composite hbm, push the composite back to empties
+         * contiguous IF  buf0->pa+buf0->len == buf1->pa
+	 */
+	if (buffer_coal){
+		/** it turns out that buffers allocate in roughly reverse order.. sort them */
+		list_sort(0, &adev->EMPTIES, hbm_pa_compare);
+		coalesce_buffers(adev, buffer_coal);
+	}
 
 	dev_info(DEVP(adev), "setting nbuffers %d\n", ix);
 	ix = 0;
