@@ -1,0 +1,113 @@
+#!/bin/sh
+
+
+dump() {
+	name=${1}
+	shift
+	echo -e "\n"
+	echo "--------- Diagsdump ${name} ---------"
+	if [ $# -eq 0 ]; then
+		tries=0
+		while [ ! -s "$name" ] && [ "$tries" -lt 3 ]; do
+			case "$name" in
+			/proc/*|/sys/*) break ;;
+			esac
+			sleep 0.3
+			tries=$((tries + 1))
+		done
+		cat "$name"
+	else
+		"$@"
+	fi
+	echo "--------- End ${name} ---------"
+}
+
+dump_text() {
+	name=${1}
+	echo -e "\n"
+	echo "--------- Diagsdump ${name} ---------"
+	cat
+	echo "--------- End ${name} ---------"
+}
+
+HNFILE=/tmp/$(hostname).diagsdump
+{
+
+echo "[DIAGSDUMP]: $(hostname) $(uptime | sed -n 's/.*up \([^,]*\),.*/\1/p') $(date)"
+
+dump /tmp/sys_id
+dump /tmp/esw_status
+dump /tmp/fpga_status
+dump /tmp/current.md5
+dump /proc/interrupts
+dump /tmp/u-boot_env
+dump /tmp/dhcp.env
+dump /dev/shm/temp.txt
+dump /dev/shm/volts.txt
+dump /dev/shm/role
+
+[ -d /dev/gpio/MGT482 ] && dump /dev/gpio/MGT482/ sh -c 'cd /dev/gpio/MGT482 && grep -H "" SFP*/PRESENT '
+[ -d /sys/kernel/debug/dsp1 ] && dump /sys/kernel/debug/dsp1 sh -c 'cd /sys/kernel/debug/dsp1 && grep -H "" *'
+
+[ -e /dev/acq400.0.knobs/wr_link_up ] &&  {
+	get.site 0 tai_date
+	echo -e "\n"
+	for knob in /dev/acq400.0.knobs/wr*
+	do
+		echo $(basename $knob) $(cat $knob)
+	done
+	echo -e "\n"
+	echo "si5326_tune_phase .."
+	if  [ -e /dev/shm/si5326_tune_phase.log ]; then
+		tail -n 12 /dev/shm/si5326_tune_phase.log
+	else
+		echo "WARNING: si5326 has not been tuned"
+	fi
+} | dump_text wr
+
+[ -e /dev/shm/wr11.sh ] && dump /dev/shm/wr11.sh
+
+for file in /mnt/local/*; do
+	[ -f "$file" ] || continue
+	#Skip binary files probably
+	[ "$(dd if="$file" bs=512 count=1 2>/dev/null | tr -cd '\0' | wc -c)" -gt 0 ] && continue
+	dump "$file"
+done
+
+for file in /mnt/local/sysconfig/*; do
+	if [ -f "$file" ]; then
+		dump "$file"
+	fi	
+done
+
+
+dump "/mnt/packages" ls -1 /mnt/packages
+dump "/mnt/packages.opt" ls -1 /mnt/packages.opt
+dump "/mnt/local/cal/" ls -1 /mnt/local/cal/
+
+for register in \
+	/sys/kernel/debug/acq400/* \
+	/sys/kernel/debug/acq400_axi_dma/* \
+	/sys/kernel/debug/mgt400/* 
+do
+	[ -e "${register}" ] || continue
+	dump "${register}" /usr/local/bin/dump_regs "${register}"
+done
+
+for file in /tmp/*.cmd; do
+	dump $file
+done
+
+for file in /tmp/*.dbl; do
+	dump $file
+done
+
+dump top top -b -n 1
+dump dmesg dmesg
+dump logread sh -c 'logread | grep -v "auth.info sshd"'
+
+for file in /tmp/*.log; do
+	dump $file /usr/local/bin/nbcat $file
+done
+
+} 2>&1 | tee "$HNFILE"
