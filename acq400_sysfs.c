@@ -2183,11 +2183,6 @@ static const struct attribute *acq425_attrs[] = {
 	&dev_attr_bank_mask.attr,
 	&dev_attr_adc_nobt.attr,
 	&dev_attr_adc_18b.attr,
-	&dev_attr_gains.attr,
-	&dev_attr_gain1.attr,
-	&dev_attr_gain2.attr,
-	&dev_attr_gain3.attr,
-	&dev_attr_gain4.attr,
 	&dev_attr_adc_conv_time.attr,
 	NULL
 };
