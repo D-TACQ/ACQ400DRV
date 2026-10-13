@@ -768,6 +768,29 @@ static ssize_t show_dac_immediate(
 	}
 }
 
+static ssize_t show_dac_no_immediate(
+	int chan,
+	struct device * dev,
+	struct device_attribute *attr,
+	char * buf)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+	short chx;
+	int pchan = xo_dev->xo.physchan(chan);
+
+	if (adev->word_size == sizeof(long)){
+		 chx = xo_dev->AO_immediate._u.lw[pchan];
+		 return sprintf(buf, "0x%08x %d\n", chx, chx);
+	}else{
+		chx = xo_dev->AO_immediate._u.ch[pchan];
+		if (IS_AO424(adev)){
+			chx = ao424_fixEncoding(adev, pchan, chx);
+		}
+		return sprintf(buf, "0x%04x %d\n", chx, chx);
+	}
+}
+
 extern int no_ao42x_llc_ever;
 
 static ssize_t store_dac_immediate(
@@ -804,6 +827,138 @@ static ssize_t store_dac_immediate(
 		return -1;
 	}
 }
+
+static ssize_t store_dac_no_immediate(
+		int chan,
+		struct device * dev,
+		struct device_attribute *attr,
+		const char * buf,
+		size_t count)
+{
+	struct acq400_dev *adev = acq400_devices[dev->id];
+	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+	int chx;
+	int pchan = xo_dev->xo.physchan(chan);
+
+	if (sscanf(buf, "0x%x", &chx) == 1 || sscanf(buf, "%d", &chx) == 1){
+		unsigned cr = acq400rd32(adev, DAC_CTRL);
+		if (IS_AO424(adev)){
+			chx = ao424_fixEncoding(adev, pchan, chx);
+		}
+		if (adev->word_size == sizeof(long)){
+			xo_dev->AO_immediate._u.lw[pchan] = chx;
+		}else{
+			xo_dev->AO_immediate._u.ch[pchan] = chx;
+		}
+		if (!no_ao42x_llc_ever){
+			//acq400wr32(adev, DAC_CTRL, cr);
+			ao420_flushImmediate(adev);
+		}else{
+			dev_dbg(DEVP(adev), "store_dac_immediate STUB no_ao42x_llc_ever set");
+		}
+		return count;
+	}else{
+		dev_warn(dev, "rejecting input args != 0x%%04x or %%d");
+		return -1;
+	}
+}
+
+
+static ssize_t store_dac_no_immediate_all(
+        struct device * dev,
+        struct device_attribute *attr,
+        const char * buf,
+        size_t count)
+{
+        struct acq400_dev *adev = acq400_devices[dev->id];
+        struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+        unsigned int chx;
+        int chan;
+
+        /* Parse the single value the user wants to apply to all channels */
+        if (sscanf(buf, "0x%x", &chx) == 1 || sscanf(buf, "%d", &chx) == 1){
+
+                /* Loop through all enabled channels (1-based index) */
+                for (chan = 1; chan <= adev->nchan_enabled; chan++) {
+                        int pchan = xo_dev->xo.physchan(chan);
+                        unsigned int val = chx;
+
+                        if (IS_AO424(adev)){
+                                val = ao424_fixEncoding(adev, pchan, val);
+                        }
+                        if (adev->word_size == sizeof(long)){
+                                xo_dev->AO_immediate._u.lw[pchan] = val;
+                        }else{
+                                xo_dev->AO_immediate._u.ch[pchan] = val;
+                        }
+                }
+
+                if (!no_ao42x_llc_ever){
+                        /* Flush the array to hardware without touching DAC_CTRL */
+                        ao420_flushImmediate(adev);
+                }else{
+                        dev_dbg(DEVP(adev), "store_dac_no_immediate_all STUB no_ao42x_llc_ever set");
+                }
+                return count;
+        }else{
+                dev_warn(dev, "rejecting input args != 0x%%04x or %%d");
+                return -1;
+        }
+}
+
+static ssize_t store_dac_no_immediate_all_unique(
+        struct device * dev,
+        struct device_attribute *attr,
+        const char * buf,
+        size_t count)
+{
+        struct acq400_dev *adev = acq400_devices[dev->id];
+        struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
+
+        const char *p = buf;
+        int chan = 1;
+        int val;
+        int chars_read;
+
+        while (chan <= adev->nchan_enabled && sscanf(p, "%i%n", &val, &chars_read) == 1) {
+                int pchan = xo_dev->xo.physchan(chan);
+                unsigned int uval = val;
+                if (IS_AO424(adev)){
+                        uval = ao424_fixEncoding(adev, pchan, uval);
+                }
+                if (adev->word_size == sizeof(long)){
+                        xo_dev->AO_immediate._u.lw[pchan] = uval;
+                } else {
+                        xo_dev->AO_immediate._u.ch[pchan] = uval;
+                }
+
+                chan++;
+                // Now move past the value and either skip comma in preparation for next val or end
+                p += chars_read;
+                if (*p == ',') {
+                        p++;
+                } else if (*p == '\n' || *p == '\0') {
+                        break;
+                }
+        }
+
+        /* If one or more values successfully parsed then send to hardware */
+        if (chan > 1) {
+                if (!no_ao42x_llc_ever){
+                        ao420_flushImmediate(adev);
+                } else {
+                        dev_dbg(DEVP(adev), "store_dac_no_immediate_all_unique STUB no_ao42x_llc_ever set");
+                }
+                return count;
+        } else {
+                dev_warn(dev, "rejecting input args, expected comma delimited hex or positive ints\n");
+                return -EINVAL;
+        }
+}
+
+MAKE_BITS(low_latency, DAC_CTRL, MAKE_BITS_FROM_MASK, 0x100);
+static DEVICE_ATTR(NOIMM_AO_ALL, S_IWUSR, NULL, store_dac_no_immediate_all);
+static DEVICE_ATTR(NOIMM_AO_ALL_UNIQUE, S_IWUSR, NULL, store_dac_no_immediate_all_unique);
 
 #define MAKE_DAC_IMMEDIATE(NAME, CH)					\
 static ssize_t show_dac_immediate_##NAME(				\
@@ -859,7 +1014,58 @@ MAKE_DAC_IMMEDIATE(31, 31);
 MAKE_DAC_IMMEDIATE(32, 32);
 
 
+#define MAKE_DAC_NO_IMMEDIATE(NAME, CH)					\
+static ssize_t show_dac_no_immediate_##NAME(				\
+	struct device * dev,						\
+	struct device_attribute *attr,					\
+	char * buf)							\
+{									\
+	return show_dac_no_immediate(CH, dev, attr, buf);			\
+}									\
+									\
+static ssize_t store_dac_no_immediate_##NAME(				\
+	struct device * dev,						\
+	struct device_attribute *attr,					\
+	const char * buf,						\
+	size_t count)							\
+{									\
+	return store_dac_no_immediate(CH, dev, attr, buf, count);		\
+}									\
+static DEVICE_ATTR(NOIMM_AO_##NAME, S_IRUGO|S_IWUSR, 			\
+		show_dac_immediate_##NAME, store_dac_no_immediate_##NAME)
 
+MAKE_DAC_NO_IMMEDIATE(01, 1);
+MAKE_DAC_NO_IMMEDIATE(02, 2);
+MAKE_DAC_NO_IMMEDIATE(03, 3);
+MAKE_DAC_NO_IMMEDIATE(04, 4);
+MAKE_DAC_NO_IMMEDIATE(05, 5);
+MAKE_DAC_NO_IMMEDIATE(06, 6);
+MAKE_DAC_NO_IMMEDIATE(07, 7);
+MAKE_DAC_NO_IMMEDIATE(08, 8);
+MAKE_DAC_NO_IMMEDIATE(09, 9);
+MAKE_DAC_NO_IMMEDIATE(10, 10);
+MAKE_DAC_NO_IMMEDIATE(11, 11);
+MAKE_DAC_NO_IMMEDIATE(12, 12);
+MAKE_DAC_NO_IMMEDIATE(13, 13);
+MAKE_DAC_NO_IMMEDIATE(14, 14);
+MAKE_DAC_NO_IMMEDIATE(15, 15);
+MAKE_DAC_NO_IMMEDIATE(16, 16);
+MAKE_DAC_NO_IMMEDIATE(17, 17);
+MAKE_DAC_NO_IMMEDIATE(18, 18);
+MAKE_DAC_NO_IMMEDIATE(19, 19);
+MAKE_DAC_NO_IMMEDIATE(20, 20);
+MAKE_DAC_NO_IMMEDIATE(21, 21);
+MAKE_DAC_NO_IMMEDIATE(22, 22);
+MAKE_DAC_NO_IMMEDIATE(23, 23);
+MAKE_DAC_NO_IMMEDIATE(24, 24);
+MAKE_DAC_NO_IMMEDIATE(25, 25);
+MAKE_DAC_NO_IMMEDIATE(26, 26);
+MAKE_DAC_NO_IMMEDIATE(27, 27);
+MAKE_DAC_NO_IMMEDIATE(28, 28);
+MAKE_DAC_NO_IMMEDIATE(29, 29);
+MAKE_DAC_NO_IMMEDIATE(30, 30);
+MAKE_DAC_NO_IMMEDIATE(31, 31);
+MAKE_DAC_NO_IMMEDIATE(32, 32);
 
 
 #define TIMEOUT 1000
@@ -1028,7 +1234,7 @@ static ssize_t store_dac_ctrl(
 	unsigned bit)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
-	unsigned dac_ctrl = acq400rd32(adev, DAC_CTRL_RESET(adev));
+	unsigned dac_ctrl = acq400rd32_nocache(adev, DAC_CTRL_RESET(adev));
 	unsigned dacreset;
 
 	dac_ctrl |= ADC_CTRL_MODULE_EN;
@@ -1261,6 +1467,16 @@ const struct attribute *ao428_attrs[] = {
 	&dev_attr_AO_06.attr,
 	&dev_attr_AO_07.attr,
 	&dev_attr_AO_08.attr,
+	&dev_attr_NOIMM_AO_01.attr,
+	&dev_attr_NOIMM_AO_02.attr,
+	&dev_attr_NOIMM_AO_03.attr,
+	&dev_attr_NOIMM_AO_04.attr,
+	&dev_attr_NOIMM_AO_05.attr,
+	&dev_attr_NOIMM_AO_06.attr,
+	&dev_attr_NOIMM_AO_07.attr,
+	&dev_attr_NOIMM_AO_08.attr,
+	&dev_attr_NOIMM_AO_ALL.attr,
+	&dev_attr_NOIMM_AO_ALL_UNIQUE.attr,
 	&dev_attr_offset_01.attr,
 	&dev_attr_offset_02.attr,
 	&dev_attr_offset_03.attr,
@@ -1283,7 +1499,12 @@ const struct attribute *ao420_attrs[] = {
 /* subset 2 channels only .. */
 	&dev_attr_G1.attr, &dev_attr_D1.attr, &dev_attr_AO_01.attr, &dev_attr_dac_range_01.attr,
 	&dev_attr_G2.attr, &dev_attr_D2.attr, &dev_attr_AO_02.attr, &dev_attr_dac_range_02.attr,
-
+	&dev_attr_NOIMM_AO_03.attr,
+	&dev_attr_NOIMM_AO_04.attr,
+	&dev_attr_NOIMM_AO_01.attr,
+	&dev_attr_NOIMM_AO_02.attr,
+	&dev_attr_NOIMM_AO_ALL.attr,
+	&dev_attr_NOIMM_AO_ALL_UNIQUE.attr,
 	&dev_attr_GR1.attr, &dev_attr_DR1.attr,
 	&dev_attr_GR2.attr, &dev_attr_DR2.attr,
 	&dev_attr_GR3.attr, &dev_attr_DR3.attr,
@@ -1297,6 +1518,13 @@ const struct attribute *ao422_attrs[] = {
 	&dev_attr_AO_03.attr, &dev_attr_dac_range_03.attr,
 	&dev_attr_AO_04.attr, &dev_attr_dac_range_04.attr,
 	&dev_attr_AO_05.attr, &dev_attr_dac_range_05.attr,
+	&dev_attr_NOIMM_AO_01.attr,
+	&dev_attr_NOIMM_AO_02.attr,
+	&dev_attr_NOIMM_AO_03.attr,
+	&dev_attr_NOIMM_AO_04.attr,
+	&dev_attr_NOIMM_AO_05.attr,
+	&dev_attr_NOIMM_AO_ALL.attr,
+	&dev_attr_NOIMM_AO_ALL_UNIQUE.attr,
 	&dev_attr_ch5_en.attr,
 	&dev_attr_dac_range_en.attr,
 	&dev_attr_dac_ref5v.attr,
@@ -1306,6 +1534,7 @@ const struct attribute *ao422_attrs[] = {
 const struct attribute *ao420_common_attrs[] = {
 	&dev_attr_dac_range_REF.attr,
 	&dev_attr_dacreset_device.attr,
+	&dev_attr_low_latency.attr,
 	&dev_attr_dac_headroom.attr,
 	&dev_attr_dac_fifo_samples.attr,
 	&dev_attr_dac_encoding.attr,
@@ -1354,7 +1583,42 @@ static const struct attribute *ao424_attrs[] = {
 	&dev_attr_AO_14.attr,
 	&dev_attr_AO_15.attr,
 	&dev_attr_AO_16.attr,
+	&dev_attr_NOIMM_AO_17.attr,
+	&dev_attr_NOIMM_AO_18.attr,
+	&dev_attr_NOIMM_AO_19.attr,
+	&dev_attr_NOIMM_AO_20.attr,
+	&dev_attr_NOIMM_AO_21.attr,
+	&dev_attr_NOIMM_AO_22.attr,
+	&dev_attr_NOIMM_AO_23.attr,
+	&dev_attr_NOIMM_AO_24.attr,
+	&dev_attr_NOIMM_AO_25.attr,
+	&dev_attr_NOIMM_AO_26.attr,
+	&dev_attr_NOIMM_AO_27.attr,
+	&dev_attr_NOIMM_AO_28.attr,
+	&dev_attr_NOIMM_AO_29.attr,
+	&dev_attr_NOIMM_AO_30.attr,
+	&dev_attr_NOIMM_AO_31.attr,
+	&dev_attr_NOIMM_AO_32.attr,
+	&dev_attr_NOIMM_AO_01.attr,
+	&dev_attr_NOIMM_AO_02.attr,
+	&dev_attr_NOIMM_AO_03.attr,
+	&dev_attr_NOIMM_AO_04.attr,
+	&dev_attr_NOIMM_AO_05.attr,
+	&dev_attr_NOIMM_AO_06.attr,
+	&dev_attr_NOIMM_AO_07.attr,
+	&dev_attr_NOIMM_AO_08.attr,
+	&dev_attr_NOIMM_AO_09.attr,
+	&dev_attr_NOIMM_AO_10.attr,
+	&dev_attr_NOIMM_AO_11.attr,
+	&dev_attr_NOIMM_AO_12.attr,
+	&dev_attr_NOIMM_AO_13.attr,
+	&dev_attr_NOIMM_AO_14.attr,
+	&dev_attr_NOIMM_AO_15.attr,
+	&dev_attr_NOIMM_AO_16.attr,
+	&dev_attr_NOIMM_AO_ALL.attr,
+	&dev_attr_NOIMM_AO_ALL_UNIQUE.attr,
 
+	&dev_attr_low_latency.attr,
 	&dev_attr_dacreset.attr,
 	&dev_attr_dacreset_device.attr,
 	&dev_attr_dac_headroom.attr,
