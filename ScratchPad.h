@@ -21,37 +21,38 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                */
 /* ------------------------------------------------------------------------- */
 
-
 #ifndef SCRATCHPAD_H_
 #define SCRATCHPAD_H_
 
-
 #include <stdarg.h>
-
 
 /** singleton .. */
 class Scratchpad {
 	char *root;
 
-	Scratchpad(int site = 0) {
+	Scratchpad(int site = 0)
+	{
 		root = new char[80];
 		snprintf(root, 80, "/dev/acq400.%d.knobs", site);
 	}
-	virtual void set(int idx, const char* fmt, u32 value){
+	virtual void set(int idx, const char *fmt, u32 value)
+	{
 		char knob[80];
 		snprintf(knob, 80, "%s/spad%d", root, idx);
 		File fc(knob, "w");
 		fc.printf(fmt, value);
 	}
-	virtual int get(int idx, const char* fmt, u32* value) {
+	virtual int get(int idx, const char *fmt, u32 *value)
+	{
 		char knob[80];
 		snprintf(knob, 80, "%s/spad%d", root, idx);
 
 		File fc(knob, "r");
 
-		return fscanf(fc(), fmt, value) == 1? 0: -1;
+		return fscanf(fc(), fmt, value) == 1 ? 0 : -1;
 	}
-public:
+
+    public:
 	enum SP_INDEX {
 		SP_SAMPLE_COUNT,
 		SP_MUX_STATUS,
@@ -66,16 +67,18 @@ public:
 		SP_MUX_STATUS_BUSY = 0xb5b5b5b5,
 		SP_MUX_STATUS_DONE = 0xd00e0000
 	};
-	static Scratchpad& instance() {
-		static Scratchpad* _instance;
+	static Scratchpad &instance()
+	{
+		static Scratchpad *_instance;
 
-		if (!_instance){
+		if (!_instance) {
 			_instance = new Scratchpad();
 		}
 		return *_instance;
 	}
 
-	virtual void set(int idx, u32 value){
+	virtual void set(int idx, u32 value)
+	{
 		u32 v2;
 		int loopcount = 0;
 		int errcount = 0;
@@ -83,31 +86,38 @@ public:
 		do {
 			set(idx, "%08x", value);
 			get(idx, &v2);
-			if (value != v2){
-				if (errcount  && ++errcount < 10){
-					fprintf(stderr, "SCRATCHPAD validate WARNING, retry %d idx %d %x != %x\n",
-							++loopcount, idx, value, v2);
+			if (value != v2) {
+				if (errcount && ++errcount < 10) {
+					fprintf(stderr,
+						"SCRATCHPAD validate WARNING, retry %d idx %d %x != %x\n",
+						++loopcount, idx, value, v2);
 				}
 			}
 		} while (loopcount < 20 && value != v2);
 
-		if (loopcount > 10){
-			fprintf(stderr, "SCRATCHPAD validate WARNING: we are working way too hard %d\n", loopcount);
+		if (loopcount > 10) {
+			fprintf(stderr,
+				"SCRATCHPAD validate WARNING: we are working way too hard %d\n",
+				loopcount);
 		}
 	}
 
-	virtual int get(int idx, u32 *value){
+	virtual int get(int idx, u32 *value)
+	{
 		return get(idx, "%x", value);
 	}
-	virtual u32 get(int idx) {
+	virtual u32 get(int idx)
+	{
 		u32 value;
 		get(idx, &value);
 		return value;
 	}
-	virtual void setBits(int idx, u32 bits){
+	virtual void setBits(int idx, u32 bits)
+	{
 		set(idx, "+%08x", bits);
 	}
-	virtual void clrBits(int idx, u32 bits){
+	virtual void clrBits(int idx, u32 bits)
+	{
 		set(idx, "-%08x", bits);
 	}
 };

@@ -23,67 +23,68 @@
 
 #include "acq-util.h"
 
-
 static void _addRange(int channels[], int cmax, int ll, int rr)
 {
 	int ii;
 
-	if (rr > cmax) rr = cmax;
-	if (ll < 1) ll = 1;
+	if (rr > cmax)
+		rr = cmax;
+	if (ll < 1)
+		ll = 1;
 
-	for (ii = ll; ii <= rr; ++ii){
+	for (ii = ll; ii <= rr; ++ii) {
 		channels[ii] = 1;
 	}
 }
 
-static void addRange(int channels[], int cmax, char* range)
+static void addRange(int channels[], int cmax, char *range)
 {
-	char* ranger;
+	char *ranger;
 
 	if ((ranger = index(range, '-')) != 0 ||
-	    (ranger = index(range, ':')) != 0    ){
+	    (ranger = index(range, ':')) != 0) {
 		int len = strlen(range);
 		*ranger = '\0';
 
-		if (ranger == range){
-			if (len == 1){
+		if (ranger == range) {
+			if (len == 1) {
 				_addRange(channels, cmax, 1, cmax);
-			}else{
-				_addRange(channels, cmax, 1, atoi(range+1));
+			} else {
+				_addRange(channels, cmax, 1, atoi(range + 1));
 			}
-		}else if (ranger == range+len-1){
+		} else if (ranger == range + len - 1) {
 			_addRange(channels, cmax, atoi(range), cmax);
-		}else{
-			_addRange(channels, cmax, atoi(range), atoi(ranger+1));
+		} else {
+			_addRange(channels, cmax, atoi(range),
+				  atoi(ranger + 1));
 		}
-	}else{
+	} else {
 		_addRange(channels, cmax, atoi(range), atoi(range));
 	}
 }
 
-
-int acqMakeChannelRange(int channels[], int cmax, const char* definition)
+int acqMakeChannelRange(int channels[], int cmax, const char *definition)
 /** 
  *  @definition "-N  N-M  N,M,P  N-"
  *  returns number of selected channels
  */
 {
-	char* dbuf = (char*)calloc(strlen(definition)+1, 1);
-	char* tbuf = (char*)calloc(strlen(definition)+1, 1);
-	char* rbuf = tbuf;
-	char* ptok;
+	char *dbuf = (char *)calloc(strlen(definition) + 1, 1);
+	char *tbuf = (char *)calloc(strlen(definition) + 1, 1);
+	char *rbuf = tbuf;
+	char *ptok;
 
 	strcpy(dbuf, definition);
 
-	for(ptok = dbuf; (ptok = strtok_r(ptok, " ,",  &rbuf)) != 0; ptok = 0){
+	for (ptok = dbuf; (ptok = strtok_r(ptok, " ,", &rbuf)) != 0; ptok = 0) {
 		addRange(channels, cmax, ptok);
 	}
-	
+
 	int ichan;
 	int selected = 0;
 
-	for (ichan = 1; ichan <= cmax; ++ichan){
-		if (channels[ichan] != 0){
+	for (ichan = 1; ichan <= cmax; ++ichan) {
+		if (channels[ichan] != 0) {
 			selected++;
 		}
 	}
@@ -94,18 +95,18 @@ int acqMakeChannelRange(int channels[], int cmax, const char* definition)
 	return selected;
 }
 
-int strsplit(char *str, char *argv[], int maxargs, const char* delim)
+int strsplit(char *str, char *argv[], int maxargs, const char *delim)
 /** strsplit() splits str into args, returns #args. */
 {
 	int iarg;
 	char *s1, *s2;
 
-	for (iarg = 0, s1 = str; iarg < maxargs && (s2 = strstr(s1, delim)); ){
+	for (iarg = 0, s1 = str; iarg < maxargs && (s2 = strstr(s1, delim));) {
 		*s2 = '\0';
 		argv[iarg++] = s1;
 		s1 = s2 + strlen(delim);
 	}
-	if (s1 != 0){
+	if (s1 != 0) {
 		argv[iarg++] = s1;
 	}
 	return iarg;

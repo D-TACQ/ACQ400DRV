@@ -36,42 +36,39 @@
 #include <linux/spi/spi.h>
 #include <linux/uaccess.h>
 
-
-#define REVID 		"0.1.0"
-#define MODULE_NAME	"acq426"
+#define REVID "0.1.0"
+#define MODULE_NAME "acq426"
 
 extern void acq480_hook_spi_cb(void);
 extern void acq480_hook_spi(void);
 
 int cb = 0;
 module_param(cb, int, 0444);
-MODULE_PARM_DESC(cb, "select  0: regular single step site cs, 1: two step chip-board cs");
+MODULE_PARM_DESC(
+	cb,
+	"select  0: regular single step site cs, 1: two step chip-board cs");
 
 static int __init acq400_hook_spi_cs_init(void)
 {
 	int status = 0;
 
-
 	printk("D-TACQ ACQ400 SPI CS Hook %s cb=%d\n", REVID, cb);
 
-	if (cb){
+	if (cb) {
 		acq480_hook_spi_cb();
-	}else{
+	} else {
 		acq480_hook_spi();
 	}
-
 
 	return status;
 }
 
-static void __exit acq400_hook_spi_cs_exit(void){
-
+static void __exit acq400_hook_spi_cs_exit(void)
+{
 }
 
 module_init(acq400_hook_spi_cs_init);
 module_exit(acq400_hook_spi_cs_exit);
-
-
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("D-TACQ ACQ400 SPI CS Hook");

@@ -25,19 +25,16 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                */
 /* ------------------------------------------------------------------------- */
 
-
 #include <linux/cdev.h>
 
 #include "acq400_dsp.h"
 #include "acq400.h"
 
-#define REVID	"1.2"
+#define REVID "1.2"
 #define MAXDEV 2
 
 #undef DEVP
-#define DEVP(abd)		(&(abd)->pdev->dev)
-
-
+#define DEVP(abd) (&(abd)->pdev->dev)
 
 extern int regfs_probe(struct platform_device *pdev);
 extern int regfs_remove(struct platform_device *pdev);
@@ -48,9 +45,9 @@ int acq400dsp_probe(struct platform_device *pdev)
 	rc = acq400dsp_devicetree_init(pdev, pdev->dev.of_node);
 
 	dev_info(&pdev->dev, "acq400dsp_probe id:%d num_resources:%d %s",
-			pdev->id, pdev->num_resources, rc==0?"OK":"dts error");
+		 pdev->id, pdev->num_resources, rc == 0 ? "OK" : "dts error");
 
-	if (rc != 0){
+	if (rc != 0) {
 		return rc;
 	}
 
@@ -59,16 +56,15 @@ int acq400dsp_probe(struct platform_device *pdev)
 
 int acq400dsp_remove(struct platform_device *pdev)
 {
-       dev_info(&pdev->dev, "acq400dsp_probe id:%d site:%d num_resources:%d",
-                       pdev->id, 99, pdev->num_resources);
-       return regfs_remove(pdev);
+	dev_info(&pdev->dev, "acq400dsp_probe id:%d site:%d num_resources:%d",
+		 pdev->id, 99, pdev->num_resources);
+	return regfs_remove(pdev);
 }
-
 
 #ifdef CONFIG_OF
 static struct of_device_id acq400dsp_of_match[] /* __devinitdata */ = {
-        { .compatible = "D-TACQ,acq400dsp"  },
-        { /* end of table */}
+	{ .compatible = "D-TACQ,acq400dsp" },
+	{ /* end of table */ }
 };
 MODULE_DEVICE_TABLE(of, acq400dsp_of_match);
 #else
@@ -89,17 +85,16 @@ static struct platform_driver acq400dsp_driver = {
 
 static int __init acq400_dsp_init(void)
 {
-        int status;
+	int status;
 
 	printk("D-TACQ ACQ400 DSP Driver %s\n", REVID);
 
 	status = platform_driver_register(&acq400dsp_driver);
-        return status;
+	return status;
 }
 
 static void __exit acq400_dsp_exit(void)
 {
-
 }
 
 module_init(acq400_dsp_init);

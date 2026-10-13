@@ -18,7 +18,6 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                */
 /* ------------------------------------------------------------------------- */
 
-
 /*
  * lk-shim.h
  *
@@ -31,9 +30,9 @@
 
 #include <linux/version.h>
 
-#define CLASS_DEVICE		device
-#define CLASS_DEVICE_CREATE	device_create
-#define CLASS_DEVICE_ATTR	DEVICE_ATTR
+#define CLASS_DEVICE device
+#define CLASS_DEVICE_CREATE device_create
+#define CLASS_DEVICE_ATTR DEVICE_ATTR
 #define CLASS_DEVICE_CREATE_FILE DEVICE_CREATE_FILE
 
 #endif /* LK_SHIM_H_ */

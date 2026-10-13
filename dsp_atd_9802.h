@@ -33,25 +33,24 @@
 #undef PD
 #undef PDSZ
 
-#define GROUP_FIRST_N_TRIGGERS_ALL	0
+#define GROUP_FIRST_N_TRIGGERS_ALL 0
 
 #include "regfs.h"
 
 struct ATD_9802_DEV {
 	struct REGFS_DEV rdev;
 
-
 	unsigned status[ATD_TRG_MAXREG];
 	unsigned status_latch[ATD_TRG_MAXREG];
 	unsigned group_status_latch[ATD_TRG_MAXREG];
 	unsigned group_trigger_mask[ATD_TRG_MAXREG];
-	unsigned group_first_n_triggers;      /* trigger if N in the group are set. N=0 -> ALL */
+	unsigned group_first_n_triggers; /* trigger if N in the group are set. N=0 -> ALL */
 	enum GSMODE { GS_NOW, GS_HISTORIC } gsmode;
 	unsigned sample_count;
 	unsigned latch_count;
 
-	void* client;				/* stash subclass data here */
-	struct ATD atd;				/* pulse timers */
+	void *client; /* stash subclass data here */
+	struct ATD atd; /* pulse timers */
 	struct ATD soft_trigger;
 };
 
@@ -59,7 +58,8 @@ struct ATD_9802_DEV {
 
 extern irqreturn_t (*regfs_isr)(int irq, void *dev_id);
 extern int regfs_probe(struct platform_device *pdev);
-extern int regfs_probe_rdev(struct platform_device *pdev, struct REGFS_DEV* rdev);
+extern int regfs_probe_rdev(struct platform_device *pdev,
+			    struct REGFS_DEV *rdev);
 extern int regfs_remove(struct platform_device *pdev);
 
 #endif /* _DSP_ATD_9802_H_ */

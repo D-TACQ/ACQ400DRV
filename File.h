@@ -36,50 +36,64 @@
 
 #include "local.h"
 
-
 class File {
 	FILE *_fp;
 
-	void _file(const char* mode, bool check = true) {
+	void _file(const char *mode, bool check = true)
+	{
 		_fp = fopen(fname, mode);
-		if (check && _fp == 0){
+		if (check && _fp == 0) {
 			perror(fname);
 			exit(1);
 		}
 	}
-	char* buf;
-public:
-	const char* fname;
+	char *buf;
+
+    public:
+	const char *fname;
 	static const bool NOCHECK = false;
 
-	File(const char *_fname, const char* mode = "r", bool check = true): buf(0), fname(_fname) {
+	File(const char *_fname, const char *mode = "r", bool check = true)
+		: buf(0)
+		, fname(_fname)
+	{
 		_file(mode, check);
 	}
-	File(const char* path, const char *_fname, const char* mode, bool check = true){
-		buf = new char[strlen(path)+1+strlen(fname)+1];
+	File(const char *path, const char *_fname, const char *mode,
+	     bool check = true)
+	{
+		buf = new char[strlen(path) + 1 + strlen(fname) + 1];
 		strcpy(buf, path);
 		strcat(buf, "/");
 		strcat(buf, _fname);
 		fname = buf;
 		_file(mode, check);
 	}
-	~File() {
-		if (_fp) fclose(_fp);
-		if (buf) delete [] buf;
+	~File()
+	{
+		if (_fp)
+			fclose(_fp);
+		if (buf)
+			delete[] buf;
 	}
-	FILE* fp() {
+	FILE *fp()
+	{
 		return _fp;
 	}
-	bool exists() {
+	bool exists()
+	{
 		return fp() != 0;
 	}
-	int fd() {
+	int fd()
+	{
 		return fileno(_fp);
 	}
-	FILE* operator() () {
+	FILE *operator()()
+	{
 		return _fp;
 	}
-	int printf(const char* fmt, ...){
+	int printf(const char *fmt, ...)
+	{
 		va_list argp;
 		va_start(argp, fmt);
 		int rc = vfprintf(_fp, fmt, argp);
@@ -90,68 +104,68 @@ public:
 
 #ifndef NOMAPPING
 
-template <class T>
-class Mapping {
+template <class T> class Mapping {
 	int len;
-	T* _data;
+	T *_data;
 	int fd;
-public:
-	Mapping(std::string fname, int _len) : len(_len) {
+
+    public:
+	Mapping(std::string fname, int _len)
+		: len(_len)
+	{
 		int fd = open(fname.data(), O_RDWR, 0777);
-		_data = static_cast<T*>(mmap(0, len,
-			PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0));
-		if (_data == MAP_FAILED){
+		_data = static_cast<T *>(mmap(0, len, PROT_READ | PROT_WRITE,
+					      MAP_SHARED, fd, 0));
+		if (_data == MAP_FAILED) {
 			perror(fname.data());
 			exit(1);
 		}
 	}
-	~Mapping() {
+	~Mapping()
+	{
 		munmap(_data, len);
 		close(fd);
 	}
-	const T* operator() () {
+	const T *operator()()
+	{
 		return _data;
 	}
 };
 
 #endif
 
-static inline FILE *fopen_safe(const char* fname, const char* mode = "r")
+static inline FILE *fopen_safe(const char *fname, const char *mode = "r")
 {
 	FILE *fp = fopen(fname, mode);
-	if (fp == 0){
+	if (fp == 0) {
 		perror(fname);
 		exit(errno);
 	}
 	return fp;
 }
 
-template <class T>
-static
-T getvalue(const char* fname, const char* mode = "r")
+template <class T> static T getvalue(const char *fname, const char *mode = "r")
 {
 	File f(fname, mode);
-	FILE* fp = f();
+	FILE *fp = f();
 	T value = 0;
-	if (fread(&value, sizeof(T), 1, fp) != 1){
+	if (fread(&value, sizeof(T), 1, fp) != 1) {
 		fprintf(stderr, "ERROR: %s fread \"%s\" fail\n", PFN, fname);
 		exit(1);
 	}
 	return value;
 }
 
-template <class T>
-static
-T getvalue(File& file)
+template <class T> static T getvalue(File &file)
 {
-	FILE* fp = file();
+	FILE *fp = file();
 	T value = 0;
-	if (fread(&value, sizeof(T), 1, fp) != 1){
-		fprintf(stderr, "ERROR: %s fread \"%s\" fail\n", PFN, file.fname);
+	if (fread(&value, sizeof(T), 1, fp) != 1) {
+		fprintf(stderr, "ERROR: %s fread \"%s\" fail\n", PFN,
+			file.fname);
 		exit(1);
 	}
 	return value;
 }
-
 
 #endif /* FILE_H_ */

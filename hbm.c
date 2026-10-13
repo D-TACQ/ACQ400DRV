@@ -27,17 +27,18 @@ static int getOrder(int len)
 	int order;
 	len /= PAGE_SIZE;
 
-	for (order = 0; 1 << order < len; ++order){
+	for (order = 0; 1 << order < len; ++order) {
 		;
 	}
 	return order;
 }
 
-struct HBM* hbm_allocate1(struct device *dev, int len, int ix, enum dma_data_direction dir)
+struct HBM *hbm_allocate1(struct device *dev, int len, int ix,
+			  enum dma_data_direction dir)
 {
 	int order = getOrder(len);
-	struct HBM* hbm = kzalloc(sizeof(struct HBM), GFP_KERNEL);
-	hbm->va = (void*) __get_free_pages(GFP_KERNEL, order);
+	struct HBM *hbm = kzalloc(sizeof(struct HBM), GFP_KERNEL);
+	hbm->va = (void *)__get_free_pages(GFP_KERNEL, order);
 	hbm->pa = dma_map_single(dev, hbm->va, len, dir);
 	hbm->len = len;
 	hbm->dir = dir;
@@ -46,27 +47,28 @@ struct HBM* hbm_allocate1(struct device *dev, int len, int ix, enum dma_data_dir
 	return hbm;
 }
 
-void fillpa(struct HBM* hbm)
+void fillpa(struct HBM *hbm)
 {
-	int lenw = hbm->len/sizeof(unsigned);
-	unsigned *cursor = (unsigned*)hbm->va;
+	int lenw = hbm->len / sizeof(unsigned);
+	unsigned *cursor = (unsigned *)hbm->va;
 	unsigned pa = hbm->pa;
 
-	while(lenw--){
+	while (lenw--) {
 		*cursor++ = pa;
 		pa += sizeof(unsigned);
 	}
 }
-int hbm_allocate(struct device *dev, int ix, int nbuffers, int len, struct list_head *buffers, enum dma_data_direction dir)
+int hbm_allocate(struct device *dev, int ix, int nbuffers, int len,
+		 struct list_head *buffers, enum dma_data_direction dir)
 {
 	int order = getOrder(len);
 	int ii;
 
 	len = (1 << order) * PAGE_SIZE;
 
-	for (ii = 0; ii < nbuffers; ++ii, ++ix){
-		struct HBM* hbm = kzalloc(sizeof(struct HBM), GFP_KERNEL);
-		hbm->va = (void*) __get_free_pages(GFP_KERNEL, order);
+	for (ii = 0; ii < nbuffers; ++ii, ++ix) {
+		struct HBM *hbm = kzalloc(sizeof(struct HBM), GFP_KERNEL);
+		hbm->va = (void *)__get_free_pages(GFP_KERNEL, order);
 		hbm->pa = dma_map_single(dev, hbm->va, len, dir);
 		hbm->len = len;
 		hbm->dir = dir;
@@ -82,10 +84,10 @@ int hbm_allocate(struct device *dev, int ix, int nbuffers, int len, struct list_
 
 int hbm_free(struct device *dev, struct list_head *buffers)
 {
-	struct HBM* hbm;
-	struct HBM* temp;
+	struct HBM *hbm;
+	struct HBM *temp;
 
-	list_for_each_entry_safe(hbm, temp, buffers, list){
+	list_for_each_entry_safe(hbm, temp, buffers, list) {
 		list_del(&hbm->list);
 		dma_unmap_single(dev, hbm->pa, hbm->len, hbm->dir);
 		free_pages((unsigned long)hbm->va, getOrder(hbm->len));
@@ -97,10 +99,10 @@ int hbm_free(struct device *dev, struct list_head *buffers)
 
 int hbm_free_buffer_only(struct device *dev, struct list_head *buffers)
 {
-	struct HBM* hbm;
-	struct HBM* temp;
+	struct HBM *hbm;
+	struct HBM *temp;
 
-	list_for_each_entry_safe(hbm, temp, buffers, list){
+	list_for_each_entry_safe(hbm, temp, buffers, list) {
 		list_del(&hbm->list);
 		dma_unmap_single(dev, hbm->pa, hbm->len, hbm->dir);
 		free_pages((unsigned long)hbm->va, getOrder(hbm->len));

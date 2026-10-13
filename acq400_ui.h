@@ -26,12 +26,12 @@
 #ifndef ACQ400_UI_H_
 #define ACQ400_UI_H_
 
-extern ssize_t acq400_read(
-	struct file *file, char __user *buf, size_t count, loff_t *f_pos);
+extern ssize_t acq400_read(struct file *file, char __user *buf, size_t count,
+			   loff_t *f_pos);
 
-extern ssize_t acq400_write(
-	struct file *file, const char __user *buf, size_t count, loff_t *f_pos);
-extern int acq400_mmap_bar(struct file* file, struct vm_area_struct* vma);
+extern ssize_t acq400_write(struct file *file, const char __user *buf,
+			    size_t count, loff_t *f_pos);
+extern int acq400_mmap_bar(struct file *file, struct vm_area_struct *vma);
 extern int acq400_release(struct inode *inode, struct file *file);
 
 extern int acq400_open_ui(struct inode *inode, struct file *file);

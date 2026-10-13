@@ -24,10 +24,10 @@
 #ifndef ACQ400_DEBUGFS_H_
 #define ACQ400_DEBUGFS_H_
 
-void acq400_createDebugfs(struct acq400_dev* adev);
-void acq400_removeDebugfs(struct acq400_dev* adev);
-void acq2006_createDebugfs(struct acq400_dev* adev);
+void acq400_createDebugfs(struct acq400_dev *adev);
+void acq400_removeDebugfs(struct acq400_dev *adev);
+void acq2006_createDebugfs(struct acq400_dev *adev);
 
-extern const char* acq400_devnames[];
+extern const char *acq400_devnames[];
 
 #endif /* ACQ400_DEBUGFS_H_ */

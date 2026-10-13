@@ -32,110 +32,81 @@ int TIM_CTRL_LOCK;
 module_param(TIM_CTRL_LOCK, int, 0644);
 MODULE_PARM_DESC(TIM_CTRL_LOCK, "disable usr access when set");
 
-
-ssize_t acq400_show_triplet(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	unsigned T1,
-	unsigned T2,
-	unsigned T3)
+ssize_t acq400_show_triplet(struct device *dev, struct device_attribute *attr,
+			    char *buf, unsigned REG, unsigned T1, unsigned T2,
+			    unsigned T3)
 {
 	u32 regval = acq400rd32(acq400_devices[dev->id], REG);
 
-	return sprintf(buf, "%d,%d,%d\n",
-		MASKSHR(regval, T1), MASKSHR(regval, T2), MASKSHR(regval, T3));
+	return sprintf(buf, "%d,%d,%d\n", MASKSHR(regval, T1),
+		       MASKSHR(regval, T2), MASKSHR(regval, T3));
 }
 
-
-#define SHLMASK(x, f) (((x)<<getSHL(f))&(f))
+#define SHLMASK(x, f) (((x) << getSHL(f)) & (f))
 
 u32 get_edge_sense(char edge[], u32 vv)
 {
 	int len = strlen(edge);
-	if (len){
+	if (len) {
 		int ii;
-		for(ii = 0; ii < len; ++ii){
+		for (ii = 0; ii < len; ++ii) {
 			edge[ii] = tolower(edge[ii]);
 		}
 		vv = strcmp(edge, "rising") == 0;
 	}
 	return vv;
 }
-ssize_t acq400_store_triplet(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		unsigned T1,
-		unsigned T2,
-		unsigned T3)
+ssize_t acq400_store_triplet(struct device *dev, struct device_attribute *attr,
+			     const char *buf, size_t count, unsigned REG,
+			     unsigned T1, unsigned T2, unsigned T3)
 {
 	u32 v1, v2, v3;
 	char edge[21];
 	edge[0] = '\0';
 
 	if (sscanf(buf, "%d,d%d,%20s", &v1, &v2, edge) == 3 ||
-	    sscanf(buf, "%d,%d,%d", &v1, &v2, &v3) == 3		){
-
+	    sscanf(buf, "%d,%d,%d", &v1, &v2, &v3) == 3) {
 		u32 regval = acq400rd32(acq400_devices[dev->id], REG);
 		v3 = get_edge_sense(edge, v3);
 
-
-		regval &= ~(T1|T2|T3);
+		regval &= ~(T1 | T2 | T3);
 		regval |= SHLMASK(v1, T1) | SHLMASK(v2, T2) | SHLMASK(v3, T3);
 
 		acq400wr32(acq400_devices[dev->id], REG, regval);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
 /* generic show_bits, store_bits */
 
-ssize_t acq400_show_bits(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	unsigned SHL,
-	unsigned MASK)
+ssize_t acq400_show_bits(struct device *dev, struct device_attribute *attr,
+			 char *buf, unsigned REG, unsigned SHL, unsigned MASK)
 {
 	u32 regval = acq400rd32(acq400_devices[dev->id], REG);
-	u32 field = (regval>>SHL)&MASK;
+	u32 field = (regval >> SHL) & MASK;
 
 	return sprintf(buf, "%x\n", field);
 }
 
-ssize_t acq400_show_hex32(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG)
+ssize_t acq400_show_hex32(struct device *dev, struct device_attribute *attr,
+			  char *buf, unsigned REG)
 {
 	u32 regval = acq400rd32(acq400_devices[dev->id], REG);
 
 	return sprintf(buf, "0x%08x\n", regval);
 }
 
-ssize_t acq400_store_bits(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		unsigned SHL,
-		unsigned MASK,
-		unsigned show_warning)
+ssize_t acq400_store_bits(struct device *dev, struct device_attribute *attr,
+			  const char *buf, size_t count, unsigned REG,
+			  unsigned SHL, unsigned MASK, unsigned show_warning)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 regval = acq400rd32(adev, REG);
 	u32 field;
 
-	if (buf[0] == 'P' || buf[0] == '^'){
+	if (buf[0] == 'P' || buf[0] == '^') {
 		regval &= ~(MASK << SHL);
 		acq400wr32(adev, REG, regval);
 		msleep(1);
@@ -143,220 +114,190 @@ ssize_t acq400_store_bits(
 		msleep(1);
 		acq400wr32(adev, REG, regval);
 		return count;
-	}else if (sscanf(buf, "%x", &field) == 1){
+	} else if (sscanf(buf, "%x", &field) == 1) {
 		regval &= ~(MASK << SHL);
-		regval |= (field&MASK) << SHL;
-		if (show_warning){
+		regval |= (field & MASK) << SHL;
+		if (show_warning) {
 			dev_warn(dev, "deprecated %04x = %08x", REG, regval);
 		}
 		acq400wr32(adev, REG, regval);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-
-ssize_t acq400_show_bitN(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	unsigned SHL,
-	unsigned MASK)
+ssize_t acq400_show_bitN(struct device *dev, struct device_attribute *attr,
+			 char *buf, unsigned REG, unsigned SHL, unsigned MASK)
 {
 	u32 regval = acq400rd32(acq400_devices[dev->id], REG);
-	u32 field = (regval>>SHL)&MASK;
+	u32 field = (regval >> SHL) & MASK;
 
 	return sprintf(buf, "%x\n", !field);
 }
 
-ssize_t acq400_store_bitN(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		unsigned SHL,
-		unsigned MASK,
-		unsigned show_warning)
+ssize_t acq400_store_bitN(struct device *dev, struct device_attribute *attr,
+			  const char *buf, size_t count, unsigned REG,
+			  unsigned SHL, unsigned MASK, unsigned show_warning)
 {
 	u32 field;
-	if (sscanf(buf, "%x", &field) == 1){
+	if (sscanf(buf, "%x", &field) == 1) {
 		u32 regval = acq400rd32(acq400_devices[dev->id], REG);
 		regval &= ~(MASK << SHL);
-		regval |= ((!field)&MASK) << SHL;
-		if (show_warning){
+		regval |= ((!field) & MASK) << SHL;
+		if (show_warning) {
 			dev_warn(dev, "deprecated %04x = %08x", REG, regval);
 		}
 		acq400wr32(acq400_devices[dev->id], REG, regval);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-
-ssize_t acq400_show_dnum(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	unsigned SHL,
-	unsigned MASK)
+ssize_t acq400_show_dnum(struct device *dev, struct device_attribute *attr,
+			 char *buf, unsigned REG, unsigned SHL, unsigned MASK)
 {
 	u32 regval = acq400rd32(acq400_devices[dev->id], REG);
-	u32 field = (regval>>SHL)&MASK;
-	u32 sbit = (MASK+1) >> 1;
-	if ((sbit&field) != 0){
-		while(sbit <<= 1){
+	u32 field = (regval >> SHL) & MASK;
+	u32 sbit = (MASK + 1) >> 1;
+	if ((sbit & field) != 0) {
+		while (sbit <<= 1) {
 			field |= sbit;
 		}
 	}
 
 	return sprintf(buf, "%d\n", (int)field);
 }
-ssize_t acq400_store_dnum(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		unsigned SHL,
-		unsigned MASK)
+ssize_t acq400_store_dnum(struct device *dev, struct device_attribute *attr,
+			  const char *buf, size_t count, unsigned REG,
+			  unsigned SHL, unsigned MASK)
 {
 	int field;
-	if (sscanf(buf, "%d", &field) == 1){
+	if (sscanf(buf, "%d", &field) == 1) {
 		u32 regval = acq400rd32(acq400_devices[dev->id], REG);
 		regval &= ~(MASK << SHL);
-		regval |= (field&MASK) << SHL;
+		regval |= (field & MASK) << SHL;
 		acq400wr32(acq400_devices[dev->id], REG, regval);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-ssize_t show_signal(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	int shl, int mbit,
-	const char*signame, const char* mbit_hi, const char* mbit_lo)
+ssize_t show_signal(struct device *dev, struct device_attribute *attr,
+		    char *buf, unsigned REG, int shl, int mbit,
+		    const char *signame, const char *mbit_hi,
+		    const char *mbit_lo)
 {
 	u32 adc_ctrl = acq400rd32(acq400_devices[dev->id], REG);
-	if (adc_ctrl&mbit){
+	if (adc_ctrl & mbit) {
 		u32 sel = (adc_ctrl >> shl) & CTRL_SIG_MASK;
-		unsigned dx = sel&CTRL_SIG_SEL;
+		unsigned dx = sel & CTRL_SIG_SEL;
 		int rising = ((adc_ctrl >> shl) & CTRL_SIG_RISING) != 0;
 
-		return sprintf(buf, "%s=%d,%d,%d %s d%u %s\n",
-				signame, (adc_ctrl&mbit)>>getSHL(mbit), dx, rising,
-				mbit_hi, dx, rising? "RISING": "FALLING");
-	}else{
+		return sprintf(buf, "%s=%d,%d,%d %s d%u %s\n", signame,
+			       (adc_ctrl & mbit) >> getSHL(mbit), dx, rising,
+			       mbit_hi, dx, rising ? "RISING" : "FALLING");
+	} else {
 		return sprintf(buf, "%s=0,0,0 %s\n", signame, mbit_lo);
 	}
 }
 
-int store_signal3(struct acq400_dev* adev,
-		unsigned REG,
-		int shl, int mbit,
-		unsigned imode, unsigned dx, unsigned rising)
+int store_signal3(struct acq400_dev *adev, unsigned REG, int shl, int mbit,
+		  unsigned imode, unsigned dx, unsigned rising)
 {
 	u32 adc_ctrl = acq400rd32(adev, REG);
 
 	adc_ctrl &= ~mbit;
-	if (imode != 0){
-		if (dx > 7){
+	if (imode != 0) {
+		if (dx > 7) {
 			dev_warn(DEVP(adev), "rejecting \"%u\" dx > 7", dx);
 			return -1;
 		}
 		adc_ctrl &= ~(CTRL_SIG_MASK << shl);
-		adc_ctrl |=  (dx|(rising? CTRL_SIG_RISING:0))<<shl;
+		adc_ctrl |= (dx | (rising ? CTRL_SIG_RISING : 0)) << shl;
 		adc_ctrl |= imode << getSHL(mbit);
 	}
 	acq400wr32(adev, REG, adc_ctrl);
 	return 0;
-
 }
 
-
-int lock_action(struct device * dev, const char* buf)
+int lock_action(struct device *dev, const char *buf)
 {
 	wait_queue_head_t _waitq;
 
-	dev_warn(dev, "pid %d attempted to write to TIM_CTRL with LOCK ON: \"%s\"", current->pid, buf);
+	dev_warn(dev,
+		 "pid %d attempted to write to TIM_CTRL with LOCK ON: \"%s\"",
+		 current->pid, buf);
 
 	init_waitqueue_head(&_waitq);
-	if (TIM_CTRL_LOCK > 1){
+	if (TIM_CTRL_LOCK > 1) {
 		wait_event_interruptible_timeout(_waitq, 0, TIM_CTRL_LOCK);
 		dev_warn(dev, "pid %d return", current->pid);
 	}
 	return -EBUSY;
 }
-ssize_t store_signal(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		int shl, int mbit, const char* mbit_hi, const char* mbit_lo,
-		int not_while_busy)
+ssize_t store_signal(struct device *dev, struct device_attribute *attr,
+		     const char *buf, size_t count, unsigned REG, int shl,
+		     int mbit, const char *mbit_hi, const char *mbit_lo,
+		     int not_while_busy)
 {
 	char sense;
 	char mode[16];
-	char* edge = mode;
+	char *edge = mode;
 	unsigned imode, dx, rising;
-	struct acq400_dev* adev = acq400_devices[dev->id];
+	struct acq400_dev *adev = acq400_devices[dev->id];
 
-	if (not_while_busy && adev->booleans.busy){
+	if (not_while_busy && adev->booleans.busy) {
 		return -EBUSY;
 	}
 
-	if (REG == TIM_CTRL && shl == TIM_CTRL_TRIG_SHL && TIM_CTRL_LOCK){
+	if (REG == TIM_CTRL && shl == TIM_CTRL_TRIG_SHL && TIM_CTRL_LOCK) {
 		return lock_action(dev, buf);
-
 	}
 	/* first form: imode,dx,rising : easiest with auto eg StreamDevice */
-	if (sscanf(buf, "%u,%u,%u", &imode, &dx, &rising) == 3){
-		if (store_signal3(adev, REG, shl, mbit, imode, dx, rising)){
+	if (sscanf(buf, "%u,%u,%u", &imode, &dx, &rising) == 3) {
+		if (store_signal3(adev, REG, shl, mbit, imode, dx, rising)) {
 			return -1;
-		}else{
+		} else {
 			return count;
 		}
 	}
 
 	/* second form: 1,dX,rising : sync_role uses this */
-	if (sscanf(buf, "%u,d%u,%s", &imode, &dx, edge) == 3){
+	if (sscanf(buf, "%u,d%u,%s", &imode, &dx, edge) == 3) {
 		rising = get_edge_sense(edge, 0);
-		if (store_signal3(adev, REG, shl, mbit, imode, dx, rising)){
+		if (store_signal3(adev, REG, shl, mbit, imode, dx, rising)) {
 			return -1;
-		}else{
+		} else {
 			return count;
 		}
 	}
 
 	/* third form: mode dDX sense : better for human scripting */
-	switch(sscanf(buf, "%10s d%u %c", mode, &dx, &sense)){
+	switch (sscanf(buf, "%10s d%u %c", mode, &dx, &sense)) {
 	case 1:
-		if (strcmp(mode, mbit_lo) == 0){
+		if (strcmp(mode, mbit_lo) == 0) {
 			return store_signal3(adev, REG, shl, mbit, 0, 0, 0);
 		}
 		dev_warn(dev, "single arg must be:\"%s\"", mbit_lo);
 		return -1;
 	case 3:
-		if (strcmp(mode, mbit_hi) == 0){
+		if (strcmp(mode, mbit_hi) == 0) {
 			unsigned falling = strchr("Ff-Nn", sense) != NULL;
-			rising 	= strchr("Rr+Pp", sense) != NULL;
+			rising = strchr("Rr+Pp", sense) != NULL;
 
-			if (!rising && !falling){
-				dev_warn(dev,
-				 "rejecting \"%s\" sense must be R or F", buf);
+			if (!rising && !falling) {
+				dev_warn(
+					dev,
+					"rejecting \"%s\" sense must be R or F",
+					buf);
 				return -1;
-			}else if (store_signal3(adev, REG, shl, mbit, 1, dx, rising)){
+			} else if (store_signal3(adev, REG, shl, mbit, 1, dx,
+						 rising)) {
 				return -1;
-			}else{
+			} else {
 				return count;
 			}
 		}
@@ -367,12 +308,12 @@ ssize_t store_signal(
 	}
 }
 
-const char* __show_fields(const unsigned* FIELDS)
+const char *__show_fields(const unsigned *FIELDS)
 {
 	static char buf[80];
 	int ii;
-	char* cursor = buf;
-	for (ii = 0; FIELDS[ii]; ++ii){
+	char *cursor = buf;
+	for (ii = 0; FIELDS[ii]; ++ii) {
 		sprintf(cursor, "%08x,", FIELDS[ii]);
 		cursor += strlen(cursor);
 	}
@@ -381,82 +322,82 @@ const char* __show_fields(const unsigned* FIELDS)
 }
 
 /* after Kernighan .. */
-int count_set_bits(int n){
+int count_set_bits(int n)
+{
 	int count = 0; // count accumulates the total bits set
-	while(n != 0){
-		n &= (n-1); // clear the least significant bit set
+	while (n != 0) {
+		n &= (n - 1); // clear the least significant bit set
 		count++;
 	}
 	return count;
 }
 
-ssize_t show_fields(
-		struct device * dev,
-		struct device_attribute *attr,
-		char * buf,
-		const char* signal,
-		unsigned REG,
-		const unsigned* FIELDS,
-		const int zero_based)
+ssize_t show_fields(struct device *dev, struct device_attribute *attr,
+		    char *buf, const char *signal, unsigned REG,
+		    const unsigned *FIELDS, const int zero_based)
 {
-	struct acq400_dev* adev = acq400_devices[dev->id];
+	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 regval = acq400rd32(adev, REG);
 	int ii;
-	char* cursor = buf;
+	char *cursor = buf;
 
 	sprintf(cursor, "%s=", signal);
 	cursor += strlen(cursor);
 
-	dev_dbg(DEVP(adev), "%s %02x fields:%s", __FUNCTION__, REG, __show_fields(FIELDS));
-	for (ii = 0; FIELDS[ii]; ++ii){
-		int zb = (zero_based && count_set_bits(FIELDS[ii]) > 1)? 1: 0;
+	dev_dbg(DEVP(adev), "%s %02x fields:%s", __FUNCTION__, REG,
+		__show_fields(FIELDS));
+	for (ii = 0; FIELDS[ii]; ++ii) {
+		int zb = (zero_based && count_set_bits(FIELDS[ii]) > 1) ? 1 : 0;
 		unsigned shl = getSHL(FIELDS[ii]);
-		int last = FIELDS[ii+1] == '\0';
-		sprintf(cursor, "%d%c", ((regval&FIELDS[ii])>>shl)+zb, last? '\n':',');
-		dev_dbg(DEVP(adev), "%d value:%08x mask:%08x shl:%d last:%d result:%s\n", ii, regval, FIELDS[ii], shl, last, cursor);
+		int last = FIELDS[ii + 1] == '\0';
+		sprintf(cursor, "%d%c", ((regval & FIELDS[ii]) >> shl) + zb,
+			last ? '\n' : ',');
+		dev_dbg(DEVP(adev),
+			"%d value:%08x mask:%08x shl:%d last:%d result:%s\n",
+			ii, regval, FIELDS[ii], shl, last, cursor);
 		cursor += strlen(cursor);
 	}
 	dev_dbg(DEVP(adev), "%s %02xii:%d", __FUNCTION__, REG, ii);
-	return cursor-buf;
+	return cursor - buf;
 }
 
-ssize_t store_fields(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count,
-	unsigned REG,
-	const unsigned* FIELDS,
-	const int zero_based)			/* zero terminated for count */
+ssize_t store_fields(struct device *dev, struct device_attribute *attr,
+		     const char *buf, size_t count, unsigned REG,
+		     const unsigned *FIELDS,
+		     const int zero_based) /* zero terminated for count */
 
 {
-	struct acq400_dev* adev = acq400_devices[dev->id];
+	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 regval = acq400rd32(adev, REG);
-	const char* cursor = buf;
+	const char *cursor = buf;
 	int ii;
 	unsigned xx;
 	unsigned pos = 0;
 
+	dev_dbg(DEVP(adev), "%s %02x fields:%s", __FUNCTION__, REG,
+		__show_fields(FIELDS));
 
-	dev_dbg(DEVP(adev), "%s %02x fields:%s", __FUNCTION__, REG, __show_fields(FIELDS));
-
-	for (ii = 0; FIELDS[ii]; ++ii){
-		if (sscanf(cursor, "%u%n", &xx, &pos)){
-			int zb = (zero_based && count_set_bits(FIELDS[ii]) > 1)? 1: 0;
+	for (ii = 0; FIELDS[ii]; ++ii) {
+		if (sscanf(cursor, "%u%n", &xx, &pos)) {
+			int zb =
+				(zero_based && count_set_bits(FIELDS[ii]) > 1) ?
+					1 :
+					0;
 			unsigned shl = getSHL(FIELDS[ii]);
-			dev_dbg(DEVP(adev), "%s %02x shl:%u xx:%u pos:%u", __FUNCTION__, REG, shl, xx, pos);
+			dev_dbg(DEVP(adev), "%s %02x shl:%u xx:%u pos:%u",
+				__FUNCTION__, REG, shl, xx, pos);
 			regval &= ~FIELDS[ii];
-			regval |= ((xx-zb) << shl)&FIELDS[ii];
+			regval |= ((xx - zb) << shl) & FIELDS[ii];
 			cursor += pos;
-			dev_dbg(DEVP(adev), "%s %02x cursor:\"%s\"", __FUNCTION__, REG, cursor);
-			if (*cursor++ != ','){
+			dev_dbg(DEVP(adev), "%s %02x cursor:\"%s\"",
+				__FUNCTION__, REG, cursor);
+			if (*cursor++ != ',') {
 				break;
 			}
 		}
 	}
 	acq400wr32(adev, REG, regval);
-	dev_dbg(DEVP(adev), "%s %02xii:%d value:%08x", __FUNCTION__, REG, ii, regval);
+	dev_dbg(DEVP(adev), "%s %02xii:%d value:%08x", __FUNCTION__, REG, ii,
+		regval);
 	return count;
 }
-
-

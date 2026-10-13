@@ -29,28 +29,29 @@
 
 #define REVID "0.007"
 
-
-int acq400t_sites[6] = { 0,  };
+int acq400t_sites[6] = {
+	0,
+};
 int acq400t_sites_count = 0;
 module_param_array(acq400t_sites, int, &acq400t_sites_count, 0644);
 
 int site2channel = 1;
 module_param(site2channel, int, 0444);
-MODULE_PARM_DESC(site2channel, "offset from site to i2c bus# for MTCA test set 3");
+MODULE_PARM_DESC(site2channel,
+		 "offset from site to i2c bus# for MTCA test set 3");
 
-struct i2c_adapter *i2c_adap[7];	/* index from one */
+struct i2c_adapter *i2c_adap[7]; /* index from one */
 
 static const unsigned short gpio_addr[] = { 0x20, I2C_CLIENT_END };
 
 static int ntest;
 
-#define GPIO_TYPE	"pca9534"
-#define GPIO_ADDR	0x20
+#define GPIO_TYPE "pca9534"
+#define GPIO_ADDR 0x20
 #define N_GPIO_GPIO 8
 
-static struct i2c_client* new_device(
-		struct i2c_adapter *adap,
-		const char* name, unsigned short addr, int gpio_base)
+static struct i2c_client *new_device(struct i2c_adapter *adap, const char *name,
+				     unsigned short addr, int gpio_base)
 {
 	struct pca953x_platform_data pca_data = {};
 	struct i2c_board_info info = {};
@@ -64,40 +65,39 @@ static struct i2c_client* new_device(
 }
 static void __init acq400t_init_site(int site)
 {
-	int ch = site+site2channel;
+	int ch = site + site2channel;
 
 	i2c_adap[site] = i2c_get_adapter(ch);
 
-	if (new_device(i2c_adap[site], GPIO_TYPE, GPIO_ADDR, -1) == 0){
+	if (new_device(i2c_adap[site], GPIO_TYPE, GPIO_ADDR, -1) == 0) {
 		printk("acq400t_init_site(%d) GPIO NOT found\n", site);
 	}
 }
 
 static void __init acq400t_remove_site(int site)
 {
-	int ch = site+site2channel;
+	int ch = site + site2channel;
 	printk("acq400t_init_site %d channel %d\n", site, ch);
 	i2c_put_adapter(i2c_adap[site]);
 }
 
 static void __exit acq400t_exit(void)
 {
-	for (; ntest--;){
+	for (; ntest--;) {
 		acq400t_remove_site(acq400t_sites[ntest]);
 	}
 }
 
-
 static int __init acq400t_init(void)
 {
-        int status = 0;
+	int status = 0;
 
 	printk("D-TACQ ACQ400TEST Driver %s\n", REVID);
 
-	for (ntest = 0; ntest < acq400t_sites_count; ++ntest){
+	for (ntest = 0; ntest < acq400t_sites_count; ++ntest) {
 		acq400t_init_site(acq400t_sites[ntest]);
 	}
-        return status;
+	return status;
 }
 
 module_init(acq400t_init);

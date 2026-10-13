@@ -51,12 +51,11 @@
 #include <linux/dma-mapping.h>
 #include "hbm.h"
 
+#define REVID "5"
+#define MODULE_NAME "pigcelf"
 
-#define REVID 		"5"
-#define MODULE_NAME	"pigcelf"
-
-#define PIG_CELF_FPGA_SITE 2		/* site 2 in FPGA memory map */
-#define I2C_CHAN(site)         ((site)+2)      /* CELF BUS = 4 */
+#define PIG_CELF_FPGA_SITE 2 /* site 2 in FPGA memory map */
+#define I2C_CHAN(site) ((site) + 2) /* CELF BUS = 4 */
 
 int site2cs(int site)
 {
@@ -66,8 +65,6 @@ int cs2site(int cs)
 {
 	return cs + 1;
 }
-
-
 
 struct pigcelf_dev {
 	struct platform_device *pdev;
@@ -80,11 +77,10 @@ struct pigcelf_dev {
 #define DEVP(adev) (&adev->pdev->dev)
 
 static struct proc_dir_entry *pigcelf_proc_root;
-static struct pigcelf_dev* pigcelf_devs[7];	/* 6 sites index from 1 */
+static struct pigcelf_dev *pigcelf_devs[7]; /* 6 sites index from 1 */
 
-static struct i2c_client* new_device(
-		struct i2c_adapter *adap,
-		const char* name, unsigned short addr, int gpio_base)
+static struct i2c_client *new_device(struct i2c_adapter *adap, const char *name,
+				     unsigned short addr, int gpio_base)
 {
 	struct pca953x_platform_data pca_data = {};
 	struct i2c_board_info info = {};
@@ -97,16 +93,15 @@ static struct i2c_client* new_device(
 	return i2c_new_device(adap, &info);
 }
 
-
 #define pigcelf_of_match 0
 
-struct pigcelf_dev* pigcelf_allocate_dev(struct platform_device *pdev)
+struct pigcelf_dev *pigcelf_allocate_dev(struct platform_device *pdev)
 {
 	int site = pdev->id;
-	struct pigcelf_dev* adev =
+	struct pigcelf_dev *adev =
 		kzalloc(sizeof(struct pigcelf_dev), GFP_KERNEL);
 
-	if (adev == NULL){
+	if (adev == NULL) {
 		return NULL;
 	}
 	pigcelf_devs[site] = adev;
@@ -114,7 +109,7 @@ struct pigcelf_dev* pigcelf_allocate_dev(struct platform_device *pdev)
 	adev->pdev = pdev;
 	adev->i2c_adapter = i2c_get_adapter(I2C_CHAN(site));
 
-	if (new_device(adev->i2c_adapter, "ad7417", 0x29, -1) == 0){
+	if (new_device(adev->i2c_adapter, "ad7417", 0x29, -1) == 0) {
 		printk("pigcelf_init_site(%d) ad7417#2 NOT found\n", site);
 	}
 
@@ -123,12 +118,10 @@ struct pigcelf_dev* pigcelf_allocate_dev(struct platform_device *pdev)
 	return adev;
 }
 
-
-
 static int pigcelf_probe(struct platform_device *pdev)
 {
-	struct pigcelf_dev* adev = pigcelf_allocate_dev(pdev);
-	struct device* dev = &pdev->dev;
+	struct pigcelf_dev *adev = pigcelf_allocate_dev(pdev);
+	struct device *dev = &pdev->dev;
 
 	dev_info(dev, "pigcelf_probe: %d %s", pdev->id, adev->devname);
 
@@ -158,18 +151,19 @@ static void pigcelf_init_site(int site)
 		.irq = 0x42,
 	};
 
-	struct platform_device* pdev =
-			kzalloc(sizeof(struct platform_device), GFP_KERNEL);
+	struct platform_device *pdev =
+		kzalloc(sizeof(struct platform_device), GFP_KERNEL);
 	pdev->name = MODULE_NAME;
 	pdev->id = site;
 	platform_device_register(pdev);
 
 	zynq_spi_goslow_usec_kludge = 0;
 	dev_info(&pdev->dev,
-			"pigcelf_init_site() zynq_spi_goslow_msec_kludge %d",
-			zynq_spi_goslow_usec_kludge);
+		 "pigcelf_init_site() zynq_spi_goslow_msec_kludge %d",
+		 zynq_spi_goslow_usec_kludge);
 	dev_info(&pdev->dev, "pigcelf_init_site() irq %u", imu.irq);
-	dev_info(&pdev->dev, "pigcelf_init_site() set max_speed_hz %u", imu.max_speed_hz);
+	dev_info(&pdev->dev, "pigcelf_init_site() set max_speed_hz %u",
+		 imu.max_speed_hz);
 
 	imu.chip_select = site2cs(site);
 	spi_register_board_info(&imu, 1);
@@ -199,24 +193,20 @@ extern void acq480_hook_spi(void);
 
 static int __init pigcelf_init(void)
 {
-        int status = 0;
-
+	int status = 0;
 
 	printk("D-TACQ pigcelf Driver %s\n", REVID);
-
 
 	platform_driver_register(&pigcelf_driver);
 	pigcelf_proc_root = proc_mkdir("driver/pigcelf", 0);
 
 	acq480_hook_spi();
 	pigcelf_init_site(PIG_CELF_FPGA_SITE);
-        return status;
+	return status;
 }
 
 module_init(pigcelf_init);
 module_exit(pigcelf_exit);
-
-
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("D-TACQ pigcelf i2c/spi Driver");

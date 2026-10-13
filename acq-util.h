@@ -25,15 +25,13 @@
 extern "C" {
 #endif
 
-int acqMakeChannelRange(int channels[], int maxchan, const char* definition);
+int acqMakeChannelRange(int channels[], int maxchan, const char *definition);
 /** 
  *  @definition "-N  N-M  N,M,P  N-"
  *  returns number of selected channels
  */
 
-	
-
-int strsplit(char *str, char *argv[], int maxargs, const char* delim);
+int strsplit(char *str, char *argv[], int maxargs, const char *delim);
 /** strsplit() splits str into args, returns #args. */
 
 void goRealTime(int sched_fifo_priority);
@@ -41,12 +39,9 @@ void goRealTime(int sched_fifo_priority);
 char *getRoot(int devnum);
 int getBufferId(int fc);
 
-
-
 #if defined __cplusplus
 };
-int getenv_default(const char* key, int def = 0);
+int getenv_default(const char *key, int def = 0);
 #endif
 
 #endif /* __ACQ_UTIL_H__ */
-

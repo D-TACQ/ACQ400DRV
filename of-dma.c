@@ -56,10 +56,10 @@ static struct of_dma *of_dma_find_controller(struct of_phandle_args *dma_spec)
 static struct dma_chan *of_dma_router_xlate(struct of_phandle_args *dma_spec,
 					    struct of_dma *ofdma)
 {
-	struct dma_chan		*chan;
-	struct of_dma		*ofdma_target;
-	struct of_phandle_args	dma_spec_target;
-	void			*route_data;
+	struct dma_chan *chan;
+	struct of_dma *ofdma_target;
+	struct of_phandle_args dma_spec_target;
+	void *route_data;
 
 	/* translate the request for the real DMA controller */
 	memcpy(&dma_spec_target, dma_spec, sizeof(dma_spec_target));
@@ -101,12 +101,13 @@ static struct dma_chan *of_dma_router_xlate(struct of_phandle_args *dma_spec,
  * Allocated memory should be freed with appropriate of_dma_controller_free()
  * call.
  */
-int of_dma_controller_register(struct device_node *np,
-				struct dma_chan *(*of_dma_xlate)
-				(struct of_phandle_args *, struct of_dma *),
-				void *data)
+int of_dma_controller_register(
+	struct device_node *np,
+	struct dma_chan *(*of_dma_xlate)(struct of_phandle_args *,
+					 struct of_dma *),
+	void *data)
 {
-	struct of_dma	*ofdma;
+	struct of_dma *ofdma;
 
 	if (!np || !of_dma_xlate) {
 		pr_err("%s: not enough information provided\n", __func__);
@@ -169,11 +170,11 @@ EXPORT_SYMBOL_GPL(of_dma_controller_free);
  * call.
  */
 int of_dma_router_register(struct device_node *np,
-			   void *(*of_dma_route_allocate)
-			   (struct of_phandle_args *, struct of_dma *),
+			   void *(*of_dma_route_allocate)(
+				   struct of_phandle_args *, struct of_dma *),
 			   struct dma_router *dma_router)
 {
-	struct of_dma	*ofdma;
+	struct of_dma *ofdma;
 
 	if (!np || !of_dma_route_allocate || !dma_router) {
 		pr_err("%s: not enough information provided\n", __func__);
@@ -237,12 +238,12 @@ static int of_dma_match_channel(struct device_node *np, const char *name,
 struct dma_chan *of_dma_request_slave_channel(struct device_node *np,
 					      const char *name)
 {
-	struct of_phandle_args	dma_spec;
-	struct of_dma		*ofdma;
-	struct dma_chan		*chan;
-	int			count, i, start;
-	int			ret_no_channel = -ENODEV;
-	static atomic_t		last_index;
+	struct of_phandle_args dma_spec;
+	struct of_dma *ofdma;
+	struct dma_chan *chan;
+	int count, i, start;
+	int ret_no_channel = -ENODEV;
+	static atomic_t last_index;
 
 	if (!np || !name) {
 		pr_err("%s: not enough information provided\n", __func__);
@@ -256,7 +257,7 @@ struct dma_chan *of_dma_request_slave_channel(struct device_node *np,
 	count = of_property_count_strings(np, "dma-names");
 	if (count < 0) {
 		pr_err("%s: dma-names property of node '%pOF' missing or empty\n",
-			__func__, np);
+		       __func__, np);
 		return ERR_PTR(-ENODEV);
 	}
 
@@ -266,8 +267,7 @@ struct dma_chan *of_dma_request_slave_channel(struct device_node *np,
 	 */
 	start = atomic_inc_return(&last_index);
 	for (i = 0; i < count; i++) {
-		if (of_dma_match_channel(np, name,
-					 (i + start) % count,
+		if (of_dma_match_channel(np, name, (i + start) % count,
 					 &dma_spec))
 			continue;
 
@@ -305,7 +305,7 @@ EXPORT_SYMBOL_GPL(of_dma_request_slave_channel);
  * pointer to appropriate dma channel on success or NULL on error.
  */
 struct dma_chan *of_dma_simple_xlate(struct of_phandle_args *dma_spec,
-						struct of_dma *ofdma)
+				     struct of_dma *ofdma)
 {
 	int count = dma_spec->args_count;
 	struct of_dma_filter_info *info = ofdma->of_dma_data;
@@ -317,7 +317,7 @@ struct dma_chan *of_dma_simple_xlate(struct of_phandle_args *dma_spec,
 		return NULL;
 
 	return dma_request_channel(info->dma_cap, info->filter_fn,
-			&dma_spec->args[0]);
+				   &dma_spec->args[0]);
 }
 EXPORT_SYMBOL_GPL(of_dma_simple_xlate);
 

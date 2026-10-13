@@ -27,45 +27,45 @@
 
 int dma_cache_invalidate_limit = -1;
 module_param(dma_cache_invalidate_limit, int, 0644);
-MODULE_PARM_DESC(dma_cache_invalidate_limit, "cache invalidate is expensive .. limit it");
-
+MODULE_PARM_DESC(dma_cache_invalidate_limit,
+		 "cache invalidate is expensive .. limit it");
 
 int pcomp;
 module_param(pcomp, int, 0644);
 MODULE_PARM_DESC(pcomp, "compensate phase (bytes)");
 
-#define ACQ400_FS_MAGIC	0xd1ac0400
+#define ACQ400_FS_MAGIC 0xd1ac0400
 
-#define XX	0
+#define XX 0
 
 struct InodeMap {
 	struct acq400_dev *adev;
 	int site;
-	int channel;			/* 0: XX */
+	int channel; /* 0: XX */
 	//struct inode* inode;
 	unsigned int ino;
 };
 
-#define IS_RAW(map)     ((map)->channel == XX)
+#define IS_RAW(map) ((map)->channel == XX)
 
 /* word: the size of a sample element for single channel, generally 2byte or 4byte */
 struct A400_FS_PDESC {
 	struct InodeMap *map;
-	int word_offset;          /* number of words in the the data set */
-	unsigned buffer_offset;   /* number of bytes into the buffer */
-	int stride;               /* number of words to skip to get to next element */
-	int lbuf_len;		  /* optional local bounce buffer */
-	void* lbuf;
+	int word_offset; /* number of words in the the data set */
+	unsigned buffer_offset; /* number of bytes into the buffer */
+	int stride; /* number of words to skip to get to next element */
+	int lbuf_len; /* optional local bounce buffer */
+	void *lbuf;
 };
 
-#define FS_DESC(file)		((struct A400_FS_PDESC*)((file)->private_data))
+#define FS_DESC(file) ((struct A400_FS_PDESC *)((file)->private_data))
 
 struct FS_NODES {
 	struct super_block *sb;
 	struct inode *root;
 	struct dentry *root_dentry;
 	struct dentry *rawdir;
-	struct dentry *chandata[MAXDEVICES+1]; /* index from 1 */
+	struct dentry *chandata[MAXDEVICES + 1]; /* index from 1 */
 
 	int nmap;
 	struct InodeMap *site0;
@@ -78,41 +78,41 @@ struct FS_NODES {
 struct CaptureData {
 	int is_cooked;
 	int nsamples;
-	int nchan;	/* number of channels the demuxer thought it was working with */
-	char typ[8];	/* "short" or "long" */
+	int nchan; /* number of channels the demuxer thought it was working with */
+	char typ[8]; /* "short" or "long" */
 } CAPDAT;
 
 static struct file_operations a400fs_chan_file_muxdata_ops;
 
-struct InodeMap* lookup_ino(unsigned ino)
+struct InodeMap *lookup_ino(unsigned ino)
 {
 	int ii;
-	struct InodeMap* pmap = FSN.maps;
+	struct InodeMap *pmap = FSN.maps;
 
-	for (ii = 0; ii < FSN.imap; ++ii, ++pmap){
-		if (pmap->ino == ino){
+	for (ii = 0; ii < FSN.imap; ++ii, ++pmap) {
+		if (pmap->ino == ino) {
 			return pmap;
 		}
 	}
 	return 0;
 }
 
-
 static unsigned update_inode_stats(struct inode *inode)
 {
-	struct InodeMap* pmap = lookup_ino(inode->i_ino);
+	struct InodeMap *pmap = lookup_ino(inode->i_ino);
 
-	if (!pmap){
+	if (!pmap) {
 		return inode->i_size;
-	}else if (pmap->channel > pmap->adev->nchan_enabled){
+	} else if (pmap->channel > pmap->adev->nchan_enabled) {
 		return 0;
-	}else{
-		loff_t i_size = CAPDAT.nsamples * pmap->adev->word_size; /* valid for CH */
+	} else {
+		loff_t i_size = CAPDAT.nsamples *
+				pmap->adev->word_size; /* valid for CH */
 
-		if (pmap->site == XX && pmap->site == 0){
-			if (!CAPDAT.is_cooked){
-				i_size *= CAPDAT.nchan;			/* XX valid RAW only */
-			}else{
+		if (pmap->site == XX && pmap->site == 0) {
+			if (!CAPDAT.is_cooked) {
+				i_size *= CAPDAT.nchan; /* XX valid RAW only */
+			} else {
 				i_size = 0;
 			}
 		}
@@ -122,9 +122,9 @@ static unsigned update_inode_stats(struct inode *inode)
 }
 
 static int ai_getattr(const struct path *path, struct kstat *stat,
-		 u32 request_mask, unsigned int query_flags)
+		      u32 request_mask, unsigned int query_flags)
 {
-	struct acq400_dev* adev0 = FSN.site0->adev;
+	struct acq400_dev *adev0 = FSN.site0->adev;
 	struct inode *inode = d_inode(path->dentry);
 	int was;
 
@@ -133,15 +133,14 @@ static int ai_getattr(const struct path *path, struct kstat *stat,
 	stat->size = update_inode_stats(inode);
 	stat->mtime = inode->i_mtime;
 
-	dev_dbg(DEVP(adev0), "%s 99 inode:%lu was:%d size:%lld", __FUNCTION__, inode->i_ino,  was, stat->size);
+	dev_dbg(DEVP(adev0), "%s 99 inode:%lu was:%d size:%lld", __FUNCTION__,
+		inode->i_ino, was, stat->size);
 	return 0;
 }
-
 
 static struct inode *a400fs_make_inode(struct super_block *sb, int mode)
 {
 	struct inode *inode = new_inode(sb);
-
 
 	if (inode) {
 		inode->i_ino = get_next_ino();
@@ -149,30 +148,32 @@ static struct inode *a400fs_make_inode(struct super_block *sb, int mode)
 		inode->i_uid = KUIDT_INIT(0);
 		inode->i_gid = KGIDT_INIT(0);
 		inode->i_blocks = 0;
-		inode->i_atime = inode->i_mtime = inode->i_ctime = current_time(inode);
+		inode->i_atime = inode->i_mtime = inode->i_ctime =
+			current_time(inode);
 	}
 	dev_dbg(0, "%s return inode %lu", __FUNCTION__, inode->i_ino);
 	return inode;
 }
 
-
-int raw_offset_w(struct InodeMap* map)
+int raw_offset_w(struct InodeMap *map)
 {
-	struct acq400_dev* adev0 = FSN.site0->adev;
-	struct acq400_sc_dev* sc_dev = container_of(adev0, struct acq400_sc_dev, adev);
+	struct acq400_dev *adev0 = FSN.site0->adev;
+	struct acq400_sc_dev *sc_dev =
+		container_of(adev0, struct acq400_sc_dev, adev);
 
 	int offset;
 	int ia;
-	for (offset = 0, ia = 0; ia < MAXDEVICES; ++ia){
-		dev_dbg(DEVP(adev0), "compare site %d [%d] ret %d",
-							map->site, ia, offset);
-		if (sc_dev->aggregator_set[ia] == 0){
-			dev_err(DEVP(adev0), "WARNING: empty aggregator set element %d", ia);
-		}else if (sc_dev->aggregator_set[ia] == map->adev){
+	for (offset = 0, ia = 0; ia < MAXDEVICES; ++ia) {
+		dev_dbg(DEVP(adev0), "compare site %d [%d] ret %d", map->site,
+			ia, offset);
+		if (sc_dev->aggregator_set[ia] == 0) {
+			dev_err(DEVP(adev0),
+				"WARNING: empty aggregator set element %d", ia);
+		} else if (sc_dev->aggregator_set[ia] == map->adev) {
 			dev_dbg(DEVP(adev0), "found site %d [%d] ret %d",
-					map->site, ia, offset);
+				map->site, ia, offset);
 			return offset;
-		}else{
+		} else {
 			offset += sc_dev->aggregator_set[ia]->nchan_enabled;
 		}
 	}
@@ -181,12 +182,13 @@ int raw_offset_w(struct InodeMap* map)
 	return -1;
 }
 
-int chan_offset_w(struct InodeMap* map)
+int chan_offset_w(struct InodeMap *map)
 {
 	int raw_off = raw_offset_w(map);
-	if (raw_off >= 0){
-		return raw_off + map->channel - 1; /* assumes no gaps in channel set */
-	}else{
+	if (raw_off >= 0) {
+		return raw_off + map->channel -
+		       1; /* assumes no gaps in channel set */
+	} else {
 		return raw_off;
 	}
 }
@@ -196,7 +198,7 @@ int get_buffer_offset_b(int word_offset)
 	int buffer_len = FSN.site0->adev->bufferlen;
 	int totchan = CAPDAT.nchan;
 
-	return word_offset*buffer_len/totchan;
+	return word_offset * buffer_len / totchan;
 }
 /*
  * Open a file.  All we have to do here is to copy over a
@@ -204,50 +206,56 @@ int get_buffer_offset_b(int word_offset)
  */
 static int a400fs_open(struct inode *inode, struct file *file)
 {
-	struct A400_FS_PDESC* pd = kzalloc(sizeof(struct A400_FS_PDESC), GFP_KERNEL);
+	struct A400_FS_PDESC *pd =
+		kzalloc(sizeof(struct A400_FS_PDESC), GFP_KERNEL);
 	int rc = 0;
-#define RETERR(errcode) do { 						 	\
-		rc = errcode;								\
-		dev_err(0, "ERROR: a400fs_open() at line %d rc %d", __LINE__, rc);	\
-}while(0)
+#define RETERR(errcode)                                                       \
+	do {                                                                  \
+		rc = errcode;                                                 \
+		dev_err(0, "ERROR: a400fs_open() at line %d rc %d", __LINE__, \
+			rc);                                                  \
+	} while (0)
 
-	if (pd == 0){
+	if (pd == 0) {
 		RETERR(-ENODEV);
 
-	}else if ((pd->map = lookup_ino(inode->i_ino)) == 0){
+	} else if ((pd->map = lookup_ino(inode->i_ino)) == 0) {
 		RETERR(-ENODEV);
-	}else if (IS_RAW(pd->map)){
+	} else if (IS_RAW(pd->map)) {
 		file->private_data = pd;
 		pd->buffer_offset = get_buffer_offset_b(pd->word_offset);
 		pd->stride = 1;
 		return 0;
-	}else if ((pd->word_offset = chan_offset_w(pd->map)) < 0){
+	} else if ((pd->word_offset = chan_offset_w(pd->map)) < 0) {
 		RETERR(-ENODEV);
-	}else{
+	} else {
 		file->private_data = pd;
-		if (CAPDAT.is_cooked == 0){
+		if (CAPDAT.is_cooked == 0) {
 			file->f_op = &a400fs_chan_file_muxdata_ops;
 			return file->f_op->open(inode, file);
-		}else{
-			pd->buffer_offset = get_buffer_offset_b(pd->word_offset);
+		} else {
+			pd->buffer_offset =
+				get_buffer_offset_b(pd->word_offset);
 			pd->stride = 1;
 
-			dev_dbg(DEVP(pd->map->adev), "%s %d.%d wo:%d bo:%d", __FUNCTION__,
-					pd->map->site, pd->map->channel, pd->word_offset, pd->buffer_offset);
+			dev_dbg(DEVP(pd->map->adev), "%s %d.%d wo:%d bo:%d",
+				__FUNCTION__, pd->map->site, pd->map->channel,
+				pd->word_offset, pd->buffer_offset);
 			return 0;
 		}
 	}
 
 	dev_err(0, "a400fs_open FAIL\n");
-	if (pd) kfree(pd);
+	if (pd)
+		kfree(pd);
 	return rc;
 }
 
 static int a400fs_open_chan_file_muxdata(struct inode *inode, struct file *file)
 /* here with pd already part configured. */
 {
-	struct A400_FS_PDESC* pd = FS_DESC(file);
-	struct acq400_dev* adev0 = FSN.site0->adev;
+	struct A400_FS_PDESC *pd = FS_DESC(file);
+	struct acq400_dev *adev0 = FSN.site0->adev;
 
 	pd->buffer_offset = pd->word_offset * adev0->word_size;
 	pd->stride = CAPDAT.nchan;
@@ -256,21 +264,22 @@ static int a400fs_open_chan_file_muxdata(struct inode *inode, struct file *file)
 
 int _a400fs_open_raw(struct inode *inode, struct file *file)
 {
-	struct acq400_dev* adev = FSN.site0->adev;
+	struct acq400_dev *adev = FSN.site0->adev;
 	int bufferlen = adev->bufferlen;
-	int setlen = CAPDAT.nsamples*adev->word_size*CAPDAT.nchan;
+	int setlen = CAPDAT.nsamples * adev->word_size * CAPDAT.nchan;
 	int ibuf;
 
 	if (dma_cache_invalidate_limit != -1 &&
-			setlen > dma_cache_invalidate_limit){
+	    setlen > dma_cache_invalidate_limit) {
 		setlen = dma_cache_invalidate_limit;
 	}
-	for (ibuf = 0; ibuf*bufferlen <= setlen; ++ibuf){
+	for (ibuf = 0; ibuf * bufferlen <= setlen; ++ibuf) {
 		struct HBM *hbm = adev->hb[ibuf];
 		dev_dbg(DEVP(adev),
 			"_a400fs_open_raw() dma_sync_single_for_cpu: pa:0x%08x len:%d dir:%d",
-						hbm->pa, hbm->len, hbm->dir);
-		dma_sync_single_for_cpu(DEVP(adev), hbm->pa, hbm->len, DMA_FROM_DEVICE);
+			hbm->pa, hbm->len, hbm->dir);
+		dma_sync_single_for_cpu(DEVP(adev), hbm->pa, hbm->len,
+					DMA_FROM_DEVICE);
 	}
 
 	return 0;
@@ -280,9 +289,9 @@ int a400fs_open_raw(struct inode *inode, struct file *file)
 	int rc = a400fs_open(inode, file);
 	unsigned acc_mode = file->f_flags & O_ACCMODE;
 
-	if (rc == 0 && (acc_mode==O_RDONLY || acc_mode==O_RDWR)){
+	if (rc == 0 && (acc_mode == O_RDONLY || acc_mode == O_RDWR)) {
 		return _a400fs_open_raw(inode, file);
-	}else{
+	} else {
 		return rc;
 	}
 }
@@ -315,33 +324,34 @@ static ssize_t a400fs_read_file(struct file *file, char *buf,
  * offset: offset in bytes
  */
 
-ssize_t _a400fs_read_raw_file(struct file *file, char *buf,
-		size_t count, loff_t *offset)
+ssize_t _a400fs_read_raw_file(struct file *file, char *buf, size_t count,
+			      loff_t *offset)
 {
-	struct acq400_dev* adev0 = FSN.site0->adev;
-	int foffset = (int)*offset;			/* we don't have 4GB */
+	struct acq400_dev *adev0 = FSN.site0->adev;
+	int foffset = (int)*offset; /* we don't have 4GB */
 	int bufferlen = adev0->bufferlen;
-	int ibuf = foffset/bufferlen;
-	int buff_offset = foffset - ibuf*bufferlen;
+	int ibuf = foffset / bufferlen;
+	int buff_offset = foffset - ibuf * bufferlen;
 	int buf_headroom = bufferlen - buff_offset;
-	int set_headroom = CAPDAT.nsamples*adev0->word_size*CAPDAT.nchan - foffset;
+	int set_headroom =
+		CAPDAT.nsamples * adev0->word_size * CAPDAT.nchan - foffset;
 
 	int headroom = min(buf_headroom, set_headroom);
 
 	dev_dbg(DEVP(adev0), "%s [%d] + %d head:%d count:%d", __FUNCTION__,
-			ibuf, buff_offset, headroom, count);
+		ibuf, buff_offset, headroom, count);
 
-	if (set_headroom <= 0){
+	if (set_headroom <= 0) {
 		return 0;
-	}else if (!(ibuf >= 0 || ibuf < adev0->nbuffers)){
+	} else if (!(ibuf >= 0 || ibuf < adev0->nbuffers)) {
 		dev_err(DEVP(adev0), "bad ibuf %d", ibuf);
 		return -1;
-	}else{
-		char *bp = (char*)(adev0->hb[ibuf]->va);
-		if (count > headroom){
+	} else {
+		char *bp = (char *)(adev0->hb[ibuf]->va);
+		if (count > headroom) {
 			count = headroom;
 		}
-		if (copy_to_user(buf, bp+buff_offset, count)){
+		if (copy_to_user(buf, bp + buff_offset, count)) {
 			return -EFAULT;
 		}
 		*offset += count;
@@ -349,86 +359,89 @@ ssize_t _a400fs_read_raw_file(struct file *file, char *buf,
 	}
 }
 
-static ssize_t a400fs_read_raw_file(struct file *file, char *buf,
-		size_t count, loff_t *offset)
+static ssize_t a400fs_read_raw_file(struct file *file, char *buf, size_t count,
+				    loff_t *offset)
 {
-	struct acq400_dev* adev0 = FSN.site0->adev;
+	struct acq400_dev *adev0 = FSN.site0->adev;
 
-	if (adev0->bufferlen){
+	if (adev0->bufferlen) {
 		return _a400fs_read_raw_file(file, buf, count, offset);
-	}else{
+	} else {
 		dev_err(DEVP(adev0), "bufferlen not set");
 		return -1;
 	}
 }
 
-static ssize_t a400fs_read_chan_file(struct file *file, char *buf,
-		size_t count, loff_t *offset)
+static ssize_t a400fs_read_chan_file(struct file *file, char *buf, size_t count,
+				     loff_t *offset)
 {
-	struct A400_FS_PDESC* pd = FS_DESC(file);
-	struct acq400_dev* adev0 = FSN.site0->adev;
-	int _foffset = (int)*offset;			/* we don't have 4GB */
-	int foffset = _foffset == 0? pcomp: _foffset;
-	int bufferlen = adev0->bufferlen/CAPDAT.nchan;
-	int ibuf = foffset/bufferlen;
-	int buff_offset = foffset - ibuf*bufferlen;	/* independent of stride */
+	struct A400_FS_PDESC *pd = FS_DESC(file);
+	struct acq400_dev *adev0 = FSN.site0->adev;
+	int _foffset = (int)*offset; /* we don't have 4GB */
+	int foffset = _foffset == 0 ? pcomp : _foffset;
+	int bufferlen = adev0->bufferlen / CAPDAT.nchan;
+	int ibuf = foffset / bufferlen;
+	int buff_offset =
+		foffset - ibuf * bufferlen; /* independent of stride */
 	int buf_headroom = bufferlen - buff_offset;
-	int set_headroom = CAPDAT.nsamples*adev0->word_size + pcomp - foffset;
-	int cursor = buff_offset+pd->buffer_offset;
+	int set_headroom = CAPDAT.nsamples * adev0->word_size + pcomp - foffset;
+	int cursor = buff_offset + pd->buffer_offset;
 
 	int headroom = min(buf_headroom, set_headroom);
 
-	if (_foffset == 0 && pcomp){
+	if (_foffset == 0 && pcomp) {
 		*offset += pcomp;
 	}
-	if (pd->map->channel > pd->map->adev->nchan_enabled){
+	if (pd->map->channel > pd->map->adev->nchan_enabled) {
 		return -1;
-	}else if (set_headroom <= 0){
+	} else if (set_headroom <= 0) {
 		return 0;
-	}else if (!(ibuf >= 0 || ibuf < adev0->nbuffers)){
+	} else if (!(ibuf >= 0 || ibuf < adev0->nbuffers)) {
 		dev_err(DEVP(adev0), "%s bad ibuf %d", __FUNCTION__, ibuf);
 		return -ENOMEM;
-	}else{
-		char *bp = (char*)(adev0->hb[ibuf]->va);
+	} else {
+		char *bp = (char *)(adev0->hb[ibuf]->va);
 
 		dev_dbg(DEVP(adev0), "[%d] %p %p + %d->%d ^%d head:%d count:%d",
-					ibuf, bp, bp+cursor,
-					pd->buffer_offset, buff_offset,
-					cursor, headroom, count);
+			ibuf, bp, bp + cursor, pd->buffer_offset, buff_offset,
+			cursor, headroom, count);
 
-		if (count > headroom){
+		if (count > headroom) {
 			count = headroom;
 		}
-		if (pd->stride == 1){
-			if (copy_to_user(buf, bp+cursor, count)){
+		if (pd->stride == 1) {
+			if (copy_to_user(buf, bp + cursor, count)) {
 				return -EFAULT;
 			}
 			*offset += count;
-		}else{
+		} else {
 			int wsize = adev0->word_size;
 			int wcount;
 			int iw;
-			if (!pd->lbuf){
+			if (!pd->lbuf) {
 				/* lazy allocation .. chances are all calls to
 				 * read() in a single session will have same (or smaller) count
 				 * free() on release.
 				 */
 				pd->lbuf = kmalloc(count, GFP_KERNEL);
 				pd->lbuf_len = count;
-			}else if (unlikely(count > pd->lbuf_len)){
+			} else if (unlikely(count > pd->lbuf_len)) {
 				count = pd->lbuf_len;
 			}
 			count /= pd->stride;
-			wcount = count/wsize;
-			dev_dbg(DEVP(adev0), "stride:%d count:%d wcount:%d", pd->stride, count, wcount);
+			wcount = count / wsize;
+			dev_dbg(DEVP(adev0), "stride:%d count:%d wcount:%d",
+				pd->stride, count, wcount);
 
-			for (iw = 0; iw < wcount; ++iw){
-				memcpy(pd->lbuf+iw*wsize, bp+cursor+iw*pd->stride*wsize, wsize);
+			for (iw = 0; iw < wcount; ++iw) {
+				memcpy(pd->lbuf + iw * wsize,
+				       bp + cursor + iw * pd->stride * wsize,
+				       wsize);
 			}
-			if (copy_to_user(buf, pd->lbuf, iw*wsize)){
+			if (copy_to_user(buf, pd->lbuf, iw * wsize)) {
 				return -EFAULT;
 			}
-			*offset += count*pd->stride;
+			*offset += count * pd->stride;
 		}
 
 		return count;
@@ -438,85 +451,101 @@ static ssize_t a400fs_read_chan_file(struct file *file, char *buf,
 int32_t thing;
 int16_t other_thin;
 
-static void cp_muxdata_lbuf_int32_t(int32_t* dst, int32_t* src, int headsam, int stride){
+static void cp_muxdata_lbuf_int32_t(int32_t *dst, int32_t *src, int headsam,
+				    int stride)
+{
 	int iw;
 
 	dev_dbg(DEVP(FSN.site0->adev), "%s src:%p dst:%p headsam:%d stride:%d",
-			__FUNCTION__, src, dst, headsam, stride);
+		__FUNCTION__, src, dst, headsam, stride);
 
-	for (iw = 0; iw < headsam; ++iw){
-		dst[iw] = src[iw*stride];
+	for (iw = 0; iw < headsam; ++iw) {
+		dst[iw] = src[iw * stride];
 	}
 }
 
-static void cp_muxdata_lbuf_int16_t(int16_t* dst, int16_t* src, int headsam, int stride){
+static void cp_muxdata_lbuf_int16_t(int16_t *dst, int16_t *src, int headsam,
+				    int stride)
+{
 	int iw;
 
 	dev_dbg(DEVP(FSN.site0->adev), "%s src:%p dst:%p headsam:%d stride:%d",
-			__FUNCTION__, src, dst, headsam, stride);
+		__FUNCTION__, src, dst, headsam, stride);
 
-	for (iw = 0; iw < headsam; ++iw){
-		dst[iw] = src[iw*stride];
+	for (iw = 0; iw < headsam; ++iw) {
+		dst[iw] = src[iw * stride];
 	}
 }
 
 static ssize_t a400fs_read_chan_file_muxdata(struct file *file, char *buf,
-		size_t count, loff_t *offset)
+					     size_t count, loff_t *offset)
 /* offset in bytes */
 {
-	struct A400_FS_PDESC* pd = FS_DESC(file);
-	struct acq400_dev* adev0 = FSN.site0->adev;
+	struct A400_FS_PDESC *pd = FS_DESC(file);
+	struct acq400_dev *adev0 = FSN.site0->adev;
 	const int bufferlen = adev0->bufferlen;
 	const int word_size = adev0->word_size;
-	const int ssb = CAPDAT.nchan*word_size;
+	const int ssb = CAPDAT.nchan * word_size;
 
 	int rc = -EINVAL;
 
-	int foffset = *offset == 0? *offset += pcomp: *offset;          /* file offset bytes 		*/
-	int fsam = foffset/word_size;					/* file offset samples 		*/
-	int buffer_sam = bufferlen/ssb;					/* samples in buffer 		*/
+	int foffset = *offset == 0 ? *offset += pcomp :
+				     *offset; /* file offset bytes 		*/
+	int fsam = foffset / word_size; /* file offset samples 		*/
+	int buffer_sam = bufferlen / ssb; /* samples in buffer 		*/
 
-	int ibuf = fsam/buffer_sam;					/* buffer index 		*/
-	int buff_offset_sam = fsam - ibuf*buffer_sam;			/* sample offset in this buffer */
+	int ibuf = fsam / buffer_sam; /* buffer index 		*/
+	int buff_offset_sam =
+		fsam - ibuf * buffer_sam; /* sample offset in this buffer */
 	int buf_headsam = buffer_sam - buff_offset_sam;
-	int buff_offset = buff_offset_sam*ssb + pd->buffer_offset;	/* byte offset of data in buffer */
-	int buff_offset_w = buff_offset/word_size;			/* word offset of data in buffer */
+	int buff_offset = buff_offset_sam * ssb +
+			  pd->buffer_offset; /* byte offset of data in buffer */
+	int buff_offset_w =
+		buff_offset / word_size; /* word offset of data in buffer */
 
-	int set_headsam = CAPDAT.nsamples - fsam;			/* total set headroom, samples	*/
+	int set_headsam =
+		CAPDAT.nsamples - fsam; /* total set headroom, samples	*/
 
-	int headsam = min(buf_headsam, set_headsam);			/* current call headroom, samples */
+	int headsam = min(buf_headsam,
+			  set_headsam); /* current call headroom, samples */
 	int headcount = headsam * word_size;
 
-	dev_dbg(DEVP(adev0), "%s 01 count:%d offset:%d buflen:%d ssb:%d headsam:%d stride:%d",
-			__FUNCTION__, count, foffset, bufferlen, ssb, headsam, pd->stride);
+	dev_dbg(DEVP(adev0),
+		"%s 01 count:%d offset:%d buflen:%d ssb:%d headsam:%d stride:%d",
+		__FUNCTION__, count, foffset, bufferlen, ssb, headsam,
+		pd->stride);
 
-	if (count > headcount){
+	if (count > headcount) {
 		count = headcount;
-	}else if (headcount > count){
+	} else if (headcount > count) {
 		headcount = count;
-		headsam = headcount/word_size;
+		headsam = headcount / word_size;
 	}
-	dev_dbg(DEVP(adev0), "%s 02 count:%d offset:%d buflen:%d ssb:%d headsam:%d",
-			__FUNCTION__, count, foffset, bufferlen, ssb, headsam);
+	dev_dbg(DEVP(adev0),
+		"%s 02 count:%d offset:%d buflen:%d ssb:%d headsam:%d",
+		__FUNCTION__, count, foffset, bufferlen, ssb, headsam);
 
-	if (pd->map->channel > pd->map->adev->nchan_enabled){
-		dev_err(DEVP(adev0), "%s channel %d not enabled", __FUNCTION__, pd->map->channel);
+	if (pd->map->channel > pd->map->adev->nchan_enabled) {
+		dev_err(DEVP(adev0), "%s channel %d not enabled", __FUNCTION__,
+			pd->map->channel);
 		rc = -ENODEV;
-	}else if (headsam <= 0){
-		return 0; 		/* finished */
-	}else if (!(ibuf >= 0 && ibuf < adev0->nbuffers)){
+	} else if (headsam <= 0) {
+		return 0; /* finished */
+	} else if (!(ibuf >= 0 && ibuf < adev0->nbuffers)) {
 		dev_err(DEVP(adev0), "%s bad ibuf %d", __FUNCTION__, ibuf);
 		rc = -ENOMEM;
-	}else if (word_size != sizeof(short) && word_size != sizeof(int)){
-		dev_err(DEVP(adev0), "%s bad word size %d", __FUNCTION__, word_size);
+	} else if (word_size != sizeof(short) && word_size != sizeof(int)) {
+		dev_err(DEVP(adev0), "%s bad word size %d", __FUNCTION__,
+			word_size);
 		rc = -ENODEV;
-	}else{
+	} else {
+		dev_dbg(DEVP(adev0),
+			"%s channel %d, bo:%d ibuf:%d buff_offset:%d ssb:%d",
+			__FUNCTION__, pd->map->channel, pd->buffer_offset, ibuf,
+			buff_offset, ssb);
 
-		dev_dbg(DEVP(adev0), "%s channel %d, bo:%d ibuf:%d buff_offset:%d ssb:%d",
-				__FUNCTION__, pd->map->channel, pd->buffer_offset, ibuf, buff_offset, ssb);
-
-		if (count > pd->lbuf_len){
-			if (pd->lbuf){
+		if (count > pd->lbuf_len) {
+			if (pd->lbuf) {
 				kfree(pd->lbuf);
 			}
 			/* lazy allocation .. chances are all calls to
@@ -526,14 +555,22 @@ static ssize_t a400fs_read_chan_file_muxdata(struct file *file, char *buf,
 			pd->lbuf = kmalloc(pd->lbuf_len = count, GFP_KERNEL);
 		}
 
-		if (word_size == sizeof(short)){
-			cp_muxdata_lbuf_int16_t((int16_t*)pd->lbuf, (int16_t*)(adev0->hb[ibuf]->va)+buff_offset_w, headsam, pd->stride);
-		}else{    /* it's OK we checked earlier */
-			cp_muxdata_lbuf_int32_t((int32_t*)pd->lbuf, (int32_t*)(adev0->hb[ibuf]->va)+buff_offset_w, headsam, pd->stride);
+		if (word_size == sizeof(short)) {
+			cp_muxdata_lbuf_int16_t(
+				(int16_t *)pd->lbuf,
+				(int16_t *)(adev0->hb[ibuf]->va) +
+					buff_offset_w,
+				headsam, pd->stride);
+		} else { /* it's OK we checked earlier */
+			cp_muxdata_lbuf_int32_t(
+				(int32_t *)pd->lbuf,
+				(int32_t *)(adev0->hb[ibuf]->va) +
+					buff_offset_w,
+				headsam, pd->stride);
 		}
-		if (copy_to_user(buf, pd->lbuf, count)){
+		if (copy_to_user(buf, pd->lbuf, count)) {
 			rc = -EFAULT;
-		}else{
+		} else {
 			*offset += count;
 			rc = count;
 		}
@@ -545,29 +582,30 @@ static ssize_t a400fs_read_chan_file_muxdata(struct file *file, char *buf,
  * Write a file.
  */
 static ssize_t a400fs_write_file(struct file *file, const char *buf,
-		size_t count, loff_t *offset)
+				 size_t count, loff_t *offset)
 {
 	return -EPERM;
 }
 
 int a400fs_release(struct inode *inode, struct file *file)
 {
-	struct A400_FS_PDESC* pd = FS_DESC(file);
+	struct A400_FS_PDESC *pd = FS_DESC(file);
 
 	dev_dbg(DEVP(pd->map->adev), "a400fs_release() : %d.%d wo:%d bo:%d",
-		pd->map->site, pd->map->channel, pd->word_offset, pd->buffer_offset);
+		pd->map->site, pd->map->channel, pd->word_offset,
+		pd->buffer_offset);
 
-	if (pd->lbuf) kfree(pd->lbuf);
+	if (pd->lbuf)
+		kfree(pd->lbuf);
 	kfree(pd);
 	return 0;
 }
 
-
-static long
-a400fs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+static long a400fs_unlocked_ioctl(struct file *file, unsigned int cmd,
+				  unsigned long arg)
 {
-	struct A400_FS_PDESC* pd = FS_DESC(file);
-	switch(cmd){
+	struct A400_FS_PDESC *pd = FS_DESC(file);
+	switch (cmd) {
 	case ACQ400_FS_STRIDE:
 		pd->stride = arg;
 		return 0;
@@ -586,99 +624,94 @@ a400fs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 /* returns data for one channel post-demux, result cooked[ch][:] */
 static struct file_operations a400fs_chan_file_ops = {
-	.open	= a400fs_open,
-	.read 	= a400fs_read_chan_file,
-	.write  = a400fs_write_file,
+	.open = a400fs_open,
+	.read = a400fs_read_chan_file,
+	.write = a400fs_write_file,
 	.unlocked_ioctl = a400fs_unlocked_ioctl,
 	.llseek = generic_file_llseek,
-	.release= a400fs_release
+	.release = a400fs_release
 };
 
 /* returns raw data (all channels, no demux), result rawdat[:][:] */
 static struct file_operations a400fs_raw_file_ops = {
-	.open	= a400fs_open_raw,
-	.read 	= a400fs_read_raw_file,
-	.write  = a400fs_write_file,
-	.release= a400fs_release
+	.open = a400fs_open_raw,
+	.read = a400fs_read_raw_file,
+	.write = a400fs_write_file,
+	.release = a400fs_release
 };
 
 /* returns channel data without demux, result rawdat[:][ch] */
 static struct file_operations a400fs_chan_file_muxdata_ops = {
-	.open	= a400fs_open_chan_file_muxdata,
-	.read 	= a400fs_read_chan_file_muxdata,
-	.write  = a400fs_write_file,
+	.open = a400fs_open_chan_file_muxdata,
+	.read = a400fs_read_chan_file_muxdata,
+	.write = a400fs_write_file,
 	.unlocked_ioctl = a400fs_unlocked_ioctl,
 	.llseek = generic_file_llseek,
-	.release= a400fs_release
+	.release = a400fs_release
 };
-
-
 
 /*
  * Create a file mapping a name to a counter.
  */
-static struct inode *a400fs_create_file (struct super_block *sb,
-		struct dentry *dir, const char *name,
-		struct file_operations* fops,
-		struct InodeMap* inodeMap)
+static struct inode *a400fs_create_file(struct super_block *sb,
+					struct dentry *dir, const char *name,
+					struct file_operations *fops,
+					struct InodeMap *inodeMap)
 {
-	static struct inode_operations inops = {
-		.getattr = ai_getattr
-	};
+	static struct inode_operations inops = { .getattr = ai_getattr };
 	struct dentry *dentry;
 	struct inode *inode;
-/*
+	/*
  * Now we can create our dentry and the inode to go with it.
  */
 
 	dentry = d_alloc_name(dir, name);
-	if (! dentry)
+	if (!dentry)
 		goto out;
 	inode = a400fs_make_inode(sb, S_IFREG | 0644);
-	if (! inode)
+	if (!inode)
 		goto out_dput;
 	inode->i_fop = fops;
 	inode->i_op = &inops;
 	if (inodeMap) {
 		inodeMap->ino = inode->i_ino;
 	}
-/*
+	/*
  * Put it all into the dentry cache and we're done.
  */
 	d_add(dentry, inode);
 	dev_dbg(0, "%s 98 SUCCESS \"%s\"", __FUNCTION__, name);
 	return inode;
-/*
+	/*
  * Then again, maybe it didn't work.
  */
-  out_dput:
+out_dput:
 	dput(dentry);
-  out:
-  	dev_warn(0, "%s 99 FAILED to create \"%s\"", __FUNCTION__, name);
+out:
+	dev_warn(0, "%s 99 FAILED to create \"%s\"", __FUNCTION__, name);
 	return 0;
 }
-
-
 
 /*
  * Create a directory which can be used to hold files.  This code is
  * almost identical to the "create file" logic, except that we create
  * the inode with a different mode, and use the libfs "simple" operations.
  */
-static struct dentry *a400fs_create_dir (struct super_block *sb,
-		struct dentry *parent, const char *name)
+static struct dentry *a400fs_create_dir(struct super_block *sb,
+					struct dentry *parent, const char *name)
 {
 	struct dentry *dentry;
 	struct inode *inode;
 
 	dentry = d_alloc_name(parent, name);
-	if (! dentry){
+	if (!dentry) {
 		return NULL;
 	}
 
 	inode = a400fs_make_inode(sb, S_IFDIR | 0644);
 	if (!inode) {
-		dev_warn(0, "%s 99 FAILED to create \"%s\"", __FUNCTION__, name);
+		dev_warn(0, "%s 99 FAILED to create \"%s\"", __FUNCTION__,
+			 name);
 		dput(dentry);
 		return NULL;
 	}
@@ -688,44 +721,37 @@ static struct dentry *a400fs_create_dir (struct super_block *sb,
 	d_add(dentry, inode);
 	dev_dbg(0, "%s 98 SUCCESS \"%s\"", __FUNCTION__, name);
 	return dentry;
-
 }
 
 #define a400fs_create_raw_file a400fs_create_file
 #define a400fs_create_channel_file a400fs_create_file
 
+static const char *channels[] = { "00error", "01", "02", "03", "04", "05", "06",
+				  "07",	     "08", "09", "10", "11", "12", "13",
+				  "14",	     "15", "16", "17", "18", "19", "20",
+				  "21",	     "22", "23", "24", "25", "26", "27",
+				  "28",	     "29", "30", "31", "32" };
 
-
-static const char* channels[] = {
-	"00error",
-	"01", "02", "03", "04", "05", "06", "07", "08",
-	"09", "10", "11", "12", "13", "14", "15", "16",
-	"17", "18", "19", "20", "21", "22", "23", "24",
-	"25", "26", "27", "28", "29", "30", "31", "32"
-};
-
-struct InodeMap*
-_build_mapping(struct FS_NODES *fsn, struct acq400_dev *adev,
-		int site, int channel)
+struct InodeMap *_build_mapping(struct FS_NODES *fsn, struct acq400_dev *adev,
+				int site, int channel)
 {
 	struct InodeMap map;
 	int ii = fsn->imap++;
 	map.adev = adev;
 	map.site = site;
 	map.channel = channel;
-	fsn->maps[ii] = map;	/* STRUCTURE COPY */
-	if (map.site == 0){
+	fsn->maps[ii] = map; /* STRUCTURE COPY */
+	if (map.site == 0) {
 		fsn->site0 = &fsn->maps[ii];
 	}
 	return &fsn->maps[ii];
 }
-struct InodeMap*
-build_mapping(struct FS_NODES *fsn, struct acq400_dev *adev,
-		int site, int channel)
+struct InodeMap *build_mapping(struct FS_NODES *fsn, struct acq400_dev *adev,
+			       int site, int channel)
 {
-	if (likely(fsn->imap < fsn->nmap)){
+	if (likely(fsn->imap < fsn->nmap)) {
 		return _build_mapping(fsn, adev, site, channel);
-	}else{
+	} else {
 		dev_err(DEVP(adev), "ERROR mapping count mismatch");
 		return 0;
 	}
@@ -736,55 +762,56 @@ void a400fs_add_site(int site, struct acq400_dev *adev, struct FS_NODES *fsn)
 	int ic;
 	struct inode *inode;
 
-	dev_info(DEVP(adev), "a400fs_add_site() 01 site:%d sb:%p",
-			site, fsn->sb);
+	dev_info(DEVP(adev), "a400fs_add_site() 01 site:%d sb:%p", site,
+		 fsn->sb);
 
-	inode = a400fs_create_raw_file(
-		fsn->sb, fsn->rawdir, adev->site_no,
-		&a400fs_raw_file_ops, build_mapping(fsn, adev, site, XX));
+	inode = a400fs_create_raw_file(fsn->sb, fsn->rawdir, adev->site_no,
+				       &a400fs_raw_file_ops,
+				       build_mapping(fsn, adev, site, XX));
 
 	dev_dbg(DEVP(adev), "a400fs_add_site() 19 site:%d", site);
 
 	fsn->chandata[site] =
 		a400fs_create_dir(fsn->sb, fsn->root_dentry, adev->site_no);
 
-	if(fsn->chandata[site] == 0){
+	if (fsn->chandata[site] == 0) {
 		dev_warn(DEVP(adev), "site:%d failed to create_dir", site);
 		return;
 	}
 
-	for (ic = 1; ic <= adev->nchan_enabled; ++ic){
-		inode =	a400fs_create_channel_file(
-				fsn->sb, fsn->chandata[site],
-				channels[ic],
-				&a400fs_chan_file_ops,
-				build_mapping(fsn, adev, site, ic));
-		if (inode == 0){
-			dev_err(DEVP(adev), "ERROR failed to create channel file");
+	for (ic = 1; ic <= adev->nchan_enabled; ++ic) {
+		inode = a400fs_create_channel_file(
+			fsn->sb, fsn->chandata[site], channels[ic],
+			&a400fs_chan_file_ops,
+			build_mapping(fsn, adev, site, ic));
+		if (inode == 0) {
+			dev_err(DEVP(adev),
+				"ERROR failed to create channel file");
 		}
 	}
 	dev_dbg(DEVP(adev), "a400fs_add_site() 99 site:%d", site);
 }
-
 
 static int a400fs_ctrl_open(struct inode *inode, struct file *file)
 {
 	return 0;
 }
 
-#define LINESIZE	80
+#define LINESIZE 80
 
-static ssize_t a400fs_ctrl_read_file(struct file *file, char *buf,
-		size_t count, loff_t *offset)
+static ssize_t a400fs_ctrl_read_file(struct file *file, char *buf, size_t count,
+				     loff_t *offset)
 {
 	char tmp[LINESIZE];
-	int len = snprintf(tmp, LINESIZE, "COOKED=%d NSAMPLES=%d NCHAN=%d TYPE=%s\n",
-			CAPDAT.is_cooked, CAPDAT.nsamples, CAPDAT.nchan, CAPDAT.typ);
+	int len = snprintf(tmp, LINESIZE,
+			   "COOKED=%d NSAMPLES=%d NCHAN=%d TYPE=%s\n",
+			   CAPDAT.is_cooked, CAPDAT.nsamples, CAPDAT.nchan,
+			   CAPDAT.typ);
 	if (*offset > len)
 		return 0;
 	if (count > len - *offset)
 		count = len - *offset;
-/*
+	/*
  * Copy it back, increment the offset, and we're done.
  */
 	if (copy_to_user(buf, tmp + *offset, count))
@@ -794,39 +821,38 @@ static ssize_t a400fs_ctrl_read_file(struct file *file, char *buf,
 }
 
 static ssize_t a400fs_ctrl_write_file(struct file *file, const char *buf,
-		size_t count, loff_t *offset)
+				      size_t count, loff_t *offset)
 {
 	char tmp[LINESIZE];
 	struct CaptureData capdat;
 
-	if (count > LINESIZE-1){
-		count = LINESIZE-2;
+	if (count > LINESIZE - 1) {
+		count = LINESIZE - 2;
 	}
-	if (copy_from_user(tmp, buf, count)){
+	if (copy_from_user(tmp, buf, count)) {
 		return -EFAULT;
 	}
-	tmp[count+1] = '\0';
-
+	tmp[count + 1] = '\0';
 
 	if (sscanf(tmp, "COOKED=%d NSAMPLES=%d NCHAN=%d TYPE=%7s",
-			&capdat.is_cooked, &capdat.nsamples,
-			&capdat.nchan, capdat.typ) == 4){
+		   &capdat.is_cooked, &capdat.nsamples, &capdat.nchan,
+		   capdat.typ) == 4) {
 		CAPDAT = capdat;
 		FSN.mtime = current_time(FSN.root);
 		return count;
-	}else{
+	} else {
 		return -EINVAL;
 	}
 	return -EPERM;
 }
 
 static struct file_operations a400fs_control_ops = {
-	.open	= a400fs_ctrl_open,
-	.read 	= a400fs_ctrl_read_file,
-	.write  = a400fs_ctrl_write_file,
+	.open = a400fs_ctrl_open,
+	.read = a400fs_ctrl_read_file,
+	.write = a400fs_ctrl_write_file,
 };
 
-static void a400fs_create_files (struct super_block *sb, struct dentry *root)
+static void a400fs_create_files(struct super_block *sb, struct dentry *root)
 {
 	struct acq400_dev *adev0 = acq400_devices[0];
 	int dev;
@@ -837,24 +863,23 @@ static void a400fs_create_files (struct super_block *sb, struct dentry *root)
 	FSN.mtime = current_time(FSN.root);
 	a400fs_create_file(sb, root, ".control", &a400fs_control_ops, 0);
 
-	for (dev = 0; dev <= MAXDEVICES; ++dev){
+	for (dev = 0; dev <= MAXDEVICES; ++dev) {
 		struct acq400_dev *adev = acq400_devices[dev];
-		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev))){
+		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev))) {
 			FSN.nmap += adev->nchan_enabled + 1;
 		}
 	}
 
-	FSN.maps = kmalloc(sizeof(struct InodeMap)*FSN.nmap, GFP_KERNEL);
+	FSN.maps = kmalloc(sizeof(struct InodeMap) * FSN.nmap, GFP_KERNEL);
 
-	for (dev = 0; dev <= MAXDEVICES; ++dev){
+	for (dev = 0; dev <= MAXDEVICES; ++dev) {
 		struct acq400_dev *adev = acq400_devices[dev];
 		dev_dbg(DEVP(adev0), "dev:%d adev:%p", dev, adev);
-		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev))){
+		if (adev && (HAS_AI(adev) || IS_SC(adev) || IS_DIO432X(adev))) {
 			a400fs_add_site(adev->of_prams.site, adev, &FSN);
 		}
 	}
 }
-
 
 /*
  * Superblock stuff.  This is all boilerplate to give the vfs something
@@ -866,70 +891,68 @@ static void a400fs_create_files (struct super_block *sb, struct dentry *root)
  * that we don't have to write ourselves.
  */
 static struct super_operations a400fs_s_ops = {
-	.statfs		= simple_statfs,
-	.drop_inode	= generic_delete_inode,
+	.statfs = simple_statfs,
+	.drop_inode = generic_delete_inode,
 };
 
 /*
  * "Fill" a superblock with mundane stuff.
  */
-static int a400fs_fill_super (struct super_block *sb, void *data, int silent)
+static int a400fs_fill_super(struct super_block *sb, void *data, int silent)
 {
-/*
+	/*
  * Basic parameters.
  */
 	sb->s_blocksize = PAGE_SIZE;
 	sb->s_blocksize_bits = PAGE_SHIFT;
 	sb->s_magic = ACQ400_FS_MAGIC;
 	sb->s_op = &a400fs_s_ops;
-/*
+	/*
  * We need to conjure up an inode to represent the root directory
  * of this filesystem.  Its operations all come from libfs, so we
  * don't have to mess with actually *doing* things inside this
  * directory.
  */
-	FSN.root = a400fs_make_inode (sb, S_IFDIR | 0755);
+	FSN.root = a400fs_make_inode(sb, S_IFDIR | 0755);
 	if (!FSN.root)
 		goto out;
 	FSN.root->i_op = &simple_dir_inode_operations;
 	FSN.root->i_fop = &simple_dir_operations;
-/*
+	/*
  * Get a dentry to represent the directory in core.
  */
 	FSN.root_dentry = d_make_root(FSN.root);
-	if (! FSN.root_dentry)
+	if (!FSN.root_dentry)
 		goto out_iput;
 	sb->s_root = FSN.root_dentry;
-/*
+	/*
  * Make up the files which will be in this filesystem, and we're done.
  */
-	a400fs_create_files (sb, FSN.root_dentry);
+	a400fs_create_files(sb, FSN.root_dentry);
 
 	return 0;
 
-  out_iput:
+out_iput:
 	iput(FSN.root);
-  out:
+out:
 	return -ENOMEM;
 }
-
 
 /*
  * Stuff to pass in when registering the filesystem.
  */
-static struct dentry *a400fs_get_super(struct file_system_type *fst,
-		int flags, const char *devname, void *data)
+static struct dentry *a400fs_get_super(struct file_system_type *fst, int flags,
+				       const char *devname, void *data)
 {
 	return mount_nodev(fst, flags, data, a400fs_fill_super);
 }
 
 static struct file_system_type a400fs_type = {
-	.owner 		= THIS_MODULE,
-	.name		= "acq400fs",
-	.mount		= a400fs_get_super,
-	.kill_sb	= kill_litter_super,
+	.owner = THIS_MODULE,
+	.name = "acq400fs",
+	.mount = a400fs_get_super,
+	.kill_sb = kill_litter_super,
 };
-
 
 int a400fs_init(void)
 {
@@ -940,7 +963,6 @@ void a400fs_exit(void)
 {
 	unregister_filesystem(&a400fs_type);
 }
-
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("peter.milne@d-tacq.com");

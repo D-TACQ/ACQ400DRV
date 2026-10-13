@@ -26,10 +26,9 @@
 #include "acq400_debugfs.h"
 #include "acq400_debugfs_internal.h"
 
-
-void bolo8_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void bolo8_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
-	struct dentry* chdir = debugfs_create_dir("current", adev->debug_dir);
+	struct dentry *chdir = debugfs_create_dir("current", adev->debug_dir);
 
 	DBG_REG_CREATE(B8_SYS_CON);
 	DBG_REG_CREATE(B8_TIM_CON);
@@ -47,7 +46,7 @@ void bolo8_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(B8_DAC_SAMPLE_CNT);
 	DBG_REG_CREATE_RW(B8_DAC_SPI);
 	DBG_REG_CREATE(B8_DAC_SPI_RBK);
-/* Current ADc */
+	/* Current ADc */
 	DBG_REG_CREATE(B8_CAD_CON);
 	DBG_REG_CREATE(B8_CAD_DELAY);
 
@@ -67,37 +66,38 @@ void bolo8_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	CH_REG_CREATE(A6, B8_CAD_A6);
 	CH_REG_CREATE(A7, B8_CAD_A7);
 	CH_REG_CREATE(A8, B8_CAD_A8);
-/* Offset DAc */
+	/* Offset DAc */
 	DBG_REG_CREATE(B8_ODA_CON);
 	DBG_REG_CREATE(B8_ODA_DATA);
 }
 
 /* ao424 ch knobs: working with a cache buffer, use regular accessor */
-char * _ao424_create_ch_knobs(
-	struct acq400_dev* adev, const char* name, u16 values[],
-	char* pcursor)
+char *_ao424_create_ch_knobs(struct acq400_dev *adev, const char *name,
+			     u16 values[], char *pcursor)
 {
-	struct dentry* dir = debugfs_create_dir(name, adev->debug_dir);
+	struct dentry *dir = debugfs_create_dir(name, adev->debug_dir);
 	int ic;
 
-	for (ic = 0; ic < AO424_MAXCHAN; ++ic){
-		int nc = sprintf(pcursor, "%02d", ic+1);
-		debugfs_create_x16(pcursor, S_IWUGO|S_IRUGO, dir, values+ic);
-		pcursor += nc+1;
+	for (ic = 0; ic < AO424_MAXCHAN; ++ic) {
+		int nc = sprintf(pcursor, "%02d", ic + 1);
+		debugfs_create_x16(pcursor, S_IWUGO | S_IRUGO, dir,
+				   values + ic);
+		pcursor += nc + 1;
 	}
-
 
 	return pcursor;
 }
-void ao424_create_spans(struct acq400_dev* adev, char* pcursor)
+void ao424_create_spans(struct acq400_dev *adev, char *pcursor)
 {
-	struct XO_dev* xo_dev = container_of(adev, struct XO_dev, adev);
-	pcursor = _ao424_create_ch_knobs(adev, "spans",
-			xo_dev->ao424_device_settings.u.ch.ao424_spans, pcursor);
-	pcursor = _ao424_create_ch_knobs(adev, "init",
-			xo_dev->ao424_device_settings.u.ch.ao424_initvals, pcursor);
+	struct XO_dev *xo_dev = container_of(adev, struct XO_dev, adev);
+	pcursor = _ao424_create_ch_knobs(
+		adev, "spans", xo_dev->ao424_device_settings.u.ch.ao424_spans,
+		pcursor);
+	pcursor = _ao424_create_ch_knobs(
+		adev, "init", xo_dev->ao424_device_settings.u.ch.ao424_initvals,
+		pcursor);
 }
-void ao420_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void ao420_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE_CTRL(DAC_CTRL);
 	DBG_REG_CREATE_CTRL(TIM_CTRL);
@@ -108,32 +108,31 @@ void ao420_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE_NAME_N(DAC_CLK_CTR);
 	DBG_REG_CREATE_NAME_N(DAC_SAMPLE_CTR);
 	DBG_REG_CREATE(DAC_CLKDIV);
-	if (IS_AO42S(adev)){
+	if (IS_AO42S(adev)) {
 		DBG_REG_CREATE(AO420_RANGE);
 		DBG_REG_CREATE_RW(AO420_DACSPI);
 	}
-	if (IS_AO420(adev)||IS_AO422(adev)||IS_AO424(adev)){
+	if (IS_AO420(adev) || IS_AO422(adev) || IS_AO424(adev)) {
 		DBG_REG_CREATE(ADC_TRANSLEN);
 		DBG_REG_CREATE(DAC_DEC);
 		DBG_REG_CREATE(DAC_READ_LAT_AC);
 		DBG_REG_CREATE(DAC_READ_LAT_MM);
 	}
-	if (IS_AO420(adev)||IS_AO422(adev)){
+	if (IS_AO420(adev) || IS_AO422(adev)) {
 		DBG_REG_CREATE(DAC_GAIN_OFF(1));
 		DBG_REG_CREATE(DAC_GAIN_OFF(2));
-		if (!IS_AO420_HALF436(adev)){
+		if (!IS_AO420_HALF436(adev)) {
 			DBG_REG_CREATE(DAC_GAIN_OFF(3));
 			DBG_REG_CREATE(DAC_GAIN_OFF(4));
-		}else{
+		} else {
 			DBG_REG_CREATE(DAC_MUX);
 		}
-		if (IS_AO422(adev)){
+		if (IS_AO422(adev)) {
 			DBG_REG_CREATE(DAC_GAIN_OFF(5));
 		}
-
 	}
 
-	if (IS_AO428(adev)){
+	if (IS_AO428(adev)) {
 		DBG_REG_CREATE(AO428_OFFSET_1);
 		DBG_REG_CREATE(AO428_OFFSET_2);
 		DBG_REG_CREATE(AO428_OFFSET_3);
@@ -143,7 +142,7 @@ void ao420_createDebugfs(struct acq400_dev* adev, char* pcursor)
 		DBG_REG_CREATE(AO428_OFFSET_7);
 		DBG_REG_CREATE(AO428_OFFSET_8);
 	}
-	if (IS_AO424(adev)){
+	if (IS_AO424(adev)) {
 		DBG_REG_CREATE(DAC_424_CGEN);
 
 		DBG_REG_CREATE(DAC_424_SNOOP);
@@ -153,7 +152,7 @@ void ao420_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(CUSTOM_FLASH_DELTA_SP);
 }
 
-void adc_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void adc_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE_CTRL(ADC_CTRL);
 	DBG_REG_CREATE_CTRL(TIM_CTRL);
@@ -164,33 +163,33 @@ void adc_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE_NAME_N(ADC_CLK_CTR);
 	DBG_REG_CREATE_NAME_N(ADC_SAMPLE_CTR);
 	DBG_REG_CREATE_NAME_N(ADC_SAMPLE_CLK_CTR);
-	if (IS_ACQ465(adev)||IS_ACQ426(adev)){
+	if (IS_ACQ465(adev) || IS_ACQ426(adev)) {
 		DBG_REG_CREATE(ACQ465_LCS);
 	}
 	DBG_REG_CREATE(ADC_CLKDIV);
-	if (IS_ACQ425(adev)){
+	if (IS_ACQ425(adev)) {
 		DBG_REG_CREATE(ACQ425_BANK);
 	}
-	if (IS_ACQ423(adev)){
+	if (IS_ACQ423(adev)) {
 		DBG_REG_CREATE(ACQ423_BANK);
 	}
-	if (IS_ACQ465(adev)){
+	if (IS_ACQ465(adev)) {
 		DBG_REG_CREATE(ACQ465_BANK_MODE);
 	}
 	DBG_REG_CREATE(ADC_ACC_DEC);
 }
 
-void acq420_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq420_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	adc_createDebugfs(adev, pcursor);
 	DBG_REG_CREATE(EVT_SC_LATCH);
-	if (IS_ACQ420(adev)){
+	if (IS_ACQ420(adev)) {
 		DBG_REG_CREATE(ADC_GAIN);
 	}
 
 	DBG_REG_CREATE(ADC_CONV_TIME);
 	DBG_REG_CREATE(ADC_TRANSLEN);
-	if (IS_ACQ423(adev)){
+	if (IS_ACQ423(adev)) {
 		DBG_REG_CREATE(ACQ423_SPAN_A);
 		DBG_REG_CREATE(ACQ423_SPAN_B);
 		DBG_REG_CREATE(ACQ423_SPAN_C);
@@ -211,16 +210,16 @@ void acq420_createDebugfs(struct acq400_dev* adev, char* pcursor)
 		DBG_REG_CREATE(ACQ423_SAMPLE_RAM_27);
 		DBG_REG_CREATE(ACQ423_SAMPLE_RAM_29);
 		DBG_REG_CREATE(ACQ423_SAMPLE_RAM_31);
-                if (IS_FLASHELF(adev)){
-                    DBG_REG_CREATE(FLASH_GPIO);
-                }
-	}else if (IS_ACQ424(adev)){
+		if (IS_FLASHELF(adev)) {
+			DBG_REG_CREATE(FLASH_GPIO);
+		}
+	} else if (IS_ACQ424(adev)) {
 		DBG_REG_CREATE(ACQ424_SHOT_LENGTH);
 		DBG_REG_CREATE(ACQ424_CLK_MIN_MAX);
 	}
 }
 
-void acq480_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq480_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	adc_createDebugfs(adev, pcursor);
 	DBG_REG_CREATE_CTRL(ADC_TRANSLEN);
@@ -228,20 +227,20 @@ void acq480_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(ACQ480_TRAIN_HI_VAL);
 	DBG_REG_CREATE(ACQ480_TRAIN_LO_VAL);
 	DBG_REG_CREATE(ACQ480_ADC_MULTIRATE);
-	if (HAS_FPGA_FIR(adev)){
+	if (HAS_FPGA_FIR(adev)) {
 		DBG_REG_CREATE(ACQ480_FIRCO_LOAD);
 		DBG_REG_CREATE(ACQ480_FIRCO_CSR);
 	}
 }
-void pmodadc1_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void pmodadc1_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	adc_createDebugfs(adev, pcursor);
 }
-void acq43x_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq43x_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	adc_createDebugfs(adev, pcursor);
 
-	switch(GET_MOD_ID(adev)){
+	switch (GET_MOD_ID(adev)) {
 	case MOD_ID_ACQ435ELF:
 	case MOD_ID_ACQ436ELF:
 	case MOD_ID_ACQ437ELF:
@@ -249,7 +248,7 @@ void acq43x_createDebugfs(struct acq400_dev* adev, char* pcursor)
 		DBG_REG_CREATE(ACQ435_SW_EMB_WORD2);
 		break;
 	case MOD_ID_ACQ430FMC:
-		if (IS_MASTER(adev)){
+		if (IS_MASTER(adev)) {
 			DBG_REG_CREATE(FMC_DSR);
 		}
 	}
@@ -261,14 +260,14 @@ void acq43x_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(ATD_MASK_OR);
 }
 
-void acq465_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq465_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	adc_createDebugfs(adev, pcursor);
 	DBG_REG_CREATE(ADC_TRANSLEN);
 	DBG_REG_CREATE(ACQ465_DEBUG);
 }
 
-void acq426_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq426_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	adc_createDebugfs(adev, pcursor);
 
@@ -279,23 +278,23 @@ void acq426_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(ACQ465_DEBUG);
 }
 
-void acq428_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq428_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
-    adc_createDebugfs(adev, pcursor);
+	adc_createDebugfs(adev, pcursor);
 
-    DBG_REG_CREATE(ADC_SITE_CONTROL);
-    DBG_REG_CREATE(ADC_TRANSLEN);
-    DBG_REG_CREATE(ACQ428_EVENT_SAMPLE_CTR);
-    DBG_REG_CREATE(ACQ428_BANK);
-    DBG_REG_CREATE(ACQ428_CALIB_DEBUG);
-    DBG_REG_CREATE(ACQ428_DCLK_STATUS);
-    DBG_REG_CREATE(ACQ428_CALIB_POINT_1);
-    DBG_REG_CREATE(ACQ428_CALIB_POINT_2);
-    DBG_REG_CREATE(ACQ428_CALIB_WINDOW_1);
-    DBG_REG_CREATE(ACQ428_CALIB_WINDOW_2);
+	DBG_REG_CREATE(ADC_SITE_CONTROL);
+	DBG_REG_CREATE(ADC_TRANSLEN);
+	DBG_REG_CREATE(ACQ428_EVENT_SAMPLE_CTR);
+	DBG_REG_CREATE(ACQ428_BANK);
+	DBG_REG_CREATE(ACQ428_CALIB_DEBUG);
+	DBG_REG_CREATE(ACQ428_DCLK_STATUS);
+	DBG_REG_CREATE(ACQ428_CALIB_POINT_1);
+	DBG_REG_CREATE(ACQ428_CALIB_POINT_2);
+	DBG_REG_CREATE(ACQ428_CALIB_WINDOW_1);
+	DBG_REG_CREATE(ACQ428_CALIB_WINDOW_2);
 }
 
-void acq494_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq494_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE(MOD_ID);
 	DBG_REG_CREATE(TDC_CR);
@@ -311,138 +310,144 @@ void acq494_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(TDC_CH_MASK);
 }
 
-void dio432_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void dio432_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
-	DBG_REG_CREATE( DIO432_CTRL);
-	DBG_REG_CREATE( DIO432_TIM_CTRL);
-	if (!IS_DIO482_PG(adev)){
-		DBG_REG_CREATE( DIO432_DI_HITIDE);
-		DBG_REG_CREATE( DIO432_DI_FIFO_COUNT);
-		DBG_REG_CREATE_RW( DIO432_DI_FIFO_STATUS);
+	DBG_REG_CREATE(DIO432_CTRL);
+	DBG_REG_CREATE(DIO432_TIM_CTRL);
+	if (!IS_DIO482_PG(adev)) {
+		DBG_REG_CREATE(DIO432_DI_HITIDE);
+		DBG_REG_CREATE(DIO432_DI_FIFO_COUNT);
+		DBG_REG_CREATE_RW(DIO432_DI_FIFO_STATUS);
 	}
-	DBG_REG_CREATE( DIO432_DIO_ICR);
+	DBG_REG_CREATE(DIO432_DIO_ICR);
 	DBG_REG_CREATE_NAME_N(DIO_SAMPLE_CTR);
-	DBG_REG_CREATE_NAME_N( ADC_CLK_CTR);
-	if (IS_DIO482TD_PG(adev)){
+	DBG_REG_CREATE_NAME_N(ADC_CLK_CTR);
+	if (IS_DIO482TD_PG(adev)) {
 		DBG_REG_CREATE_NAME_N(DIO482_PG_FPTRG_COUNT);
 	}
-	if (IS_DIO482_PG(adev)){
+	if (IS_DIO482_PG(adev)) {
 		DBG_REG_CREATE_NAME_N(DIO482_PG_WDT);
 	}
-	DBG_REG_CREATE( DIO_CLKDIV);
-	if (IS_DIO422ELF(adev)){
+	DBG_REG_CREATE(DIO_CLKDIV);
+	if (IS_DIO422ELF(adev)) {
 		DBG_REG_CREATE(DIO422_OE_CONFIG);
-	}else if (IS_DIO432FMC(adev)){
-		DBG_REG_CREATE( DIO432_DIO_CPLD_CTRL);
-	}else if (IS_DIO482FMC(adev)||IS_ACQ1102DIO4(adev)){
+	} else if (IS_DIO432FMC(adev)) {
+		DBG_REG_CREATE(DIO432_DIO_CPLD_CTRL);
+	} else if (IS_DIO482FMC(adev) || IS_ACQ1102DIO4(adev)) {
 		DBG_REG_CREATE(DIO482_DIRECTION_CTRL);
 	}
 
-	if (IS_DI460_STIM(adev)){
+	if (IS_DI460_STIM(adev)) {
 		DBG_REG_CREATE(DI460_DO_STIM);
-	}else{
-		DBG_REG_CREATE_NAME_N( DIO432_DIO_SAMPLE_COUNT );
+	} else {
+		DBG_REG_CREATE_NAME_N(DIO432_DIO_SAMPLE_COUNT);
 	}
-	DBG_REG_CREATE( DIO432_DI_SNOOP );
+	DBG_REG_CREATE(DIO432_DI_SNOOP);
 
-	if (IS_DI_CNTR(adev)){
+	if (IS_DI_CNTR(adev)) {
 		DBG_REG_CREATE(DIO482_DI_DWELL);
 		{
-			int chmax = IS_DI460_HS_CNTR(adev)? 12:
-				    IS_DIO_5CH_HS_CNTR(adev)? 5:
-				    IS_DIO482_HS_CNTR(adev)? 16: 32;
+			int chmax = IS_DI460_HS_CNTR(adev)   ? 12 :
+				    IS_DIO_5CH_HS_CNTR(adev) ? 5 :
+				    IS_DIO482_HS_CNTR(adev)  ? 16 :
+							       32;
 			int ch;
-			for (ch = 1; ch <= chmax; ++ch){
-				DBG_REG_CREATE_NAME_NC_NUM("cnt", ch, "CNTR", CNTR(ch));
+			for (ch = 1; ch <= chmax; ++ch) {
+				DBG_REG_CREATE_NAME_NC_NUM("cnt", ch, "CNTR",
+							   CNTR(ch));
 			}
 		}
 		return;
 	}
 
-	if (IS_DIO482PPW(adev)){
+	if (IS_DIO482PPW(adev)) {
 		int px;
 		DBG_REG_CREATE(DIO482_PG_IMM_MASK);
-		for (px = PPW_MIN; px <= PPW_MAX; ++px){
-			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "TRG", PPW_TRG(px));
+		for (px = PPW_MIN; px <= PPW_MAX; ++px) {
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "TRG",
+						   PPW_TRG(px));
 
-			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "REP", PPW_REP(px));
-			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "STA", PPW_STA(px));
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "REP",
+						   PPW_REP(px));
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "STA",
+						   PPW_STA(px));
 		}
-		for (px = PPW_MIN; px <= PPW_MAX; ++px){
-			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_GP", PPW_PWM_GP(px));
-			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_IC", PPW_PWM_IC(px));
-			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_OC", PPW_PWM_OC(px));
+		for (px = PPW_MIN; px <= PPW_MAX; ++px) {
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_GP",
+						   PPW_PWM_GP(px));
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_IC",
+						   PPW_PWM_IC(px));
+			DBG_REG_CREATE_NAME_NC_NUM("ppw", px, "PWM_OC",
+						   PPW_PWM_OC(px));
 		}
 		DBG_REG_CREATE(DIO482_PG_IMM_DO);
 		return;
 	}
-	if (IS_DIO432FMC(adev)){
+	if (IS_DIO432FMC(adev)) {
 		DBG_REG_CREATE(DIO432_DEBUG);
 		DBG_REG_CREATE(DIO432_CMD_DEBUG);
 	}
-	if (IS_DIO482FMC(adev) && !IS_DIO482_PG(adev)){
+	if (IS_DIO482FMC(adev) && !IS_DIO482_PG(adev)) {
 		DBG_REG_CREATE(DIO482_COS_STA);
 		DBG_REG_CREATE(DIO482_COS_EN);
 	}
-	if (!IS_DIO482_PG(adev)){
-		DBG_REG_CREATE( DIO432_DO_LOTIDE);
-		DBG_REG_CREATE( DIO432_DO_FIFO_COUNT);
-		DBG_REG_CREATE( DIO432_DO_FIFO_STATUS);
+	if (!IS_DIO482_PG(adev)) {
+		DBG_REG_CREATE(DIO432_DO_LOTIDE);
+		DBG_REG_CREATE(DIO432_DO_FIFO_COUNT);
+		DBG_REG_CREATE(DIO432_DO_FIFO_STATUS);
 	}
-	if (IS_DIO482FMC(adev) && GET_MOD_IDV(adev)==MOD_IDV_PWM2){
+	if (IS_DIO482FMC(adev) && GET_MOD_IDV(adev) == MOD_IDV_PWM2) {
 		DBG_REG_CREATE(PWM_SOURCE_CLK_CTRL);
 	}
 
-	if (IS_DIO482_PG(adev)){
+	if (IS_DIO482_PG(adev)) {
 		DBG_REG_CREATE(DIO482_PG_GPGCR);
 		DBG_REG_CREATE(DIO482_PG_GPGDR);
 		DBG_REG_CREATE(DIO482_PG_IMM_MASK);
 		DBG_REG_CREATE(DIO482_PG_IMM_DO);
 	}
 
-	if (IS_DI460ELF(adev)){
+	if (IS_DI460ELF(adev)) {
 		/* hopefully temporary */
 		int ch;
-		for (ch = 1; ch <= 12; ++ch){
+		for (ch = 1; ch <= 12; ++ch) {
 			DBG_REG_CREATE_NAME_NC_NUM("cnt", ch, "CNTR", CNTR(ch));
 		}
 	}
 }
 
-#define V2F_FREQ_OFF_1		V2F_FREQ_OFF
-#define V2F_FREQ_OFF_2		(V2F_FREQ_OFF_1+0x4)
-#define V2F_FREQ_OFF_3		(V2F_FREQ_OFF_1+0x8)
-#define V2F_FREQ_OFF_4		(V2F_FREQ_OFF_1+0xc)
+#define V2F_FREQ_OFF_1 V2F_FREQ_OFF
+#define V2F_FREQ_OFF_2 (V2F_FREQ_OFF_1 + 0x4)
+#define V2F_FREQ_OFF_3 (V2F_FREQ_OFF_1 + 0x8)
+#define V2F_FREQ_OFF_4 (V2F_FREQ_OFF_1 + 0xc)
 
-#define V2F_FREQ_SLO_1		V2F_FREQ_SLO
-#define V2F_FREQ_SLO_2		(V2F_FREQ_SLO+0x4)
-#define V2F_FREQ_SLO_3		(V2F_FREQ_SLO+0x8)
-#define V2F_FREQ_SLO_4		(V2F_FREQ_SLO+0xc)
+#define V2F_FREQ_SLO_1 V2F_FREQ_SLO
+#define V2F_FREQ_SLO_2 (V2F_FREQ_SLO + 0x4)
+#define V2F_FREQ_SLO_3 (V2F_FREQ_SLO + 0x8)
+#define V2F_FREQ_SLO_4 (V2F_FREQ_SLO + 0xc)
 
-
-void v2f_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void v2f_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
-	DBG_REG_CREATE( V2F_CTRL );
-	DBG_REG_CREATE( V2F_STAT );
-	DBG_REG_CREATE( V2F_CHAN_SEL );
-	DBG_REG_CREATE( V2F_FREQ_OFF_1 );
-	DBG_REG_CREATE( V2F_FREQ_OFF_2 );
-	DBG_REG_CREATE( V2F_FREQ_OFF_3 );
-	DBG_REG_CREATE( V2F_FREQ_OFF_4 );
-	DBG_REG_CREATE( V2F_FREQ_SLO_1 );
-	DBG_REG_CREATE( V2F_FREQ_SLO_2 );
-	DBG_REG_CREATE( V2F_FREQ_SLO_3 );
-	DBG_REG_CREATE( V2F_FREQ_SLO_4 );
+	DBG_REG_CREATE(V2F_CTRL);
+	DBG_REG_CREATE(V2F_STAT);
+	DBG_REG_CREATE(V2F_CHAN_SEL);
+	DBG_REG_CREATE(V2F_FREQ_OFF_1);
+	DBG_REG_CREATE(V2F_FREQ_OFF_2);
+	DBG_REG_CREATE(V2F_FREQ_OFF_3);
+	DBG_REG_CREATE(V2F_FREQ_OFF_4);
+	DBG_REG_CREATE(V2F_FREQ_SLO_1);
+	DBG_REG_CREATE(V2F_FREQ_SLO_2);
+	DBG_REG_CREATE(V2F_FREQ_SLO_3);
+	DBG_REG_CREATE(V2F_FREQ_SLO_4);
 }
 
-void dio_biscuit_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void dio_biscuit_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE(DIOUSB_CTRL);
 	DBG_REG_CREATE(DIOUSB_STAT);
 }
 
-
-void qen_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void qen_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE(QEN_CTRL);
 	DBG_REG_CREATE(TIM_CTRL);
@@ -467,7 +472,7 @@ void qen_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(QEN_POS_PRD_CNT);
 }
 
-void di460_aqb_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void di460_aqb_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	int ch;
 
@@ -479,7 +484,7 @@ void di460_aqb_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(ADC_INT_CSR);
 	DBG_REG_CREATE(ADC_SAMPLE_CTR);
 	DBG_REG_CREATE(ADC_SAMPLE_CLK_CTR);
-	if (GET_MOD_IDV(adev) == MOD_IDV_DI460_AQB_43){
+	if (GET_MOD_IDV(adev) == MOD_IDV_DI460_AQB_43) {
 		DBG_REG_CREATE(ACQ435_MODE);
 	}
 	DBG_REG_CREATE(DI460_DBG);
@@ -487,18 +492,18 @@ void di460_aqb_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(QEN_DIO_CTRL);
 	DBG_REG_CREATE(DI460_AQB_CTRL);
 
-
-	for (ch = 1; ch <= DI460_NCHAN; ++ch){
-		DBG_REG_CREATE_NAME_NC_NUM("cnt", ch, "CNTR", DI460_AQB_COUNT(ch));
+	for (ch = 1; ch <= DI460_NCHAN; ++ch) {
+		DBG_REG_CREATE_NAME_NC_NUM("cnt", ch, "CNTR",
+					   DI460_AQB_COUNT(ch));
 	}
 }
-void acq1014_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void acq1014_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE(DIO1014_CR);
 	DBG_REG_CREATE(DIO1014_SR);
 }
 
-void pig_celf_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void pig_celf_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE(ADC_CTRL);
 	DBG_REG_CREATE(TIM_CTRL);
@@ -514,7 +519,7 @@ void pig_celf_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE(PC_DDS_PHASE_INC);
 }
 
-void rad_celf_createDebugfs(struct acq400_dev* adev, char* pcursor)
+void rad_celf_createDebugfs(struct acq400_dev *adev, char *pcursor)
 {
 	DBG_REG_CREATE(RAD_CTL);
 	DBG_REG_CREATE(RAD_DDS_A);
@@ -524,54 +529,57 @@ void rad_celf_createDebugfs(struct acq400_dev* adev, char* pcursor)
 	DBG_REG_CREATE_NAME_N(RAD_CLK_PPS_LATCH);
 }
 
-void acq400_createDebugfs(struct acq400_dev* adev)
+void acq400_createDebugfs(struct acq400_dev *adev)
 {
-	char* pcursor;
+	char *pcursor;
 	unsigned *dev_rc_cache_data;
-	if (!acq400_debug_root){
+	if (!acq400_debug_root) {
 		acq400_debug_root = debugfs_create_dir("acq400", 0);
-		if (!acq400_debug_root){
+		if (!acq400_debug_root) {
 			dev_warn(&adev->pdev->dev, "failed create dir acq420");
 			return;
 		}
 	}
 
 	dev_rc_cache_data = dev_rc_alloc_cache();
-	dev_rc_init(adev, &adev->clk_reg_cache, adev->dev_virtaddr, adev->of_prams.site, dev_rc_cache_data);
-	dev_rc_init(adev, &adev->ctrl_reg_cache, adev->dev_virtaddr, adev->of_prams.site, dev_rc_cache_data);
+	dev_rc_init(adev, &adev->clk_reg_cache, adev->dev_virtaddr,
+		    adev->of_prams.site, dev_rc_cache_data);
+	dev_rc_init(adev, &adev->ctrl_reg_cache, adev->dev_virtaddr,
+		    adev->of_prams.site, dev_rc_cache_data);
 	pcursor = adev->debug_names = kmalloc(4096, GFP_KERNEL);
-
 
 	adev->debug_dir = debugfs_create_dir(adev->dev_name, acq400_debug_root);
 
-	if (!adev->debug_dir){
+	if (!adev->debug_dir) {
 		dev_warn(&adev->pdev->dev, "failed create dir acq400.x");
 		return;
 	}
 	DBG_REG_CREATE(MOD_ID);
 
-	if (IS_ACQ42X(adev)){
-		switch(GET_MOD_ID(adev)){
+	if (IS_ACQ42X(adev)) {
+		switch (GET_MOD_ID(adev)) {
 		case MOD_ID_ACQ426ELF:
 			acq426_createDebugfs(adev, pcursor);
 			break;
-                case MOD_ID_ACQ428ELF:
-                        acq428_createDebugfs(adev, pcursor);
-                        break;
+		case MOD_ID_ACQ428ELF:
+			acq428_createDebugfs(adev, pcursor);
+			break;
 		default:
 			acq420_createDebugfs(adev, pcursor);
 			break;
 		}
-	}else if (IS_DI460AQB(adev)){
+	} else if (IS_DI460AQB(adev)) {
 		di460_aqb_createDebugfs(adev, pcursor);
-	}else if (IS_DIO422AQB(adev)){
+	} else if (IS_DIO422AQB(adev)) {
 		qen_createDebugfs(adev, pcursor);
-	}else if (IS_DIO432X(adev) || IS_DIO482TD_PG(adev) || IS_DI460ELF(adev)){
+	} else if (IS_DIO432X(adev) || IS_DIO482TD_PG(adev) ||
+		   IS_DI460ELF(adev)) {
 		dio432_createDebugfs(adev, pcursor);
-	}else if (IS_DIO_5CH(adev)){
-		dio432_createDebugfs(adev, pcursor);  // @@worktodo dubious, placeholder
-	}else{
-		switch(GET_MOD_ID(adev)){
+	} else if (IS_DIO_5CH(adev)) {
+		dio432_createDebugfs(
+			adev, pcursor); // @@worktodo dubious, placeholder
+	} else {
+		switch (GET_MOD_ID(adev)) {
 		case MOD_ID_BOLO8:
 		case MOD_ID_BOLO8B:
 			bolo8_createDebugfs(adev, pcursor);
@@ -606,7 +614,7 @@ void acq400_createDebugfs(struct acq400_dev* adev)
 		case MOD_ID_ACQ400T_ELF:
 			break;
 		case MOD_ID_DIO_BISCUIT:
-			switch(GET_MOD_IDV(adev)){
+			switch (GET_MOD_IDV(adev)) {
 			case MOD_IDV_V2F:
 				return v2f_createDebugfs(adev, pcursor);
 			case MOD_IDV_DIO:
@@ -628,24 +636,25 @@ void acq400_createDebugfs(struct acq400_dev* adev)
 			break;
 		default:
 			dev_warn(&adev->pdev->dev, "unsupported MOD_ID:%02x",
-				GET_MOD_ID(adev));
+				 GET_MOD_ID(adev));
 		}
 	}
 
-	dev_rc_finalize(&adev->clk_reg_cache, adev->of_prams.site, RC_HAS_TIMER);
-	dev_rc_finalize(&adev->ctrl_reg_cache, adev->of_prams.site, !RC_HAS_TIMER);
+	dev_rc_finalize(&adev->clk_reg_cache, adev->of_prams.site,
+			RC_HAS_TIMER);
+	dev_rc_finalize(&adev->ctrl_reg_cache, adev->of_prams.site,
+			!RC_HAS_TIMER);
 }
 
-void acq400_removeDebugfs(struct acq400_dev* adev)
+void acq400_removeDebugfs(struct acq400_dev *adev)
 {
 	debugfs_remove_recursive(adev->debug_dir);
 	kfree(adev->debug_names);
 }
 
-
-void acq2006_createDebugfs(struct acq400_dev* adev)
+void acq2006_createDebugfs(struct acq400_dev *adev)
 {
-	char* pcursor;
+	char *pcursor;
 	int site;
 	int sites =
 		IS_ACQ2X06SC(adev)? 6:
@@ -655,24 +664,23 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 		IS_ACQ1102SC(adev)? 2:
 				    0;
 
-	unsigned* dev_rc_cache_data = dev_rc_alloc_cache();
-	dev_rc_init(adev, &adev->clk_reg_cache,
-			adev->dev_virtaddr, adev->of_prams.site, dev_rc_cache_data);
-	dev_rc_init(adev, &adev->ctrl_reg_cache,
-			adev->dev_virtaddr, adev->of_prams.site, dev_rc_cache_data);
-	if (!acq400_debug_root){
+	unsigned *dev_rc_cache_data = dev_rc_alloc_cache();
+	dev_rc_init(adev, &adev->clk_reg_cache, adev->dev_virtaddr,
+		    adev->of_prams.site, dev_rc_cache_data);
+	dev_rc_init(adev, &adev->ctrl_reg_cache, adev->dev_virtaddr,
+		    adev->of_prams.site, dev_rc_cache_data);
+	if (!acq400_debug_root) {
 		acq400_debug_root = debugfs_create_dir("acq400", 0);
-		if (!acq400_debug_root){
+		if (!acq400_debug_root) {
 			dev_warn(&adev->pdev->dev, "failed create dir acq420");
 			return;
 		}
 	}
 	pcursor = adev->debug_names = kmalloc(4096, GFP_KERNEL);
 
-
 	adev->debug_dir = debugfs_create_dir(adev->dev_name, acq400_debug_root);
 
-	if (!adev->debug_dir){
+	if (!adev->debug_dir) {
 		dev_warn(&adev->pdev->dev, "failed create dir acq400.x");
 		return;
 	}
@@ -682,14 +690,14 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 	DBG_REG_CREATE(AGGSTA);
 	DBG_REG_CREATE(DATA_ENGINE_0);
 	DBG_REG_CREATE(DATA_ENGINE_1);
-	if (IS_ACQ2X06SC(adev)){
-		if (IS_AXI64(adev)){
+	if (IS_ACQ2X06SC(adev)) {
+		if (IS_AXI64(adev)) {
 			DBG_REG_CREATE(AXI_DMA_ENGINE_DATA);
-		}else{
+		} else {
 			DBG_REG_CREATE(DATA_ENGINE_2);
 			DBG_REG_CREATE(DATA_ENGINE_3);
 		}
-	}else if(IS_AXI64(adev)){
+	} else if (IS_AXI64(adev)) {
 		DBG_REG_CREATE(AXI_DMA_ENGINE_DATA);
 	}
 
@@ -712,57 +720,56 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 	DBG_REG_CREATE(AXI_DMA_DEBUG_1);
 	DBG_REG_CREATE(AXI_DMA_DEBUG_2);
 	DBG_REG_CREATE(AXI_DMA_DEBUG_3);
-	if (IS_MULTIPATH(adev)){
+	if (IS_MULTIPATH(adev)) {
 		DBG_REG_CREATE(AGG_FIFO_WMASK);
 	}
 	DBG_REG_CREATE(DIST_TCAN_OVLY);
 
-
 	DBG_REG_CREATE_NAME("CLK_EXT", ACQ2006_CLK_COUNT(EXT_DX));
-	DBG_REG_CREATE_NAME("CLK_MB",  ACQ2006_CLK_COUNT(MB_DX));
+	DBG_REG_CREATE_NAME("CLK_MB", ACQ2006_CLK_COUNT(MB_DX));
 
-	for (site = 1; site <= sites + IS_ACQ1001SC(adev); ++site){
+	for (site = 1; site <= sites + IS_ACQ1001SC(adev); ++site) {
 		char name[20];
 		sprintf(name, "CLK_%d", site);
 		DBG_REG_CREATE_NAME(name, ACQ2006_CLK_COUNT(SITE2DX(site)));
 	}
 
 	DBG_REG_CREATE_NAME("TRG_EXT", ACQ2006_TRG_COUNT(EXT_DX));
-	DBG_REG_CREATE_NAME("TRG_MB",  ACQ2006_TRG_COUNT(MB_DX));
-	for (site = 1; site <= sites; ++site){
+	DBG_REG_CREATE_NAME("TRG_MB", ACQ2006_TRG_COUNT(MB_DX));
+	for (site = 1; site <= sites; ++site) {
 		char name[20];
 		sprintf(name, "TRG_%d", site);
 		DBG_REG_CREATE_NAME(name, ACQ2006_TRG_COUNT(SITE2DX(site)));
 	}
 
 	DBG_REG_CREATE_NAME("SYN_EXT", ACQ2006_SYN_COUNT(EXT_DX));
-	DBG_REG_CREATE_NAME("SYN_MB",  ACQ2006_SYN_COUNT(MB_DX));
-	for (site = 1; site <= sites; ++site){
+	DBG_REG_CREATE_NAME("SYN_MB", ACQ2006_SYN_COUNT(MB_DX));
+	for (site = 1; site <= sites; ++site) {
 		char name[20];
 		sprintf(name, "SYN_%d", site);
 		DBG_REG_CREATE_NAME(name, ACQ2006_SYN_COUNT(SITE2DX(site)));
 	}
 	DBG_REG_CREATE_NAME("EVT_EXT", ACQ2006_EVT_COUNT(EXT_DX));
-	DBG_REG_CREATE_NAME("EVT_MB",  ACQ2006_EVT_COUNT(MB_DX));
-	for (site = 1; site <= sites; ++site){
+	DBG_REG_CREATE_NAME("EVT_MB", ACQ2006_EVT_COUNT(MB_DX));
+	for (site = 1; site <= sites; ++site) {
 		char name[20];
 		sprintf(name, "EVT_%d", site);
 		DBG_REG_CREATE_NAME(name, ACQ2006_EVT_COUNT(SITE2DX(site)));
 	}
 
-	if (IS_SC(adev) && !(IS_ACQ2006SC(adev) && FPGA_REV(adev)<8)){
+	if (IS_SC(adev) && !(IS_ACQ2006SC(adev) && FPGA_REV(adev) < 8)) {
 		char name[16];
 		int ii;
-		for (ii = 0; ii < SPADMAX; ++ii){
+		for (ii = 0; ii < SPADMAX; ++ii) {
 			snprintf(name, 16, "spad%d", ii);
 			DBG_REG_CREATE_NAME_NC(name, SPADN(ii));
 		}
-		for (ii = 0; ii < SPADMAX; ++ii){
+		for (ii = 0; ii < SPADMAX; ++ii) {
 			snprintf(name, 16, "xo_spad%d", ii);
 			DBG_REG_CREATE_NAME_NC(name, XO_SPADN(ii));
 		}
 	}
-	if (IS_ACQ1102_WR(adev) || IS_ACQ2106_WR(adev)){
+	if (IS_ACQ1102_WR(adev) || IS_ACQ2106_WR(adev)) {
 		DBG_REG_CREATE(WR_CTRL);
 		DBG_REG_CREATE(WR_CLK_GEN);
 		DBG_REG_CREATE(WR_TAI_CUR_L);
@@ -772,7 +779,7 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 		DBG_REG_CREATE(WR_CUR_VERNR);
 		DBG_REG_CREATE(WR_TAI_TRG1);
 
-		if (IS_ACQ2106_TIGA(adev)){
+		if (IS_ACQ2106_TIGA(adev)) {
 			DBG_REG_CREATE(WR_TS_S1);
 			DBG_REG_CREATE(WR_TS_S2);
 			DBG_REG_CREATE(WR_TS_S3);
@@ -790,6 +797,8 @@ void acq2006_createDebugfs(struct acq400_dev* adev)
 			DBG_REG_CREATE(WR_TIGA_CSR);
 		}
 	}
-	dev_rc_finalize(&adev->clk_reg_cache, adev->of_prams.site, RC_HAS_TIMER);
-	dev_rc_finalize(&adev->ctrl_reg_cache, adev->of_prams.site, !RC_HAS_TIMER);
+	dev_rc_finalize(&adev->clk_reg_cache, adev->of_prams.site,
+			RC_HAS_TIMER);
+	dev_rc_finalize(&adev->ctrl_reg_cache, adev->of_prams.site,
+			!RC_HAS_TIMER);
 }

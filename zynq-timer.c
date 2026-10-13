@@ -51,12 +51,12 @@
 #include <asm/mach/dma.h>
 #include <asm/io.h>
 
-#define SLCR_XSCU	0xf8f00000
+#define SLCR_XSCU 0xf8f00000
 #define SLCR_XSCU_RANGE 0x00002000
 
-#define XSCU_GTC0_COUNT0	0x0200
-#define XSCU_GTC0_COUNT1	0x0204
-#define XSCU_GTC0_CR		0x0208
+#define XSCU_GTC0_COUNT0 0x0200
+#define XSCU_GTC0_COUNT1 0x0204
+#define XSCU_GTC0_CR 0x0208
 
 static void *xscu;
 
@@ -72,22 +72,21 @@ again. If the value is different to the
 step 2. Otherwise the 64-bit time
 */
 {
-	u32 ctr12 = readl(xscu+XSCU_GTC0_COUNT1);
+	u32 ctr12 = readl(xscu + XSCU_GTC0_COUNT1);
 	u32 ctr0;
 	u32 ctr1;
 	unsigned long long llc;
 
 	do {
 		ctr1 = ctr12;
-		ctr0 = readl(xscu+XSCU_GTC0_COUNT0);
-		ctr12 = readl(xscu+XSCU_GTC0_COUNT1);
+		ctr0 = readl(xscu + XSCU_GTC0_COUNT0);
+		ctr12 = readl(xscu + XSCU_GTC0_COUNT1);
 	} while (ctr1 != ctr12);
 
 	llc = ctr1;
 	llc <<= 32;
 	llc |= ctr0;
 	return llc;
-
 }
 
 void init_xscu(void)
@@ -96,7 +95,7 @@ void init_xscu(void)
 }
 unsigned long long otick(void)
 {
-	if (!xscu){
+	if (!xscu) {
 		init_xscu();
 	}
 	return _otick();
@@ -105,6 +104,5 @@ unsigned long long otick(void)
 /* zynq 333MHz clock -> 3nsec / tick */
 unsigned delta_nsec(unsigned long long t0, unsigned long long t1)
 {
-	return ((unsigned)(t1 - t0))*3;
+	return ((unsigned)(t1 - t0)) * 3;
 }
-

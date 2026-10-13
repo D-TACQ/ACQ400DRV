@@ -38,66 +38,67 @@ extern void zynq_slcr_init_postload_fpga(void);
 static DEFINE_MUTEX(xdevcfg_mutex);
 
 /* Constant Definitions */
-#define XDCFG_CTRL_OFFSET		0x00 /* Control Register */
-#define XDCFG_LOCK_OFFSET		0x04 /* Lock Register */
-#define XDCFG_INT_STS_OFFSET		0x0C /* Interrupt Status Register */
-#define XDCFG_INT_MASK_OFFSET		0x10 /* Interrupt Mask Register */
-#define XDCFG_STATUS_OFFSET		0x14 /* Status Register */
-#define XDCFG_DMA_SRC_ADDR_OFFSET	0x18 /* DMA Source Address Register */
-#define XDCFG_DMA_DEST_ADDR_OFFSET	0x1C /* DMA Destination Address Reg */
-#define XDCFG_DMA_SRC_LEN_OFFSET	0x20 /* DMA Source Transfer Length */
-#define XDCFG_DMA_DEST_LEN_OFFSET	0x24 /* DMA Destination Transfer */
-#define XDCFG_UNLOCK_OFFSET		0x34 /* Unlock Register */
-#define XDCFG_MCTRL_OFFSET		0x80 /* Misc. Control Register */
+#define XDCFG_CTRL_OFFSET 0x00 /* Control Register */
+#define XDCFG_LOCK_OFFSET 0x04 /* Lock Register */
+#define XDCFG_INT_STS_OFFSET 0x0C /* Interrupt Status Register */
+#define XDCFG_INT_MASK_OFFSET 0x10 /* Interrupt Mask Register */
+#define XDCFG_STATUS_OFFSET 0x14 /* Status Register */
+#define XDCFG_DMA_SRC_ADDR_OFFSET 0x18 /* DMA Source Address Register */
+#define XDCFG_DMA_DEST_ADDR_OFFSET 0x1C /* DMA Destination Address Reg */
+#define XDCFG_DMA_SRC_LEN_OFFSET 0x20 /* DMA Source Transfer Length */
+#define XDCFG_DMA_DEST_LEN_OFFSET 0x24 /* DMA Destination Transfer */
+#define XDCFG_UNLOCK_OFFSET 0x34 /* Unlock Register */
+#define XDCFG_MCTRL_OFFSET 0x80 /* Misc. Control Register */
 
 /* Control Register Bit definitions */
-#define XDCFG_CTRL_PCFG_PROG_B_MASK	0x40000000 /* Program signal to
+#define XDCFG_CTRL_PCFG_PROG_B_MASK \
+	0x40000000 /* Program signal to
 						    *  Reset FPGA */
-#define XDCFG_CTRL_PCAP_PR_MASK		0x08000000 /* Enable PCAP for PR */
-#define XDCFG_CTRL_PCAP_MODE_MASK	0x04000000 /* Enable PCAP */
-#define XDCFG_CTRL_PCAP_RATE_EN_MASK  0x02000000 /* Enable PCAP Quad Rate */
-#define XDCFG_CTRL_PCFG_AES_EN_MASK	0x00000E00 /* AES Enable Mask */
-#define XDCFG_CTRL_SEU_EN_MASK		0x00000100 /* SEU Enable Mask */
-#define XDCFG_CTRL_SPNIDEN_MASK		0x00000040 /* Secure Non Invasive
+#define XDCFG_CTRL_PCAP_PR_MASK 0x08000000 /* Enable PCAP for PR */
+#define XDCFG_CTRL_PCAP_MODE_MASK 0x04000000 /* Enable PCAP */
+#define XDCFG_CTRL_PCAP_RATE_EN_MASK 0x02000000 /* Enable PCAP Quad Rate */
+#define XDCFG_CTRL_PCFG_AES_EN_MASK 0x00000E00 /* AES Enable Mask */
+#define XDCFG_CTRL_SEU_EN_MASK 0x00000100 /* SEU Enable Mask */
+#define XDCFG_CTRL_SPNIDEN_MASK \
+	0x00000040 /* Secure Non Invasive
 						    *  Debug Enable */
-#define XDCFG_CTRL_SPIDEN_MASK		0x00000020 /* Secure Invasive
+#define XDCFG_CTRL_SPIDEN_MASK \
+	0x00000020 /* Secure Invasive
 						    *  Debug Enable */
-#define XDCFG_CTRL_NIDEN_MASK		0x00000010 /* Non-Invasive Debug
+#define XDCFG_CTRL_NIDEN_MASK \
+	0x00000010 /* Non-Invasive Debug
 						    *  Enable */
-#define XDCFG_CTRL_DBGEN_MASK		0x00000008 /* Invasive Debug
+#define XDCFG_CTRL_DBGEN_MASK \
+	0x00000008 /* Invasive Debug
 						    *  Enable */
-#define XDCFG_CTRL_DAP_EN_MASK		0x00000007 /* DAP Enable Mask */
+#define XDCFG_CTRL_DAP_EN_MASK 0x00000007 /* DAP Enable Mask */
 
 /* Lock register bit definitions */
 
-#define XDCFG_LOCK_AES_EN_MASK		0x00000008 /* Lock AES_EN update */
-#define XDCFG_LOCK_SEU_MASK		0x00000004 /* Lock SEU_En update */
-#define XDCFG_LOCK_DBG_MASK		0x00000001 /* This bit locks
+#define XDCFG_LOCK_AES_EN_MASK 0x00000008 /* Lock AES_EN update */
+#define XDCFG_LOCK_SEU_MASK 0x00000004 /* Lock SEU_En update */
+#define XDCFG_LOCK_DBG_MASK \
+	0x00000001 /* This bit locks
 						    *  security config
 						    *  including: DAP_En,
 						    *  DBGEN,NIDEN, SPNIEN */
 
 /* Miscellaneous Control Register bit definitions */
-#define XDCFG_MCTRL_PCAP_LPBK_MASK	0x00000010 /* Internal PCAP loopback */
+#define XDCFG_MCTRL_PCAP_LPBK_MASK 0x00000010 /* Internal PCAP loopback */
 
 /* Status register bit definitions */
-#define XDCFG_STATUS_PCFG_INIT_MASK	0x00000010 /* FPGA init status */
+#define XDCFG_STATUS_PCFG_INIT_MASK 0x00000010 /* FPGA init status */
 
 /* Interrupt Status/Mask Register Bit definitions */
-#define XDCFG_IXR_DMA_DONE_MASK		0x00002000 /* DMA Command Done */
-#define XDCFG_IXR_D_P_DONE_MASK		0x00001000 /* DMA and PCAP Cmd Done */
-#define XDCFG_IXR_PCFG_DONE_MASK	0x00000004 /* FPGA programmed */
-#define XDCFG_IXR_ERROR_FLAGS_MASK	0x00F0F860
-#define XDCFG_IXR_ALL_MASK		0xF8F7F87F
+#define XDCFG_IXR_DMA_DONE_MASK 0x00002000 /* DMA Command Done */
+#define XDCFG_IXR_D_P_DONE_MASK 0x00001000 /* DMA and PCAP Cmd Done */
+#define XDCFG_IXR_PCFG_DONE_MASK 0x00000004 /* FPGA programmed */
+#define XDCFG_IXR_ERROR_FLAGS_MASK 0x00F0F860
+#define XDCFG_IXR_ALL_MASK 0xF8F7F87F
 /* Miscellaneous constant values */
-#define XDCFG_DMA_INVALID_ADDRESS	0xFFFFFFFF  /* Invalid DMA address */
+#define XDCFG_DMA_INVALID_ADDRESS 0xFFFFFFFF /* Invalid DMA address */
 
-static const char * const fclk_name[] = {
-	"fclk0",
-	"fclk1",
-	"fclk2",
-	"fclk3"
-};
+static const char *const fclk_name[] = { "fclk0", "fclk1", "fclk2", "fclk3" };
 #define NUMFCLKS ARRAY_SIZE(fclk_name)
 
 /**
@@ -156,8 +157,8 @@ struct fclk_data {
 };
 
 /* Register read/write access routines */
-#define xdevcfg_writereg(offset, val)	__raw_writel(val, offset)
-#define xdevcfg_readreg(offset)		__raw_readl(offset)
+#define xdevcfg_writereg(offset, val) __raw_writel(val, offset)
+#define xdevcfg_readreg(offset) __raw_readl(offset)
 
 /**
  * xdevcfg_reset_pl() - Reset the programmable logic.
@@ -173,24 +174,24 @@ static void xdevcfg_reset_pl(void __iomem *base_address)
 	 * the rising edge happens.
 	 */
 	xdevcfg_writereg(base_address + XDCFG_CTRL_OFFSET,
-			(xdevcfg_readreg(base_address + XDCFG_CTRL_OFFSET) |
-			 XDCFG_CTRL_PCFG_PROG_B_MASK));
+			 (xdevcfg_readreg(base_address + XDCFG_CTRL_OFFSET) |
+			  XDCFG_CTRL_PCFG_PROG_B_MASK));
 	while (!(xdevcfg_readreg(base_address + XDCFG_STATUS_OFFSET) &
-				XDCFG_STATUS_PCFG_INIT_MASK))
+		 XDCFG_STATUS_PCFG_INIT_MASK))
 		;
 
 	xdevcfg_writereg(base_address + XDCFG_CTRL_OFFSET,
-			(xdevcfg_readreg(base_address + XDCFG_CTRL_OFFSET) &
-			 ~XDCFG_CTRL_PCFG_PROG_B_MASK));
+			 (xdevcfg_readreg(base_address + XDCFG_CTRL_OFFSET) &
+			  ~XDCFG_CTRL_PCFG_PROG_B_MASK));
 	while (xdevcfg_readreg(base_address + XDCFG_STATUS_OFFSET) &
-			XDCFG_STATUS_PCFG_INIT_MASK)
+	       XDCFG_STATUS_PCFG_INIT_MASK)
 		;
 
 	xdevcfg_writereg(base_address + XDCFG_CTRL_OFFSET,
-			(xdevcfg_readreg(base_address + XDCFG_CTRL_OFFSET) |
-			 XDCFG_CTRL_PCFG_PROG_B_MASK));
+			 (xdevcfg_readreg(base_address + XDCFG_CTRL_OFFSET) |
+			  XDCFG_CTRL_PCFG_PROG_B_MASK));
 	while (!(xdevcfg_readreg(base_address + XDCFG_STATUS_OFFSET) &
-				XDCFG_STATUS_PCFG_INIT_MASK))
+		 XDCFG_STATUS_PCFG_INIT_MASK))
 		;
 }
 
@@ -207,19 +208,18 @@ static irqreturn_t xdevcfg_irq(int irq, void *data)
 
 	spin_lock(&drvdata->lock);
 
-	intr_status = xdevcfg_readreg(drvdata->base_address +
-					XDCFG_INT_STS_OFFSET);
+	intr_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_INT_STS_OFFSET);
 
 	/* Clear the interrupts */
 	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_STS_OFFSET,
-				intr_status);
+			 intr_status);
 
-	if ((intr_status & XDCFG_IXR_D_P_DONE_MASK) ==
-				XDCFG_IXR_D_P_DONE_MASK)
+	if ((intr_status & XDCFG_IXR_D_P_DONE_MASK) == XDCFG_IXR_D_P_DONE_MASK)
 		drvdata->dma_done = 1;
 
 	if ((intr_status & XDCFG_IXR_ERROR_FLAGS_MASK) ==
-			XDCFG_IXR_ERROR_FLAGS_MASK)
+	    XDCFG_IXR_ERROR_FLAGS_MASK)
 		drvdata->error_status = 1;
 
 	spin_unlock(&drvdata->lock);
@@ -236,9 +236,8 @@ static irqreturn_t xdevcfg_irq(int irq, void *data)
  * @ppos:	Pointer to the offset value
  * returns:	Success or error status.
  **/
-static ssize_t
-xdevcfg_write(struct file *file, const char __user *buf, size_t count,
-		loff_t *ppos)
+static ssize_t xdevcfg_write(struct file *file, const char __user *buf,
+			     size_t count, loff_t *ppos)
 {
 	char *kbuf;
 	int status;
@@ -315,12 +314,11 @@ xdevcfg_write(struct file *file, const char __user *buf, size_t count,
 
 	/* Enable DMA and error interrupts */
 	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_STS_OFFSET,
-				XDCFG_IXR_ALL_MASK);
+			 XDCFG_IXR_ALL_MASK);
 
-
-	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_MASK_OFFSET,
-				(u32) (~(XDCFG_IXR_D_P_DONE_MASK |
-				XDCFG_IXR_ERROR_FLAGS_MASK)));
+	xdevcfg_writereg(
+		drvdata->base_address + XDCFG_INT_MASK_OFFSET,
+		(u32)(~(XDCFG_IXR_D_P_DONE_MASK | XDCFG_IXR_ERROR_FLAGS_MASK)));
 
 	drvdata->dma_done = 0;
 	drvdata->error_status = 0;
@@ -328,28 +326,30 @@ xdevcfg_write(struct file *file, const char __user *buf, size_t count,
 	/* Initiate DMA write command */
 	if (count < 0x1000)
 		xdevcfg_writereg(drvdata->base_address +
-			XDCFG_DMA_SRC_ADDR_OFFSET, (u32)(dma_addr + 1));
+					 XDCFG_DMA_SRC_ADDR_OFFSET,
+				 (u32)(dma_addr + 1));
 	else
 		xdevcfg_writereg(drvdata->base_address +
-			XDCFG_DMA_SRC_ADDR_OFFSET, (u32) dma_addr);
+					 XDCFG_DMA_SRC_ADDR_OFFSET,
+				 (u32)dma_addr);
 
 	xdevcfg_writereg(drvdata->base_address + XDCFG_DMA_DEST_ADDR_OFFSET,
-				(u32)XDCFG_DMA_INVALID_ADDRESS);
+			 (u32)XDCFG_DMA_INVALID_ADDRESS);
 	/* Convert number of bytes to number of words.  */
 	if (count % 4)
-		transfer_length	= (count / 4 + 1);
+		transfer_length = (count / 4 + 1);
 	else
-		transfer_length	= count / 4;
+		transfer_length = count / 4;
 	xdevcfg_writereg(drvdata->base_address + XDCFG_DMA_SRC_LEN_OFFSET,
-				transfer_length);
+			 transfer_length);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_DMA_DEST_LEN_OFFSET, 0);
 
 	timeout = jiffies + msecs_to_jiffies(1000);
 
 	while (!drvdata->dma_done) {
 		if (time_after(jiffies, timeout)) {
-				status = -ETIMEDOUT;
-				goto error;
+			status = -ETIMEDOUT;
+			goto error;
 		}
 	}
 
@@ -357,11 +357,11 @@ xdevcfg_write(struct file *file, const char __user *buf, size_t count,
 		status = drvdata->error_status;
 
 	/* Disable the DMA and error interrupts */
-	intr_reg = xdevcfg_readreg(drvdata->base_address +
-					XDCFG_INT_MASK_OFFSET);
+	intr_reg =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_INT_MASK_OFFSET);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_MASK_OFFSET,
-				intr_reg | (XDCFG_IXR_D_P_DONE_MASK |
-				XDCFG_IXR_ERROR_FLAGS_MASK));
+			 intr_reg | (XDCFG_IXR_D_P_DONE_MASK |
+				     XDCFG_IXR_ERROR_FLAGS_MASK));
 
 	/* If we didn't write correctly, then bail out. */
 	if (status) {
@@ -381,7 +381,6 @@ err_clk:
 	return status;
 }
 
-
 /**
  * xdevcfg_read() - The is the driver read function.
  * @file:	Pointer to the file structure.
@@ -390,8 +389,8 @@ err_clk:
  * @ppos:	Pointer to the offsetvalue
  * returns:	Success or error status.
  */
-static ssize_t
-xdevcfg_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+static ssize_t xdevcfg_read(struct file *file, char __user *buf, size_t count,
+			    loff_t *ppos)
 {
 	u32 *kbuf;
 	int status;
@@ -420,19 +419,19 @@ xdevcfg_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 
 	/* Enable DMA and error interrupts */
 	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_STS_OFFSET,
-				XDCFG_IXR_ALL_MASK);
+			 XDCFG_IXR_ALL_MASK);
 
-	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_MASK_OFFSET,
-				(u32) (~(XDCFG_IXR_D_P_DONE_MASK |
-				XDCFG_IXR_ERROR_FLAGS_MASK)));
+	xdevcfg_writereg(
+		drvdata->base_address + XDCFG_INT_MASK_OFFSET,
+		(u32)(~(XDCFG_IXR_D_P_DONE_MASK | XDCFG_IXR_ERROR_FLAGS_MASK)));
 	/* Initiate DMA read command */
 	xdevcfg_writereg(drvdata->base_address + XDCFG_DMA_SRC_ADDR_OFFSET,
-				(u32)XDCFG_DMA_INVALID_ADDRESS);
+			 (u32)XDCFG_DMA_INVALID_ADDRESS);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_DMA_DEST_ADDR_OFFSET,
-				(u32)dma_addr);
+			 (u32)dma_addr);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_DMA_SRC_LEN_OFFSET, 0);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_DMA_DEST_LEN_OFFSET,
-				count / 4);
+			 count / 4);
 
 	timeout = jiffies + msecs_to_jiffies(1000);
 
@@ -447,12 +446,11 @@ xdevcfg_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 		status = drvdata->error_status;
 
 	/* Disable and clear DMA and error interrupts */
-	intr_reg = xdevcfg_readreg(drvdata->base_address +
-					XDCFG_INT_MASK_OFFSET);
+	intr_reg =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_INT_MASK_OFFSET);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_MASK_OFFSET,
-				intr_reg | (XDCFG_IXR_D_P_DONE_MASK |
-				XDCFG_IXR_ERROR_FLAGS_MASK));
-
+			 intr_reg | (XDCFG_IXR_D_P_DONE_MASK |
+				     XDCFG_IXR_ERROR_FLAGS_MASK));
 
 	/* If we didn't read correctly, then bail out. */
 	if (status) {
@@ -506,7 +504,7 @@ static int xdevcfg_open(struct inode *inode, struct file *file)
 	file->private_data = drvdata;
 	drvdata->is_open = 1;
 	drvdata->endian_swap = 0;
-	drvdata->residue_len= 0;
+	drvdata->residue_len = 0;
 
 	/*
 	 * If is_partial_bitstream is set, then PROG_B is not asserted
@@ -527,7 +525,7 @@ static int xdevcfg_open(struct inode *inode, struct file *file)
 		xdevcfg_reset_pl(drvdata->base_address);
 
 	xdevcfg_writereg(drvdata->base_address + XDCFG_INT_STS_OFFSET,
-			XDCFG_IXR_PCFG_DONE_MASK);
+			 XDCFG_IXR_PCFG_DONE_MASK);
 
 error:
 	mutex_unlock(&drvdata->sem);
@@ -551,7 +549,7 @@ static int xdevcfg_release(struct inode *inode, struct file *file)
 
 	if (drvdata->residue_len)
 		printk("Did not transfer last %d bytes\n",
-			drvdata->residue_len);
+		       drvdata->residue_len);
 
 	drvdata->is_open = 0;
 
@@ -583,7 +581,8 @@ static const struct file_operations xdevcfg_fops = {
  *		or the size of the buffer.
  */
 static ssize_t xdevcfg_set_dap_en(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				  struct device_attribute *attr,
+				  const char *buf, size_t size)
 {
 	u32 ctrl_reg_status;
 	unsigned long flags;
@@ -595,8 +594,8 @@ static ssize_t xdevcfg_set_dap_en(struct device *dev,
 	if (status)
 		return status;
 
-	ctrl_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET);
+	ctrl_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 	spin_lock_irqsave(&drvdata->lock, flags);
 
 	status = kstrtoul(buf, 10, &mask_bit);
@@ -610,8 +609,8 @@ static ssize_t xdevcfg_set_dap_en(struct device *dev,
 	}
 
 	xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-			(ctrl_reg_status |
-			 (((u32)mask_bit) & XDCFG_CTRL_DAP_EN_MASK)));
+			 (ctrl_reg_status |
+			  (((u32)mask_bit) & XDCFG_CTRL_DAP_EN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -636,7 +635,8 @@ err_unlock:
  * returns:	Size of the buffer.
  */
 static ssize_t xdevcfg_show_dap_en_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					  struct device_attribute *attr,
+					  char *buf)
 {
 	u32 dap_en_status;
 	int status;
@@ -646,8 +646,9 @@ static ssize_t xdevcfg_show_dap_en_status(struct device *dev,
 	if (status)
 		return status;
 
-	dap_en_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET) & XDCFG_CTRL_DAP_EN_MASK;
+	dap_en_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET) &
+		XDCFG_CTRL_DAP_EN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -657,7 +658,7 @@ static ssize_t xdevcfg_show_dap_en_status(struct device *dev,
 }
 
 static DEVICE_ATTR(enable_dap, 0644, xdevcfg_show_dap_en_status,
-				xdevcfg_set_dap_en);
+		   xdevcfg_set_dap_en);
 
 /**
  * xdevcfg_set_dbgen() - This function sets the DBGEN bit in the
@@ -670,7 +671,8 @@ static DEVICE_ATTR(enable_dap, 0644, xdevcfg_show_dap_en_status,
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_dbgen(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				 struct device_attribute *attr, const char *buf,
+				 size_t size)
 {
 	u32 ctrl_reg_status;
 	unsigned long flags;
@@ -682,8 +684,8 @@ static ssize_t xdevcfg_set_dbgen(struct device *dev,
 	if (status)
 		return status;
 
-	ctrl_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET);
+	ctrl_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 
 	status = kstrtoul(buf, 10, &mask_bit);
 
@@ -699,10 +701,10 @@ static ssize_t xdevcfg_set_dbgen(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status | XDCFG_CTRL_DBGEN_MASK));
+				 (ctrl_reg_status | XDCFG_CTRL_DBGEN_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status & (~XDCFG_CTRL_DBGEN_MASK)));
+				 (ctrl_reg_status & (~XDCFG_CTRL_DBGEN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -726,7 +728,8 @@ err_clk:
  * returns:	Size of the buffer.
  */
 static ssize_t xdevcfg_show_dbgen_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					 struct device_attribute *attr,
+					 char *buf)
 {
 	u32 dbgen_status;
 	ssize_t status;
@@ -736,8 +739,9 @@ static ssize_t xdevcfg_show_dbgen_status(struct device *dev,
 	if (status)
 		return status;
 
-	dbgen_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET) & XDCFG_CTRL_DBGEN_MASK;
+	dbgen_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET) &
+		XDCFG_CTRL_DBGEN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -747,7 +751,7 @@ static ssize_t xdevcfg_show_dbgen_status(struct device *dev,
 }
 
 static DEVICE_ATTR(enable_dbg_in, 0644, xdevcfg_show_dbgen_status,
-				xdevcfg_set_dbgen);
+		   xdevcfg_set_dbgen);
 
 /**
  * xdevcfg_set_niden() - This function sets the NIDEN bit in the
@@ -760,7 +764,8 @@ static DEVICE_ATTR(enable_dbg_in, 0644, xdevcfg_show_dbgen_status,
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_niden(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				 struct device_attribute *attr, const char *buf,
+				 size_t size)
 {
 	u32 ctrl_reg_status;
 	unsigned long flags;
@@ -772,8 +777,8 @@ static ssize_t xdevcfg_set_niden(struct device *dev,
 	if (status)
 		return status;
 
-	ctrl_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET);
+	ctrl_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 
 	status = kstrtoul(buf, 10, &mask_bit);
 
@@ -789,10 +794,10 @@ static ssize_t xdevcfg_set_niden(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status | XDCFG_CTRL_NIDEN_MASK));
+				 (ctrl_reg_status | XDCFG_CTRL_NIDEN_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status & (~XDCFG_CTRL_NIDEN_MASK)));
+				 (ctrl_reg_status & (~XDCFG_CTRL_NIDEN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -816,7 +821,8 @@ err_clk:
  * returns:	Size of the buffer.
  */
 static ssize_t xdevcfg_show_niden_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					 struct device_attribute *attr,
+					 char *buf)
 {
 	u32 niden_status;
 	ssize_t status;
@@ -826,8 +832,9 @@ static ssize_t xdevcfg_show_niden_status(struct device *dev,
 	if (status)
 		return status;
 
-	niden_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET) & XDCFG_CTRL_NIDEN_MASK;
+	niden_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET) &
+		XDCFG_CTRL_NIDEN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -837,7 +844,7 @@ static ssize_t xdevcfg_show_niden_status(struct device *dev,
 }
 
 static DEVICE_ATTR(enable_dbg_nonin, 0644, xdevcfg_show_niden_status,
-			xdevcfg_set_niden);
+		   xdevcfg_set_niden);
 
 /**
  * xdevcfg_set_spiden() - This function sets the SPIDEN bit in the
@@ -850,7 +857,8 @@ static DEVICE_ATTR(enable_dbg_nonin, 0644, xdevcfg_show_niden_status,
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_spiden(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				  struct device_attribute *attr,
+				  const char *buf, size_t size)
 {
 	u32 ctrl_reg_status;
 	unsigned long flags;
@@ -862,8 +870,8 @@ static ssize_t xdevcfg_set_spiden(struct device *dev,
 	if (status)
 		return status;
 
-	ctrl_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET);
+	ctrl_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 
 	status = kstrtoul(buf, 10, &mask_bit);
 
@@ -879,11 +887,11 @@ static ssize_t xdevcfg_set_spiden(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status | XDCFG_CTRL_SPIDEN_MASK));
+				 (ctrl_reg_status | XDCFG_CTRL_SPIDEN_MASK));
 	else
 
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status & (~XDCFG_CTRL_SPIDEN_MASK)));
+				 (ctrl_reg_status & (~XDCFG_CTRL_SPIDEN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -907,7 +915,8 @@ err_clk:
  * returns:	Size of the buffer.
  */
 static ssize_t xdevcfg_show_spiden_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					  struct device_attribute *attr,
+					  char *buf)
 {
 	u32 spiden_status;
 	ssize_t status;
@@ -917,8 +926,9 @@ static ssize_t xdevcfg_show_spiden_status(struct device *dev,
 	if (status)
 		return status;
 
-	spiden_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_CTRL_OFFSET) & XDCFG_CTRL_SPIDEN_MASK;
+	spiden_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET) &
+		XDCFG_CTRL_SPIDEN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -928,7 +938,7 @@ static ssize_t xdevcfg_show_spiden_status(struct device *dev,
 }
 
 static DEVICE_ATTR(enable_sec_dbg_in, 0644, xdevcfg_show_spiden_status,
-				xdevcfg_set_spiden);
+		   xdevcfg_set_spiden);
 
 /**
  * xdevcfg_set_spniden() - This function sets the SPNIDEN bit in the
@@ -941,7 +951,8 @@ static DEVICE_ATTR(enable_sec_dbg_in, 0644, xdevcfg_show_spiden_status,
  * returns:	-EINVAL if invalid parameter is sent or the size of buffer
  */
 static ssize_t xdevcfg_set_spniden(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				   struct device_attribute *attr,
+				   const char *buf, size_t size)
 {
 	u32 ctrl_reg_status;
 	unsigned long flags;
@@ -953,8 +964,8 @@ static ssize_t xdevcfg_set_spniden(struct device *dev,
 	if (status)
 		return status;
 
-	ctrl_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET);
+	ctrl_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 	status = kstrtoul(buf, 10, &mask_bit);
 
 	if (status)
@@ -969,10 +980,11 @@ static ssize_t xdevcfg_set_spniden(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status | XDCFG_CTRL_SPNIDEN_MASK));
+				 (ctrl_reg_status | XDCFG_CTRL_SPNIDEN_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status & (~XDCFG_CTRL_SPNIDEN_MASK)));
+				 (ctrl_reg_status &
+				  (~XDCFG_CTRL_SPNIDEN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -996,7 +1008,8 @@ err_clk:
  * returns:	Size of the buffer.
  */
 static ssize_t xdevcfg_show_spniden_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					   struct device_attribute *attr,
+					   char *buf)
 {
 	u32 spniden_status;
 	ssize_t status;
@@ -1006,8 +1019,9 @@ static ssize_t xdevcfg_show_spniden_status(struct device *dev,
 	if (status)
 		return status;
 
-	spniden_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_CTRL_OFFSET) & XDCFG_CTRL_SPNIDEN_MASK;
+	spniden_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET) &
+		XDCFG_CTRL_SPNIDEN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -1017,7 +1031,7 @@ static ssize_t xdevcfg_show_spniden_status(struct device *dev,
 }
 
 static DEVICE_ATTR(enable_sec_dbg_nonin, 0644, xdevcfg_show_spniden_status,
-					xdevcfg_set_spniden);
+		   xdevcfg_set_spniden);
 
 /**
  * xdevcfg_set_seu() - This function sets the SEU_EN bit in the
@@ -1030,7 +1044,8 @@ static DEVICE_ATTR(enable_sec_dbg_nonin, 0644, xdevcfg_show_spniden_status,
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_seu(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+			       struct device_attribute *attr, const char *buf,
+			       size_t size)
 {
 	u32 ctrl_reg_status;
 	unsigned long flags;
@@ -1042,8 +1057,8 @@ static ssize_t xdevcfg_set_seu(struct device *dev,
 	if (status)
 		return status;
 
-	ctrl_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET);
+	ctrl_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 
 	status = kstrtoul(buf, 10, &mask_bit);
 
@@ -1059,10 +1074,10 @@ static ssize_t xdevcfg_set_seu(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status | XDCFG_CTRL_SEU_EN_MASK));
+				 (ctrl_reg_status | XDCFG_CTRL_SEU_EN_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status & (~XDCFG_CTRL_SEU_EN_MASK)));
+				 (ctrl_reg_status & (~XDCFG_CTRL_SEU_EN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -1086,7 +1101,7 @@ err_clk:
  * returns:	size of the buffer.
  */
 static ssize_t xdevcfg_show_seu_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				       struct device_attribute *attr, char *buf)
 {
 	u32 seu_status;
 	ssize_t status;
@@ -1096,8 +1111,9 @@ static ssize_t xdevcfg_show_seu_status(struct device *dev,
 	if (status)
 		return status;
 
-	seu_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_CTRL_OFFSET) & XDCFG_CTRL_SEU_EN_MASK;
+	seu_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET) &
+		XDCFG_CTRL_SEU_EN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -1122,7 +1138,8 @@ static DEVICE_ATTR(enable_seu, 0644, xdevcfg_show_seu_status, xdevcfg_set_seu);
  * either set or reset these bits.
  */
 static ssize_t xdevcfg_set_aes(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+			       struct device_attribute *attr, const char *buf,
+			       size_t size)
 {
 	u32 ctrl_reg_status;
 	unsigned long flags;
@@ -1134,8 +1151,8 @@ static ssize_t xdevcfg_set_aes(struct device *dev,
 	if (status)
 		return status;
 
-	ctrl_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_CTRL_OFFSET);
+	ctrl_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 
 	status = kstrtoul(buf, 10, &mask_bit);
 
@@ -1147,19 +1164,18 @@ static ssize_t xdevcfg_set_aes(struct device *dev,
 		goto err_clk;
 	}
 
-
 	spin_lock_irqsave(&drvdata->lock, flags);
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status |
-				 XDCFG_CTRL_PCFG_AES_EN_MASK |
-				 XDCFG_CTRL_PCAP_RATE_EN_MASK));
+				 (ctrl_reg_status |
+				  XDCFG_CTRL_PCFG_AES_EN_MASK |
+				  XDCFG_CTRL_PCAP_RATE_EN_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(ctrl_reg_status &
-				 ~(XDCFG_CTRL_PCFG_AES_EN_MASK |
-				 XDCFG_CTRL_PCAP_RATE_EN_MASK)));
+				 (ctrl_reg_status &
+				  ~(XDCFG_CTRL_PCFG_AES_EN_MASK |
+				    XDCFG_CTRL_PCAP_RATE_EN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -1183,7 +1199,7 @@ err_clk:
  * returns:	size of the buffer.
  */
 static ssize_t xdevcfg_show_aes_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				       struct device_attribute *attr, char *buf)
 {
 	u32 aes_status;
 	ssize_t status;
@@ -1193,8 +1209,9 @@ static ssize_t xdevcfg_show_aes_status(struct device *dev,
 	if (status)
 		return status;
 
-	aes_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_CTRL_OFFSET) & XDCFG_CTRL_PCFG_AES_EN_MASK;
+	aes_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET) &
+		XDCFG_CTRL_PCFG_AES_EN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -1216,7 +1233,8 @@ static DEVICE_ATTR(enable_aes, 0644, xdevcfg_show_aes_status, xdevcfg_set_aes);
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_aes_en_lock(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				       struct device_attribute *attr,
+				       const char *buf, size_t size)
 {
 	u32 aes_en_lock_status;
 	unsigned long flags;
@@ -1228,8 +1246,8 @@ static ssize_t xdevcfg_set_aes_en_lock(struct device *dev,
 	if (status)
 		return status;
 
-	aes_en_lock_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_LOCK_OFFSET);
+	aes_en_lock_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_LOCK_OFFSET);
 
 	status = kstrtoul(buf, 10, &mask_bit);
 
@@ -1245,11 +1263,11 @@ static ssize_t xdevcfg_set_aes_en_lock(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_LOCK_OFFSET,
-				(aes_en_lock_status | XDCFG_LOCK_AES_EN_MASK));
+				 (aes_en_lock_status | XDCFG_LOCK_AES_EN_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_LOCK_OFFSET,
-				(aes_en_lock_status &
-				 (~XDCFG_LOCK_AES_EN_MASK)));
+				 (aes_en_lock_status &
+				  (~XDCFG_LOCK_AES_EN_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -1273,7 +1291,8 @@ err_clk:
  * returns:	size of the buffer.
  */
 static ssize_t xdevcfg_show_aes_en_lock_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					       struct device_attribute *attr,
+					       char *buf)
 {
 	u32 aes_en_lock_status;
 	ssize_t status;
@@ -1283,8 +1302,9 @@ static ssize_t xdevcfg_show_aes_en_lock_status(struct device *dev,
 	if (status)
 		return status;
 
-	aes_en_lock_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_LOCK_OFFSET) & XDCFG_LOCK_AES_EN_MASK;
+	aes_en_lock_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_LOCK_OFFSET) &
+		XDCFG_LOCK_AES_EN_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -1294,7 +1314,7 @@ static ssize_t xdevcfg_show_aes_en_lock_status(struct device *dev,
 }
 
 static DEVICE_ATTR(aes_en_lock, 0644, xdevcfg_show_aes_en_lock_status,
-				xdevcfg_set_aes_en_lock);
+		   xdevcfg_set_aes_en_lock);
 
 /**
  * xdevcfg_set_seu_lock() - This function sets the LOCK_SEU bit in the
@@ -1307,7 +1327,8 @@ static DEVICE_ATTR(aes_en_lock, 0644, xdevcfg_show_aes_en_lock_status,
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_seu_lock(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
 {
 	u32 seu_lock_status;
 	unsigned long flags;
@@ -1319,8 +1340,8 @@ static ssize_t xdevcfg_set_seu_lock(struct device *dev,
 	if (status)
 		return status;
 
-	seu_lock_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_LOCK_OFFSET);
+	seu_lock_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_LOCK_OFFSET);
 
 	status = kstrtoul(buf, 10, &mask_bit);
 
@@ -1336,10 +1357,10 @@ static ssize_t xdevcfg_set_seu_lock(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_LOCK_OFFSET,
-				(seu_lock_status | XDCFG_LOCK_SEU_MASK));
+				 (seu_lock_status | XDCFG_LOCK_SEU_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_LOCK_OFFSET,
-				(seu_lock_status  & (~XDCFG_LOCK_SEU_MASK)));
+				 (seu_lock_status & (~XDCFG_LOCK_SEU_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -1363,7 +1384,8 @@ err_clk:
  * returns:	size of the buffer.
  */
 static ssize_t xdevcfg_show_seu_lock_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					    struct device_attribute *attr,
+					    char *buf)
 {
 	u32 seu_lock_status;
 	ssize_t status;
@@ -1373,8 +1395,9 @@ static ssize_t xdevcfg_show_seu_lock_status(struct device *dev,
 	if (status)
 		return status;
 
-	seu_lock_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_LOCK_OFFSET) & XDCFG_LOCK_SEU_MASK;
+	seu_lock_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_LOCK_OFFSET) &
+		XDCFG_LOCK_SEU_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -1384,7 +1407,7 @@ static ssize_t xdevcfg_show_seu_lock_status(struct device *dev,
 }
 
 static DEVICE_ATTR(seu_lock, 0644, xdevcfg_show_seu_lock_status,
-					xdevcfg_set_seu_lock);
+		   xdevcfg_set_seu_lock);
 
 /**
  * xdevcfg_set_dbg_lock() - This function sets the LOCK_DBG bit in the
@@ -1397,7 +1420,8 @@ static DEVICE_ATTR(seu_lock, 0644, xdevcfg_show_seu_lock_status,
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_dbg_lock(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
 {
 	u32 lock_reg_status;
 	unsigned long flags;
@@ -1409,8 +1433,8 @@ static ssize_t xdevcfg_set_dbg_lock(struct device *dev,
 	if (status)
 		return status;
 
-	lock_reg_status = xdevcfg_readreg(drvdata->base_address +
-				XDCFG_LOCK_OFFSET);
+	lock_reg_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_LOCK_OFFSET);
 	status = kstrtoul(buf, 10, &mask_bit);
 
 	if (status)
@@ -1425,10 +1449,10 @@ static ssize_t xdevcfg_set_dbg_lock(struct device *dev,
 
 	if (mask_bit)
 		xdevcfg_writereg(drvdata->base_address + XDCFG_LOCK_OFFSET,
-				(lock_reg_status | XDCFG_LOCK_DBG_MASK));
+				 (lock_reg_status | XDCFG_LOCK_DBG_MASK));
 	else
 		xdevcfg_writereg(drvdata->base_address + XDCFG_LOCK_OFFSET,
-				(lock_reg_status & (~XDCFG_LOCK_DBG_MASK)));
+				 (lock_reg_status & (~XDCFG_LOCK_DBG_MASK)));
 
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
@@ -1452,7 +1476,8 @@ err_clk:
  * returns:	size of the buffer.
  */
 static ssize_t xdevcfg_show_dbg_lock_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					    struct device_attribute *attr,
+					    char *buf)
 {
 	u32 dbg_lock_status;
 	ssize_t status;
@@ -1462,8 +1487,9 @@ static ssize_t xdevcfg_show_dbg_lock_status(struct device *dev,
 	if (status)
 		return status;
 
-	dbg_lock_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_LOCK_OFFSET) & XDCFG_LOCK_DBG_MASK;
+	dbg_lock_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_LOCK_OFFSET) &
+		XDCFG_LOCK_DBG_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -1473,7 +1499,7 @@ static ssize_t xdevcfg_show_dbg_lock_status(struct device *dev,
 }
 
 static DEVICE_ATTR(dbg_lock, 0644, xdevcfg_show_dbg_lock_status,
-				xdevcfg_set_dbg_lock);
+		   xdevcfg_set_dbg_lock);
 
 /**
  * xdevcfg_show_prog_done_status() - The function returns the PROG_DONE bit
@@ -1485,7 +1511,8 @@ static DEVICE_ATTR(dbg_lock, 0644, xdevcfg_show_dbg_lock_status,
  * returns:	size of the buffer.
  */
 static ssize_t xdevcfg_show_prog_done_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					     struct device_attribute *attr,
+					     char *buf)
 {
 	u32 prog_done_status;
 	ssize_t status;
@@ -1495,8 +1522,9 @@ static ssize_t xdevcfg_show_prog_done_status(struct device *dev,
 	if (status)
 		return status;
 
-	prog_done_status = xdevcfg_readreg(drvdata->base_address +
-			XDCFG_INT_STS_OFFSET) & XDCFG_IXR_PCFG_DONE_MASK;
+	prog_done_status =
+		xdevcfg_readreg(drvdata->base_address + XDCFG_INT_STS_OFFSET) &
+		XDCFG_IXR_PCFG_DONE_MASK;
 
 	clk_disable(drvdata->clk);
 
@@ -1505,8 +1533,7 @@ static ssize_t xdevcfg_show_prog_done_status(struct device *dev,
 	return status;
 }
 
-static DEVICE_ATTR(prog_done, 0644, xdevcfg_show_prog_done_status,
-				NULL);
+static DEVICE_ATTR(prog_done, 0644, xdevcfg_show_prog_done_status, NULL);
 
 /**
  * xdevcfg_set_is_partial_bitstream() - This function sets the
@@ -1522,7 +1549,8 @@ static DEVICE_ATTR(prog_done, 0644, xdevcfg_show_prog_done_status,
  * returns:	-EINVAL if invalid parameter is sent or size
  */
 static ssize_t xdevcfg_set_is_partial_bitstream(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+						struct device_attribute *attr,
+						const char *buf, size_t size)
 {
 	unsigned long mask_bit;
 	ssize_t status;
@@ -1553,8 +1581,8 @@ static ssize_t xdevcfg_set_is_partial_bitstream(struct device *dev,
  *		data.
  * returns:	size of the buffer.
  */
-static ssize_t xdevcfg_show_is_partial_bitstream_status(struct device *dev,
-		struct device_attribute *attr, char *buf)
+static ssize_t xdevcfg_show_is_partial_bitstream_status(
+	struct device *dev, struct device_attribute *attr, char *buf)
 {
 	ssize_t status;
 	struct xdevcfg_drvdata *drvdata = dev_get_drvdata(dev);
@@ -1565,8 +1593,8 @@ static ssize_t xdevcfg_show_is_partial_bitstream_status(struct device *dev,
 }
 
 static DEVICE_ATTR(is_partial_bitstream, 0644,
-				xdevcfg_show_is_partial_bitstream_status,
-				xdevcfg_set_is_partial_bitstream);
+		   xdevcfg_show_is_partial_bitstream_status,
+		   xdevcfg_set_is_partial_bitstream);
 
 static const struct attribute *xdevcfg_attrs[] = {
 	&dev_attr_prog_done.attr, /* PCFG_DONE bit in Intr Status register */
@@ -1584,13 +1612,12 @@ static const struct attribute *xdevcfg_attrs[] = {
 	NULL,
 };
 
-
 static const struct attribute_group xdevcfg_attr_group = {
-	.attrs = (struct attribute **) xdevcfg_attrs,
+	.attrs = (struct attribute **)xdevcfg_attrs,
 };
 
 static ssize_t fclk_enable_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				struct device_attribute *attr, char *buf)
 {
 	struct fclk_data *pdata = dev_get_drvdata(dev);
 
@@ -1598,7 +1625,8 @@ static ssize_t fclk_enable_show(struct device *dev,
 }
 
 static ssize_t fclk_enable_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+				 struct device_attribute *attr, const char *buf,
+				 size_t count)
 {
 	unsigned long enable;
 	int ret;
@@ -1627,7 +1655,7 @@ static ssize_t fclk_enable_store(struct device *dev,
 static DEVICE_ATTR(enable, 0644, fclk_enable_show, fclk_enable_store);
 
 static ssize_t fclk_set_rate_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				  struct device_attribute *attr, char *buf)
 {
 	struct fclk_data *pdata = dev_get_drvdata(dev);
 
@@ -1635,7 +1663,8 @@ static ssize_t fclk_set_rate_show(struct device *dev,
 }
 
 static ssize_t fclk_set_rate_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
 {
 	int ret = 0;
 	unsigned long rate;
@@ -1654,16 +1683,17 @@ static ssize_t fclk_set_rate_store(struct device *dev,
 static DEVICE_ATTR(set_rate, 0644, fclk_set_rate_show, fclk_set_rate_store);
 
 static ssize_t fclk_round_rate_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				    struct device_attribute *attr, char *buf)
 {
 	struct fclk_data *pdata = dev_get_drvdata(dev);
 
 	return scnprintf(buf, PAGE_SIZE, "%lu => %lu\n", pdata->rate_rnd,
-			clk_round_rate(pdata->clk, pdata->rate_rnd));
+			 clk_round_rate(pdata->clk, pdata->rate_rnd));
 }
 
 static ssize_t fclk_round_rate_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
 {
 	int ret = 0;
 	unsigned long rate;
@@ -1679,7 +1709,7 @@ static ssize_t fclk_round_rate_store(struct device *dev,
 }
 
 static DEVICE_ATTR(round_rate, 0644, fclk_round_rate_show,
-		fclk_round_rate_store);
+		   fclk_round_rate_store);
 
 static const struct attribute *fclk_ctrl_attrs[] = {
 	&dev_attr_enable.attr,
@@ -1693,7 +1723,8 @@ static const struct attribute_group fclk_ctrl_attr_grp = {
 };
 
 static ssize_t xdevcfg_fclk_export_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+					 struct device_attribute *attr,
+					 const char *buf, size_t size)
 {
 	int i, ret;
 	struct device *subdev;
@@ -1708,7 +1739,7 @@ static ssize_t xdevcfg_fclk_export_store(struct device *dev,
 	if (i < NUMFCLKS && !drvdata->fclk_exported[i]) {
 		drvdata->fclk_exported[i] = 1;
 		subdev = device_create(drvdata->fclk_class, dev, MKDEV(0, 0),
-				NULL, fclk_name[i]);
+				       NULL, fclk_name[i]);
 		if (IS_ERR(subdev))
 			return PTR_ERR(subdev);
 		ret = clk_prepare(drvdata->fclk[i]);
@@ -1739,7 +1770,8 @@ err_unprepare:
 }
 
 static ssize_t xdevcfg_fclk_export_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					struct device_attribute *attr,
+					char *buf)
 {
 	int i;
 	ssize_t count = 0;
@@ -1748,13 +1780,13 @@ static ssize_t xdevcfg_fclk_export_show(struct device *dev,
 	for (i = 0; i < NUMFCLKS; i++) {
 		if (!drvdata->fclk_exported[i])
 			count += scnprintf(buf + count, PAGE_SIZE - count,
-					"%s\n", fclk_name[i]);
+					   "%s\n", fclk_name[i]);
 	}
 	return count;
 }
 
 static DEVICE_ATTR(fclk_export, 0644, xdevcfg_fclk_export_show,
-		xdevcfg_fclk_export_store);
+		   xdevcfg_fclk_export_store);
 
 static int match_fclk(struct device *dev, const void *data)
 {
@@ -1764,7 +1796,8 @@ static int match_fclk(struct device *dev, const void *data)
 }
 
 static ssize_t xdevcfg_fclk_unexport_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+					   struct device_attribute *attr,
+					   const char *buf, size_t size)
 {
 	int i;
 	struct xdevcfg_drvdata *drvdata = dev_get_drvdata(dev);
@@ -1780,7 +1813,7 @@ static ssize_t xdevcfg_fclk_unexport_store(struct device *dev,
 
 		drvdata->fclk_exported[i] = 0;
 		subdev = class_find_device(drvdata->fclk_class, NULL,
-				drvdata->fclk[i], match_fclk);
+					   drvdata->fclk[i], match_fclk);
 		fdata = dev_get_drvdata(subdev);
 		if (fdata->enabled)
 			clk_disable(fdata->clk);
@@ -1796,7 +1829,8 @@ static ssize_t xdevcfg_fclk_unexport_store(struct device *dev,
 }
 
 static ssize_t xdevcfg_fclk_unexport_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					  struct device_attribute *attr,
+					  char *buf)
 {
 	int i;
 	ssize_t count = 0;
@@ -1805,13 +1839,13 @@ static ssize_t xdevcfg_fclk_unexport_show(struct device *dev,
 	for (i = 0; i < NUMFCLKS; i++) {
 		if (drvdata->fclk_exported[i])
 			count += scnprintf(buf + count, PAGE_SIZE - count,
-					"%s\n", fclk_name[i]);
+					   "%s\n", fclk_name[i]);
 	}
 	return count;
 }
 
 static DEVICE_ATTR(fclk_unexport, 0644, xdevcfg_fclk_unexport_show,
-		xdevcfg_fclk_unexport_store);
+		   xdevcfg_fclk_unexport_store);
 
 static const struct attribute *fclk_exp_attrs[] = {
 	&dev_attr_fclk_export.attr,
@@ -1858,7 +1892,8 @@ static void xdevcfg_fclk_remove(struct device *dev)
 
 			drvdata->fclk_exported[i] = 0;
 			subdev = class_find_device(drvdata->fclk_class, NULL,
-					drvdata->fclk[i], match_fclk);
+						   drvdata->fclk[i],
+						   match_fclk);
 			fdata = dev_get_drvdata(subdev);
 			if (fdata->enabled)
 				clk_disable(fdata->clk);
@@ -1866,7 +1901,6 @@ static void xdevcfg_fclk_remove(struct device *dev)
 			kfree(fdata);
 			device_unregister(subdev);
 			put_device(subdev);
-
 		}
 	}
 
@@ -1906,8 +1940,8 @@ static int xdevcfg_drv_probe(struct platform_device *pdev)
 		return PTR_ERR(drvdata->base_address);
 
 	drvdata->irq = platform_get_irq(pdev, 0);
-	retval = devm_request_irq(&pdev->dev, drvdata->irq, &xdevcfg_irq,
-				0, dev_name(&pdev->dev), drvdata);
+	retval = devm_request_irq(&pdev->dev, drvdata->irq, &xdevcfg_irq, 0,
+				  dev_name(&pdev->dev), drvdata);
 	if (retval) {
 		dev_err(&pdev->dev, "No IRQ available");
 		return retval;
@@ -1920,8 +1954,8 @@ static int xdevcfg_drv_probe(struct platform_device *pdev)
 	drvdata->is_partial_bitstream = 0;
 	drvdata->dma_done = 0;
 	drvdata->error_status = 0;
-	dev_info(&pdev->dev, "ioremap %pa to %p\n",
-		 &res->start, drvdata->base_address);
+	dev_info(&pdev->dev, "ioremap %pa to %p\n", &res->start,
+		 drvdata->base_address);
 
 	drvdata->clk = devm_clk_get(&pdev->dev, "ref_clk");
 	if (IS_ERR(drvdata->clk)) {
@@ -1953,7 +1987,7 @@ static int xdevcfg_drv_probe(struct platform_device *pdev)
 
 	/* Unlock the device */
 	xdevcfg_writereg(drvdata->base_address + XDCFG_UNLOCK_OFFSET,
-				0x757BDF0D);
+			 0x757BDF0D);
 
 	/*
 	 * Set the configuration register with the following options
@@ -1965,17 +1999,14 @@ static int xdevcfg_drv_probe(struct platform_device *pdev)
 	 */
 	ctrlreg = xdevcfg_readreg(drvdata->base_address + XDCFG_CTRL_OFFSET);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_CTRL_OFFSET,
-				(XDCFG_CTRL_PCFG_PROG_B_MASK |
-				XDCFG_CTRL_PCAP_PR_MASK |
-				XDCFG_CTRL_PCAP_MODE_MASK |
-				ctrlreg));
+			 (XDCFG_CTRL_PCFG_PROG_B_MASK |
+			  XDCFG_CTRL_PCAP_PR_MASK | XDCFG_CTRL_PCAP_MODE_MASK |
+			  ctrlreg));
 
 	/* Ensure internal PCAP loopback is disabled */
 	ctrlreg = xdevcfg_readreg(drvdata->base_address + XDCFG_MCTRL_OFFSET);
 	xdevcfg_writereg(drvdata->base_address + XDCFG_MCTRL_OFFSET,
-				(~XDCFG_MCTRL_PCAP_LPBK_MASK &
-				ctrlreg));
-
+			 (~XDCFG_MCTRL_PCAP_LPBK_MASK & ctrlreg));
 
 	retval = alloc_chrdev_region(&devt, 0, XDEVCFG_DEVICES, DRIVER_NAME);
 	if (retval < 0)
@@ -1998,10 +2029,10 @@ static int xdevcfg_drv_probe(struct platform_device *pdev)
 	}
 
 	dev = device_create(drvdata->class, &pdev->dev, devt, drvdata,
-			DRIVER_NAME);
+			    DRIVER_NAME);
 	if (IS_ERR(dev)) {
-			dev_err(&pdev->dev, "unable to create device\n");
-			goto failed7;
+		dev_err(&pdev->dev, "unable to create device\n");
+		goto failed7;
 	}
 
 	/* create sysfs files for the device */
@@ -2016,7 +2047,7 @@ static int xdevcfg_drv_probe(struct platform_device *pdev)
 
 	clk_disable(drvdata->clk);
 
-	return 0;		/* Success */
+	return 0; /* Success */
 
 failed8:
 	device_destroy(drvdata->class, drvdata->devt);
@@ -2058,12 +2089,14 @@ static int xdevcfg_drv_remove(struct platform_device *pdev)
 	cdev_del(&drvdata->cdev);
 	clk_unprepare(drvdata->clk);
 
-	return 0;		/* Success */
+	return 0; /* Success */
 }
 
 static struct of_device_id xdevcfg_of_match[] = {
-	{ .compatible = "xlnx,zynq-devcfg-1.0", },
-	{ /* end of table */}
+	{
+		.compatible = "xlnx,zynq-devcfg-1.0",
+	},
+	{ /* end of table */ }
 };
 MODULE_DEVICE_TABLE(of, xdevcfg_of_match);
 

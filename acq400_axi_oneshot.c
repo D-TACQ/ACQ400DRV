@@ -38,21 +38,22 @@
 
 int AXIDMA_ONCE_TO_MSEC = 1000;
 module_param(AXIDMA_ONCE_TO_MSEC, int, 0644);
-MODULE_PARM_DESC(AXIDMA_ONCE_TO_MSEC, "timeout for transferrining 4MB at 800MB/s");
-
+MODULE_PARM_DESC(AXIDMA_ONCE_TO_MSEC,
+		 "timeout for transferrining 4MB at 800MB/s");
 
 int AXIDMA_ONCE_BUSY;
 module_param(AXIDMA_ONCE_BUSY, int, 0444);
 MODULE_PARM_DESC(AXIDMA_ONCE_BUSY, "TRUE when ONCE in progress");
 
 int AXIDMA_ONCE_RESET_ON_EXIT;
-module_param(AXIDMA_ONCE_RESET_ON_EXIT, int , 0644);
+module_param(AXIDMA_ONCE_RESET_ON_EXIT, int, 0644);
 
 int use_sg_always = 0;
 module_param(use_sg_always, int, 0644);
-MODULE_PARM_DESC(use_sg_always, "test mode for single element, send it through sg path");
+MODULE_PARM_DESC(use_sg_always,
+		 "test mode for single element, send it through sg path");
 
-#define WAIT 	1
+#define WAIT 1
 #define NO_WAIT 0
 
 static void axidma_sync_callback(void *completion)
@@ -62,15 +63,16 @@ static void axidma_sync_callback(void *completion)
 	 */
 
 	complete(completion);
-
 }
 
 /* Prepare a DMA buffer to be used in a DMA transaction, submit it to the DMA engine
  * to queued and return a cookie that can be used to track that status of the
  * transaction
  */
-static dma_cookie_t axidma_prep_buffer(struct dma_chan *chan, dma_addr_t buf, size_t len,
-					enum dma_transfer_direction dir, struct completion *cmp)
+static dma_cookie_t axidma_prep_buffer(struct dma_chan *chan, dma_addr_t buf,
+				       size_t len,
+				       enum dma_transfer_direction dir,
+				       struct completion *cmp)
 {
 	enum dma_ctrl_flags flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
 	struct dma_async_tx_descriptor *chan_desc;
@@ -96,14 +98,15 @@ static dma_cookie_t axidma_prep_buffer(struct dma_chan *chan, dma_addr_t buf, si
 		 */
 
 		cookie = dmaengine_submit(chan_desc);
-
 	}
 	return cookie;
 }
 
-static dma_cookie_t axidma_prep_buffer_sg(
-		struct dma_chan *chan, struct scatterlist *sgl,	unsigned int sg_len,
-		enum dma_transfer_direction dir, struct completion *cmp)
+static dma_cookie_t axidma_prep_buffer_sg(struct dma_chan *chan,
+					  struct scatterlist *sgl,
+					  unsigned int sg_len,
+					  enum dma_transfer_direction dir,
+					  struct completion *cmp)
 {
 	enum dma_ctrl_flags flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
 	struct dma_async_tx_descriptor *chan_desc;
@@ -129,7 +132,6 @@ static dma_cookie_t axidma_prep_buffer_sg(
 		 */
 
 		cookie = dmaengine_submit(chan_desc);
-
 	}
 	return cookie;
 }
@@ -137,7 +139,7 @@ static dma_cookie_t axidma_prep_buffer_sg(
  * wait for it complete, timeout or have an error
  */
 static void axidma_start_transfer(struct dma_chan *chan, struct completion *cmp,
-					dma_cookie_t cookie, int wait)
+				  dma_cookie_t cookie, int wait)
 {
 	unsigned long timeout = msecs_to_jiffies(AXIDMA_ONCE_TO_MSEC);
 	enum dma_status status;
@@ -162,12 +164,13 @@ static void axidma_start_transfer(struct dma_chan *chan, struct completion *cmp,
 		/* Determine if the transaction completed without a timeout and
 		 * without any errors
 		 */
-		if (timeout == 0)  {
+		if (timeout == 0) {
 			dev_dbg(&chan->dev->device, "DMA timed out");
-		}else if (status != DMA_COMPLETE) {
-			dev_dbg(&chan->dev->device,  "DMA returned completion callback status of: %s",
-			       status == DMA_ERROR ? "error" : "in progress");
-		}else{
+		} else if (status != DMA_COMPLETE) {
+			dev_dbg(&chan->dev->device,
+				"DMA returned completion callback status of: %s",
+				status == DMA_ERROR ? "error" : "in progress");
+		} else {
 			dev_dbg(&chan->dev->device, "DMA GOOD");
 		}
 	}
@@ -175,22 +178,23 @@ static void axidma_start_transfer(struct dma_chan *chan, struct completion *cmp,
 
 extern int xilinx_dma_reset_dmachan(struct dma_chan *chan);
 
-int _axi64_data_once(struct acq400_dev *adev, struct dma_chan *rx_chan, unsigned char ib)
+int _axi64_data_once(struct acq400_dev *adev, struct dma_chan *rx_chan,
+		     unsigned char ib)
 {
-	char *dest_dma_buffer = (char*)adev->hb[ib]->va;
+	char *dest_dma_buffer = (char *)adev->hb[ib]->va;
 	int dma_length = adev->hb[ib]->len;
 	dma_addr_t rx_dma_handle;
 	struct completion rx_cmp;
 	dma_cookie_t rx_cookie;
 
-	dev_dbg(DEVP(adev), "%s 01 ib %d va:%p len:%d", __FUNCTION__, ib, dest_dma_buffer, dma_length);
+	dev_dbg(DEVP(adev), "%s 01 ib %d va:%p len:%d", __FUNCTION__, ib,
+		dest_dma_buffer, dma_length);
 
+	rx_dma_handle = dma_map_single(rx_chan->device->dev, dest_dma_buffer,
+				       dma_length, DMA_FROM_DEVICE);
 
-	rx_dma_handle = dma_map_single(
-			rx_chan->device->dev, dest_dma_buffer, dma_length, DMA_FROM_DEVICE);
-
-	rx_cookie = axidma_prep_buffer(
-			rx_chan, rx_dma_handle, dma_length, DMA_DEV_TO_MEM, &rx_cmp);
+	rx_cookie = axidma_prep_buffer(rx_chan, rx_dma_handle, dma_length,
+				       DMA_DEV_TO_MEM, &rx_cmp);
 
 	if (dma_submit_error(rx_cookie)) {
 		printk(KERN_ERR "xdma_prep_buffer error\n");
@@ -199,16 +203,17 @@ int _axi64_data_once(struct acq400_dev *adev, struct dma_chan *rx_chan, unsigned
 	dev_dbg(DEVP(adev), "%s 50 ib %d", __FUNCTION__, ib);
 
 	axidma_start_transfer(rx_chan, &rx_cmp, rx_cookie, WAIT);
-	dma_unmap_single(rx_chan->device->dev, rx_dma_handle, dma_length, DMA_FROM_DEVICE);
-
+	dma_unmap_single(rx_chan->device->dev, rx_dma_handle, dma_length,
+			 DMA_FROM_DEVICE);
 
 	dev_dbg(DEVP(adev), "%s 99", __FUNCTION__);
 	return 0;
 }
 
-#define MAXSG	16
+#define MAXSG 16
 
-int _axi64_data_once_sg(struct acq400_dev *adev, struct dma_chan *rx_chan, unsigned char blocks[], int nb)
+int _axi64_data_once_sg(struct acq400_dev *adev, struct dma_chan *rx_chan,
+			unsigned char blocks[], int nb)
 {
 	//struct scatterlist* sg = kzalloc(sizeof(struct scatterlist)*MAXSG, GFP_KERNEL);
 	struct scatterlist sg[MAXSG];
@@ -220,34 +225,34 @@ int _axi64_data_once_sg(struct acq400_dev *adev, struct dma_chan *rx_chan, unsig
 	BUG_ON(nb > MAXSG);
 
 	sg_init_table(sg, nb);
-	for (ii = 0; ii < nb; ++ii){
+	for (ii = 0; ii < nb; ++ii) {
 		int ib = blocks[ii];
-		char *dest_dma_buffer = (char*)adev->hb[ib]->va;
+		char *dest_dma_buffer = (char *)adev->hb[ib]->va;
 		int dma_length = adev->hb[ib]->len;
 
-		sg_dma_address(sg+ii) = dma_map_single(
-				rx_chan->device->dev,
-				dest_dma_buffer, dma_length, DMA_FROM_DEVICE);
-		sg_dma_len(sg+ii) = adev->hb[ib]->len;
+		sg_dma_address(sg + ii) =
+			dma_map_single(rx_chan->device->dev, dest_dma_buffer,
+				       dma_length, DMA_FROM_DEVICE);
+		sg_dma_len(sg + ii) = adev->hb[ib]->len;
 
-		dev_dbg(DEVP(adev), "%s 01 ib %d va:%p len:%d",
-				__FUNCTION__, ib, dest_dma_buffer, dma_length);
+		dev_dbg(DEVP(adev), "%s 01 ib %d va:%p len:%d", __FUNCTION__,
+			ib, dest_dma_buffer, dma_length);
 	}
 
-
-
-	rx_cookie = axidma_prep_buffer_sg(rx_chan, sg, nb, DMA_DEV_TO_MEM, &rx_cmp);
+	rx_cookie =
+		axidma_prep_buffer_sg(rx_chan, sg, nb, DMA_DEV_TO_MEM, &rx_cmp);
 
 	if (dma_submit_error(rx_cookie)) {
 		printk(KERN_ERR "xdma_prep_buffer error\n");
 		rc = -1;
-	}else{
+	} else {
 		dev_dbg(DEVP(adev), "%s 50 nb %d", __FUNCTION__, nb);
 
 		axidma_start_transfer(rx_chan, &rx_cmp, rx_cookie, WAIT);
-		for (ii = 0; ii < nb; ++ii){
+		for (ii = 0; ii < nb; ++ii) {
 			dma_unmap_single(rx_chan->device->dev,
-				sg_dma_address(sg+ii), sg_dma_len(sg+ii), DMA_FROM_DEVICE);
+					 sg_dma_address(sg + ii),
+					 sg_dma_len(sg + ii), DMA_FROM_DEVICE);
 		}
 	}
 	//kfree(sg);
@@ -264,14 +269,16 @@ int axi64_data_once(struct acq400_dev *adev, unsigned char blocks[], int nb)
 	int ii;
 	AXIDMA_ONCE_BUSY = 1;
 
-	if (nb == 1 && !use_sg_always){
+	if (nb == 1 && !use_sg_always) {
 		rc = _axi64_data_once(adev, rx_chan, blocks[0]);
-	}else{
-		for (ii = 0; ii < nb; ii += MAXSG){
-			dev_dbg(DEVP(adev), "%s call _axi64_data_once_sg( %p %d)",
-					__FUNCTION__, blocks+ii, min(nb, MAXSG));
-			rc = _axi64_data_once_sg(adev, rx_chan, blocks+ii, min(nb, MAXSG));
-			if (rc != 0){
+	} else {
+		for (ii = 0; ii < nb; ii += MAXSG) {
+			dev_dbg(DEVP(adev),
+				"%s call _axi64_data_once_sg( %p %d)",
+				__FUNCTION__, blocks + ii, min(nb, MAXSG));
+			rc = _axi64_data_once_sg(adev, rx_chan, blocks + ii,
+						 min(nb, MAXSG));
+			if (rc != 0) {
 				break;
 			}
 		}
@@ -279,11 +286,10 @@ int axi64_data_once(struct acq400_dev *adev, unsigned char blocks[], int nb)
 
 	xilinx_dma_halt(rx_chan);
 
-	if (AXIDMA_ONCE_RESET_ON_EXIT){
+	if (AXIDMA_ONCE_RESET_ON_EXIT) {
 		dev_dbg(DEVP(adev), "%s 66", __FUNCTION__);
 		xilinx_dma_reset_dmachan(rx_chan);
 	}
 	AXIDMA_ONCE_BUSY = 0;
 	return 0;
 }
-

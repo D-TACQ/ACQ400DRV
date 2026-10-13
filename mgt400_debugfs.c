@@ -30,11 +30,11 @@
 /* @@REMOVEME */
 #include "acq400_debugfs_internal.h"
 
-struct dentry* mgt400_debug_root;
+struct dentry *mgt400_debug_root;
 
-#define adev	mdev
+#define adev mdev
 
-void hudp_createDebugfs(struct mgt400_dev* mdev,char* pcursor)
+void hudp_createDebugfs(struct mgt400_dev *mdev, char *pcursor)
 {
 	DBG_REG_CREATE_RW(HUDP_CON);
 	DBG_REG_CREATE_RW(HUDP_IP_ADDR);
@@ -59,13 +59,12 @@ void hudp_createDebugfs(struct mgt400_dev* mdev,char* pcursor)
 	DBG_REG_CREATE_RW(HUDP_DEST_PORT);
 }
 
-void mgt400_createDebugfs(struct mgt400_dev* mdev)
+void mgt400_createDebugfs(struct mgt400_dev *mdev)
 {
-
-	char* pcursor;
-	if (!mgt400_debug_root){
+	char *pcursor;
+	if (!mgt400_debug_root) {
 		mgt400_debug_root = debugfs_create_dir("mgt400", 0);
-		if (!mgt400_debug_root){
+		if (!mgt400_debug_root) {
 			dev_warn(DEVP(adev), "failed create dir mgt400");
 			return;
 		}
@@ -75,16 +74,16 @@ void mgt400_createDebugfs(struct mgt400_dev* mdev)
 			adev->dev_virtaddr, adev->of_prams.site, MOD_REG_MAX);
 #endif
 	pcursor = adev->debug_names = kmalloc(4096, GFP_KERNEL);
-	adev->debug_dir = debugfs_create_dir(
-			adev->devname, mgt400_debug_root);
+	adev->debug_dir = debugfs_create_dir(adev->devname, mgt400_debug_root);
 
-	if (!mdev->debug_dir){
-		dev_warn(&adev->pdev->dev, "failed create dir %s", adev->devname);
+	if (!mdev->debug_dir) {
+		dev_warn(&adev->pdev->dev, "failed create dir %s",
+			 adev->devname);
 		return;
 	}
 	DBG_REG_CREATE(MOD_ID);
 
-	if (IS_MGT_HUDP(mdev)){
+	if (IS_MGT_HUDP(mdev)) {
 		return hudp_createDebugfs(mdev, pcursor);
 	}
 	DBG_REG_CREATE(ZDMA_CR);
@@ -98,11 +97,11 @@ void mgt400_createDebugfs(struct mgt400_dev* mdev)
 	DBG_REG_CREATE(COMMS_RXB_FCR);
 	DBG_REG_CREATE(ASTATS1);
 	DBG_REG_CREATE(ASTATS2);
-/* read clear, best not debug
+	/* read clear, best not debug
 	DBG_REG_CREATE(ALAT_AVG);
 	DBG_REG_CREATE(ALAT_MIN_MAX);
 */
-	if (IS_MGT_DRAM(mdev)){
+	if (IS_MGT_DRAM(mdev)) {
 		DBG_REG_CREATE(MGT_DRAM_STA);
 		DBG_REG_CREATE(MGT_DRAM_RX_CNT);
 		DBG_REG_CREATE(MGT_DRAM_TX_CNT);
@@ -130,7 +129,7 @@ void mgt400_createDebugfs(struct mgt400_dev* mdev)
 #endif
 #undef adev
 }
-void mgt400_removeDebugfs(struct mgt400_dev* adev)
+void mgt400_removeDebugfs(struct mgt400_dev *adev)
 {
 	debugfs_remove_recursive(adev->debug_dir);
 	kfree(adev->debug_names);

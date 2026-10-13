@@ -25,21 +25,28 @@
 struct list_head;
 
 enum BSTATE {
-	BS_EMPTY, BS_FILLING, BS_FULL, BS_FULL_APP,  BS_RESERVED, _BS_MAX
+	BS_EMPTY,
+	BS_FILLING,
+	BS_FULL,
+	BS_FULL_APP,
+	BS_RESERVED,
+	_BS_MAX
 };
 
-struct HBM {				/* Host Buffer Mapping */
-	u32* va;
+struct HBM { /* Host Buffer Mapping */
+	u32 *va;
 	dma_addr_t pa;
 	size_t len;
 	short dir;
 	short ix;
 	enum BSTATE bstate;
 	struct list_head list;
-	unsigned poison_data[2];	/* store data here when poisoning */
+	unsigned poison_data[2]; /* store data here when poisoning */
 };
-struct HBM* hbm_allocate1(struct device *dev, int len, int ix, enum dma_data_direction dir);
-int hbm_allocate(struct device *dev, int ix, int nbuffers, int len, struct list_head *buffers, enum dma_data_direction dir);
+struct HBM *hbm_allocate1(struct device *dev, int len, int ix,
+			  enum dma_data_direction dir);
+int hbm_allocate(struct device *dev, int ix, int nbuffers, int len,
+		 struct list_head *buffers, enum dma_data_direction dir);
 int hbm_free(struct device *dev, struct list_head *buffers);
 int hbm_free_buffer_only(struct device *dev, struct list_head *buffers);
 #endif /* HBM_H_ */

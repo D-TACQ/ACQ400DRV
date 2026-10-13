@@ -31,12 +31,10 @@
 #include <linux/of.h>
 #include <linux/regmap.h>
 
-
 #define REVID "0.1"
 
-#define GEM1_RCLK_CTRL	0x13c
-#define GEM1_CLK_CTRL	0x144
-
+#define GEM1_RCLK_CTRL 0x13c
+#define GEM1_CLK_CTRL 0x144
 
 static int __init eth1_1000X_en_init(void)
 {
@@ -51,16 +49,14 @@ static int __init eth1_1000X_en_init(void)
 	}
 
 	regmap_write(syscon, GEM1_RCLK_CTRL, 0x11);
-	regmap_write(syscon, GEM1_CLK_CTRL,  0x41);
+	regmap_write(syscon, GEM1_CLK_CTRL, 0x41);
 
 	return 0;
 }
 
 static void __exit eth1_1000X_en_exit(void)
 {
-
 }
-
 
 module_init(eth1_1000X_en_init);
 module_exit(eth1_1000X_en_exit);

@@ -8,33 +8,31 @@
 #include <linux/bug.h>
 #include "include/linux/dmaengine.h"
 
-#define DMA_SUCCESS	DMA_COMPLETE
+#define DMA_SUCCESS DMA_COMPLETE
 /* D-TACQ Customisation */
 
-#define DMA_CHANNEL_STARTS_WFP_SHL 	20
-#define DMA_CHANNEL_ENDS_FLUSHP_SHL	16
-#define DMA_CHANNEL_EV0_SHL		12
-
+#define DMA_CHANNEL_STARTS_WFP_SHL 20
+#define DMA_CHANNEL_ENDS_FLUSHP_SHL 16
+#define DMA_CHANNEL_EV0_SHL 12
 
 enum dma_ctrl_flags_dt {
-        // PGM WASHERE
-        DMA_SRC_NO_INCR = (1<<24),
-        DMA_DST_NO_INCR = (1<<25),
+	// PGM WASHERE
+	DMA_SRC_NO_INCR = (1 << 24),
+	DMA_DST_NO_INCR = (1 << 25),
 
-        DMA_WAIT_EV0 = (1<<26),
-        DMA_WAIT_EV1 = (1<<27),
-        DMA_SET_EV0 = (1<<28),
-        DMA_SET_EV1 = (1<<29),
+	DMA_WAIT_EV0 = (1 << 26),
+	DMA_WAIT_EV1 = (1 << 27),
+	DMA_SET_EV0 = (1 << 28),
+	DMA_SET_EV1 = (1 << 29),
 
-	DMA_CHANNEL_STARTS_WFP =  (0xf<<20),	/* Peripheral: 1..8 */
-	DMA_CHANNEL_ENDS_FLUSHP = (0xf<<16),    /* Peripheral: 1..8 */
-	DMA_CHANNEL_EV0	= (0xf << 12)		/* Event : 1:15 */
+	DMA_CHANNEL_STARTS_WFP = (0xf << 20), /* Peripheral: 1..8 */
+	DMA_CHANNEL_ENDS_FLUSHP = (0xf << 16), /* Peripheral: 1..8 */
+	DMA_CHANNEL_EV0 = (0xf << 12) /* Event : 1:15 */
 };
 
 /* need a nonzero value .. */
-#define PRI_TO_CTRL_FLAGS(pri) ((pri)+1)
-#define CTRL_FLAGS_TO_PRI(flg) ((flg)-1)
-
+#define PRI_TO_CTRL_FLAGS(pri) ((pri) + 1)
+#define CTRL_FLAGS_TO_PRI(flg) ((flg) - 1)
 
 /**
  * dma_cookie_init - initialize the cookies for a DMA channel
@@ -93,7 +91,8 @@ static inline void dma_cookie_complete(struct dma_async_tx_descriptor *tx)
  * non-NULL.  No locking is required.
  */
 static inline enum dma_status dma_cookie_status(struct dma_chan *chan,
-	dma_cookie_t cookie, struct dma_tx_state *state)
+						dma_cookie_t cookie,
+						struct dma_tx_state *state)
 {
 	dma_cookie_t used, complete;
 

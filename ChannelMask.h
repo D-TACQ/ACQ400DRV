@@ -55,19 +55,23 @@ static bool is_always_a_bitset;		<< Client MAY set this value BEFORE calling fac
 
 #include <bitset>
 
-
 /* MAXBIT: 256 : we have boxes with up to 192 channels,
  * so 256 gives headroom .. SPAD?
  */
 static const unsigned MAXBIT = 256;
 typedef std::bitset<MAXBIT> ChannelMask_t;
 
-class ChannelMask: public ChannelMask_t {
-	static ChannelMask_t intListToBitset(const std::string& input);
-	static bool is_number_comma_string(const std::string& input, int& count);
+class ChannelMask : public ChannelMask_t {
+	static ChannelMask_t intListToBitset(const std::string &input);
+	static bool is_number_comma_string(const std::string &input,
+					   int &count);
 
-	ChannelMask() : _start(0), _length(0), _is_bitset(false)
-	{}
+	ChannelMask()
+		: _start(0)
+		, _length(0)
+		, _is_bitset(false)
+	{
+	}
 
 	ChannelMask(int start, int length);
 	ChannelMask(unsigned long val);
@@ -78,20 +82,31 @@ class ChannelMask: public ChannelMask_t {
 	int _length;
 	bool _is_bitset;
 
-public:
-	const int start() const { return _start; }
-	const int length() const { return _length; }
-	const bool is_bitset() const { return _is_bitset; }
+    public:
+	const int start() const
+	{
+		return _start;
+	}
+	const int length() const
+	{
+		return _length;
+	}
+	const bool is_bitset() const
+	{
+		return _is_bitset;
+	}
 	int get_channelcount() const;
 	int get_topchan() const;
 	int get_firstchan() const;
 
-	static ChannelMask* factory(const char* def);
+	static ChannelMask *factory(const char *def);
 
-	std::string to_string() const;           /*<< return string repr. */
+	std::string to_string() const; /*<< return string repr. */
 
-	static int max_chan;			/*<< Client MUST set this value BEFORE calling factory(). */
-	static bool is_always_a_bitset;		/*<< Client MAY set this value BEFORE calling factory()/  */
+	static int
+		max_chan; /*<< Client MUST set this value BEFORE calling factory(). */
+	static bool
+		is_always_a_bitset; /*<< Client MAY set this value BEFORE calling factory()/  */
 };
 
 #endif /* CHANNELMASK_H_ */

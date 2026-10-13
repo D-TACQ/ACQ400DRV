@@ -13,36 +13,24 @@
 #include "mgt400_sysfs.h"
 #include "acq400_sysfs.h"
 
-
-ssize_t mgt400_show_bits(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	unsigned SHL,
-	unsigned MASK)
+ssize_t mgt400_show_bits(struct device *dev, struct device_attribute *attr,
+			 char *buf, unsigned REG, unsigned SHL, unsigned MASK)
 {
 	u32 regval = mgt400rd32(mgt400_devices[dev->id], REG);
-	u32 field = (regval>>SHL)&MASK;
+	u32 field = (regval >> SHL) & MASK;
 
 	return sprintf(buf, "%x\n", field);
 }
 
-ssize_t mgt400_store_bits(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		unsigned SHL,
-		unsigned MASK,
-		unsigned show_warning)
+ssize_t mgt400_store_bits(struct device *dev, struct device_attribute *attr,
+			  const char *buf, size_t count, unsigned REG,
+			  unsigned SHL, unsigned MASK, unsigned show_warning)
 {
 	struct mgt400_dev *mdev = mgt400_devices[dev->id];
 	u32 regval = mgt400rd32(mdev, REG);
 	u32 field;
 
-	if (buf[0] == 'P' || buf[0] == '^'){
+	if (buf[0] == 'P' || buf[0] == '^') {
 		regval &= ~(MASK << SHL);
 		mgt400wr32(mdev, REG, regval);
 		msleep(1);
@@ -50,90 +38,69 @@ ssize_t mgt400_store_bits(
 		msleep(1);
 		mgt400wr32(mdev, REG, regval);
 		return count;
-	}else if (sscanf(buf, "%x", &field) == 1){
+	} else if (sscanf(buf, "%x", &field) == 1) {
 		regval &= ~(MASK << SHL);
-		regval |= (field&MASK) << SHL;
-		if (show_warning){
+		regval |= (field & MASK) << SHL;
+		if (show_warning) {
 			dev_warn(dev, "deprecated %04x = %08x", REG, regval);
 		}
 		mgt400wr32(mgt400_devices[dev->id], REG, regval);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-ssize_t mgt400_show_dnum(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	unsigned SHL,
-	unsigned MASK)
+ssize_t mgt400_show_dnum(struct device *dev, struct device_attribute *attr,
+			 char *buf, unsigned REG, unsigned SHL, unsigned MASK)
 {
 	u32 regval = mgt400rd32(mgt400_devices[dev->id], REG);
-	u32 field = (regval>>SHL)&MASK;
-	u32 sbit = (MASK+1) >> 1;
-	if ((sbit&field) != 0){
-		while(sbit <<= 1){
+	u32 field = (regval >> SHL) & MASK;
+	u32 sbit = (MASK + 1) >> 1;
+	if ((sbit & field) != 0) {
+		while (sbit <<= 1) {
 			field |= sbit;
 		}
 	}
 
 	return sprintf(buf, "%d\n", (int)field);
 }
-ssize_t mgt400_store_dnum(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		unsigned SHL,
-		unsigned MASK)
+ssize_t mgt400_store_dnum(struct device *dev, struct device_attribute *attr,
+			  const char *buf, size_t count, unsigned REG,
+			  unsigned SHL, unsigned MASK)
 {
 	int field;
-	if (sscanf(buf, "%d", &field) == 1){
+	if (sscanf(buf, "%d", &field) == 1) {
 		u32 regval = mgt400rd32(mgt400_devices[dev->id], REG);
 		regval &= ~(MASK << SHL);
-		regval |= (field&MASK) << SHL;
+		regval |= (field & MASK) << SHL;
 		mgt400wr32(mgt400_devices[dev->id], REG, regval);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-
-ssize_t mgt400_show_u(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	unsigned REG,
-	unsigned SHL,
-	unsigned MASK)
+ssize_t mgt400_show_u(struct device *dev, struct device_attribute *attr,
+		      char *buf, unsigned REG, unsigned SHL, unsigned MASK)
 {
 	u32 regval = mgt400rd32(mgt400_devices[dev->id], REG);
-	u32 field = (regval>>SHL)&MASK;
+	u32 field = (regval >> SHL) & MASK;
 
 	return sprintf(buf, "%u\n", field);
 }
-ssize_t mgt400_store_u(
-		struct device * dev,
-		struct device_attribute *attr,
-		const char * buf,
-		size_t count,
-		unsigned REG,
-		unsigned SHL,
-		unsigned MASK)
+ssize_t mgt400_store_u(struct device *dev, struct device_attribute *attr,
+		       const char *buf, size_t count, unsigned REG,
+		       unsigned SHL, unsigned MASK)
 {
 	unsigned field;
-	if (sscanf(buf, "%u", &field) == 1){
+	if (sscanf(buf, "%u", &field) == 1) {
 		u32 regval = mgt400rd32(mgt400_devices[dev->id], REG);
 		regval &= ~(MASK << SHL);
-		regval |= (field&MASK) << SHL;
+		regval |= (field & MASK) << SHL;
 		mgt400wr32(mgt400_devices[dev->id], REG, regval);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }

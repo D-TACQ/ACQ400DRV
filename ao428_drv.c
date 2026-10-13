@@ -40,9 +40,8 @@ module_param(I2C_CELF, int, 0444);
 struct i2c_adapter *i2c_adap[1];
 int nsites;
 
-
-static struct i2c_client* new_device(
-		struct i2c_adapter *adap, const char* name, unsigned short addr)
+static struct i2c_client *new_device(struct i2c_adapter *adap, const char *name,
+				     unsigned short addr)
 {
 	struct i2c_board_info info = {};
 
@@ -55,9 +54,10 @@ static int __init ao428_init_site(int site)
 {
 	i2c_adap[site] = i2c_get_adapter(I2C_CELF);
 
-	printk("Hello i2c_adap[%d] = %p  I2C_CELF=%d\n", site, i2c_adap[site], I2C_CELF);
+	printk("Hello i2c_adap[%d] = %p  I2C_CELF=%d\n", site, i2c_adap[site],
+	       I2C_CELF);
 
-	if (new_device(i2c_adap[site], "adt7410", 0x48) == 0){
+	if (new_device(i2c_adap[site], "adt7410", 0x48) == 0) {
 		printk("ao428_init_site(%d) ADT7410 NOT FOUND\n", site);
 		return -1;
 	}
@@ -67,7 +67,7 @@ static int __init ao428_init_site(int site)
 
 static void __init ao428_remove_site(int site)
 {
-	if (i2c_adap[0]){
+	if (i2c_adap[0]) {
 		i2c_put_adapter(i2c_adap[site]);
 	}
 }
@@ -76,7 +76,6 @@ static void __exit ao428_exit(void)
 {
 	ao428_remove_site(0);
 }
-
 
 static int __init ao428_init(void)
 {

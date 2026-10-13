@@ -50,12 +50,10 @@ enum ACQ480_TRAINING {
 	ACQ480_FAIL
 };
 
-static ssize_t show_train_states(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_train_states(struct device *dev,
+				 struct device_attribute *attr, char *buf)
 {
-	char* pb = buf;
+	char *pb = buf;
 #define ST_APPEND(ST) pb += sprintf(pb, "%s=%d\n", #ST, ST)
 	ST_APPEND(ACQ480_RESET);
 	ST_APPEND(ACQ480_START);
@@ -70,10 +68,8 @@ static ssize_t show_train_states(
 }
 static DEVICE_ATTR(train_states, S_IRUGO, show_train_states, 0);
 
-static ssize_t show_train(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_train(struct device *dev, struct device_attribute *attr,
+			  char *buf)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	struct ADC_dev *adc_dev = container_of(adev, struct ADC_dev, adev);
@@ -86,8 +82,8 @@ static ssize_t acq480_reset(struct acq400_dev *adev, int goodrc)
 	struct ADC_dev *adc_dev = container_of(adev, struct ADC_dev, adev);
 
 	u32 ctrl = acq400rd32(adev, ADC_CTRL);
-	ctrl &= ~(ADC_CTRL_ADC_EN|ADC_CTRL_FIFO_EN);
-	ctrl &= ~(ADC480_CTRL_DESKEW_TRAIN|ADC480_CTRL_SYNC_TRAIN);
+	ctrl &= ~(ADC_CTRL_ADC_EN | ADC_CTRL_FIFO_EN);
+	ctrl &= ~(ADC480_CTRL_DESKEW_TRAIN | ADC480_CTRL_SYNC_TRAIN);
 	acq400wr32(adev, ADC_CTRL, ctrl | ADC_CTRL_ADC_RST);
 
 	adc_dev->acq480_train = ACQ480_RESET;
@@ -98,12 +94,12 @@ static ssize_t acq480_start(struct acq400_dev *adev, int goodrc)
 {
 	struct ADC_dev *adc_dev = container_of(adev, struct ADC_dev, adev);
 
-	if (adc_dev->acq480_train != ACQ480_RESET){
+	if (adc_dev->acq480_train != ACQ480_RESET) {
 		dev_err(DEVP(adev), "acq480_start not in ACQ480_RESET");
 		return -1;
-	}else{
+	} else {
 		u32 ctrl = acq400rd32(adev, ADC_CTRL);
-		acq400wr32(adev, ADC_CTRL, ctrl &~ ADC_CTRL_ADC_RST);
+		acq400wr32(adev, ADC_CTRL, ctrl & ~ADC_CTRL_ADC_RST);
 		adc_dev->acq480_train = ACQ480_START;
 		return goodrc;
 	}
@@ -112,16 +108,17 @@ static ssize_t acq480_start(struct acq400_dev *adev, int goodrc)
 static int training_done(unsigned stat, unsigned shl)
 // DONE when ALL bits HI
 {
-	return ((stat>>shl) & ADC480_FIFO_STA_DONE_MASK) == ADC480_FIFO_STA_DONE_MASK;
+	return ((stat >> shl) & ADC480_FIFO_STA_DONE_MASK) ==
+	       ADC480_FIFO_STA_DONE_MASK;
 }
 static ssize_t acq480_deskew(struct acq400_dev *adev, int goodrc)
 {
 	struct ADC_dev *adc_dev = container_of(adev, struct ADC_dev, adev);
 
-	if (adc_dev->acq480_train != ACQ480_START){
+	if (adc_dev->acq480_train != ACQ480_START) {
 		dev_err(DEVP(adev), "acq480_deskew not in ACQ480_START");
 		return -1;
-	}else{
+	} else {
 		u32 ctrl = acq400rd32(adev, ADC_CTRL);
 		u32 stat;
 		acq400wr32(adev, ADC_CTRL, ctrl | ADC480_CTRL_DESKEW_TRAIN);
@@ -130,10 +127,11 @@ static ssize_t acq480_deskew(struct acq400_dev *adev, int goodrc)
 		stat = acq400rd32(adev, ADC_FIFO_STA);
 		msleep(20);
 		stat = acq400rd32(adev, ADC_FIFO_STA);
-		if (!training_done(stat, ADC480_FIFO_STA_DESKEW_DONE_SHL)){
-			dev_err(DEVP(adev), "deskew failed to complete %08x", stat);
+		if (!training_done(stat, ADC480_FIFO_STA_DESKEW_DONE_SHL)) {
+			dev_err(DEVP(adev), "deskew failed to complete %08x",
+				stat);
 			return -1;
-		}else{
+		} else {
 			adc_dev->acq480_train = ACQ480_DESKEW_DONE;
 			return goodrc;
 		}
@@ -144,10 +142,10 @@ static ssize_t acq480_sync(struct acq400_dev *adev, int goodrc)
 {
 	struct ADC_dev *adc_dev = container_of(adev, struct ADC_dev, adev);
 
-	if (adc_dev->acq480_train != ACQ480_DESKEW_DONE){
+	if (adc_dev->acq480_train != ACQ480_DESKEW_DONE) {
 		dev_err(DEVP(adev), "acq480_sync not in ACQ480_DESKEW_DONE");
 		return -1;
-	}else{
+	} else {
 		u32 ctrl = acq400rd32(adev, ADC_CTRL);
 		u32 stat;
 		acq400wr32(adev, ADC_CTRL, ctrl | ADC480_CTRL_SYNC_TRAIN);
@@ -156,12 +154,14 @@ static ssize_t acq480_sync(struct acq400_dev *adev, int goodrc)
 		stat = acq400rd32(adev, ADC_FIFO_STA);
 		msleep(20);
 		stat = acq400rd32(adev, ADC_FIFO_STA);
-		if (!training_done(stat, ADC480_FIFO_STA_SYNC_DONE_SHL)){
-			dev_err(DEVP(adev), "deskew failed to complete %08x", stat);
+		if (!training_done(stat, ADC480_FIFO_STA_SYNC_DONE_SHL)) {
+			dev_err(DEVP(adev), "deskew failed to complete %08x",
+				stat);
 			return -1;
-		}else{
-			acq400wr32(adev, ADC_CTRL, ctrl &
-				~(ADC480_CTRL_DESKEW_TRAIN|ADC480_CTRL_SYNC_TRAIN));
+		} else {
+			acq400wr32(adev, ADC_CTRL,
+				   ctrl & ~(ADC480_CTRL_DESKEW_TRAIN |
+					    ADC480_CTRL_SYNC_TRAIN));
 			adc_dev->acq480_train = ACQ480_SYNC_DONE;
 			return goodrc;
 		}
@@ -171,32 +171,29 @@ static ssize_t acq480_activate(struct acq400_dev *adev, int goodrc)
 {
 	struct ADC_dev *adc_dev = container_of(adev, struct ADC_dev, adev);
 
-	if (adc_dev->acq480_train != ACQ480_SYNC_DONE){
+	if (adc_dev->acq480_train != ACQ480_SYNC_DONE) {
 		dev_err(DEVP(adev), "acq480_activate not in ACQ480_SYNC_DONE");
 		return -1;
-	}else{
+	} else {
 		u32 ctrl = acq400rd32(adev, ADC_CTRL);
-		acq400wr32(adev, ADC_CTRL, ctrl | ADC_CTRL_FIFO_EN | ADC_CTRL_ADC_EN);
+		acq400wr32(adev, ADC_CTRL,
+			   ctrl | ADC_CTRL_FIFO_EN | ADC_CTRL_ADC_EN);
 		dev_info(DEVP(adev), "acq480_activate GOOD");
 		adc_dev->acq480_train = ACQ480_ACTIVATE;
 		return goodrc;
 	}
 }
 
-
-static ssize_t store_train(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
+static ssize_t store_train(struct device *dev, struct device_attribute *attr,
+			   const char *buf, size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	struct ADC_dev *adc_dev = container_of(adev, struct ADC_dev, adev);
 	int train;
 
-	if (sscanf(buf, "%u", &train) == 1){
+	if (sscanf(buf, "%u", &train) == 1) {
 		dev_dbg(DEVP(adev), "store_train() %u", train);
-		switch(train){
+		switch (train) {
 		case ACQ480_RESET:
 			return acq480_reset(adev, count);
 		case ACQ480_START:
@@ -219,52 +216,50 @@ static ssize_t store_train(
 		}
 
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-static DEVICE_ATTR(train, S_IRUGO|S_IWUSR, show_train, store_train);
+static DEVICE_ATTR(train, S_IRUGO | S_IWUSR, show_train, store_train);
 
-
-static ssize_t store_dclock_reset(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
+static ssize_t store_dclock_reset(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 reset;
 
-	if (sscanf(buf, "%u", &reset) == 1 && reset == 1){
+	if (sscanf(buf, "%u", &reset) == 1 && reset == 1) {
 		u32 ctrl = acq400rd32(adev, ADC_CTRL);
-		if (ctrl & ADC_CTRL_ENABLE_CAPTURE){
-			dev_err(dev, "resetting DCLK, but ADC_ENABLED: 0x%08x", ctrl);
+		if (ctrl & ADC_CTRL_ENABLE_CAPTURE) {
+			dev_err(dev, "resetting DCLK, but ADC_ENABLED: 0x%08x",
+				ctrl);
 			ctrl &= ~ADC_CTRL_ENABLE_CAPTURE;
 			acq400wr32(adev, ADC_CTRL, ctrl);
 		}
-		if (ctrl & ADC_CTRL_480_DCLK_SYNC){
-			dev_err(dev, "resetting DCLK, but it was already set: 0x%08x", ctrl);
+		if (ctrl & ADC_CTRL_480_DCLK_SYNC) {
+			dev_err(dev,
+				"resetting DCLK, but it was already set: 0x%08x",
+				ctrl);
 		}
 		ctrl &= ~ADC_CTRL_480_DCLK_SYNC;
-		dev_dbg(dev, "setting ADC_CTRL %08x", ctrl|ADC_CTRL_480_DCLK_SYNC);
-		acq400wr32(adev, ADC_CTRL, ctrl|ADC_CTRL_480_DCLK_SYNC);
+		dev_dbg(dev, "setting ADC_CTRL %08x",
+			ctrl | ADC_CTRL_480_DCLK_SYNC);
+		acq400wr32(adev, ADC_CTRL, ctrl | ADC_CTRL_480_DCLK_SYNC);
 		msleep(1);
 		dev_dbg(dev, "clear ADC_CTRL %08x", ctrl);
 		acq400wr32(adev, ADC_CTRL, ctrl);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-
 static DEVICE_ATTR(dclock_reset, S_IWUSR, 0, store_dclock_reset);
 
-static ssize_t show_acq480_train_ctrl(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_acq480_train_ctrl(struct device *dev,
+				      struct device_attribute *attr, char *buf)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 tc = acq400rd32(adev, ACQ480_TRAIN_CTRL);
@@ -272,174 +267,147 @@ static ssize_t show_acq480_train_ctrl(
 	return sprintf(buf, "0x%08x\n", tc);
 }
 
-
-
-static ssize_t store_acq480_train_ctrl(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
+static ssize_t store_acq480_train_ctrl(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 tc;
 
-	if (sscanf(buf, "%x", &tc) == 1){
+	if (sscanf(buf, "%x", &tc) == 1) {
 		acq400wr32(adev, ACQ480_TRAIN_CTRL, tc);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-static DEVICE_ATTR(acq480_train_ctrl,
-		S_IRUGO|S_IWUSR, show_acq480_train_ctrl, store_acq480_train_ctrl);
+static DEVICE_ATTR(acq480_train_ctrl, S_IRUGO | S_IWUSR, show_acq480_train_ctrl,
+		   store_acq480_train_ctrl);
 
-static ssize_t show_acq480_two_lane_mode(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_acq480_two_lane_mode(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 adc_ctrl = acq400rd32(adev, ADC_CTRL);
 
-	return sprintf(buf, "%d\n", (adc_ctrl&ADC_CTRL_480_TWO_LANE_MODE) != 0);
+	return sprintf(buf, "%d\n",
+		       (adc_ctrl & ADC_CTRL_480_TWO_LANE_MODE) != 0);
 }
 
-
-static ssize_t store_acq480_two_lane_mode(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
+static ssize_t store_acq480_two_lane_mode(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 tc;
 
-	if (sscanf(buf, "%x", &tc) == 1){
+	if (sscanf(buf, "%x", &tc) == 1) {
 		u32 adc_ctrl = acq400rd32(adev, ADC_CTRL);
-		if (tc){
+		if (tc) {
 			adc_ctrl |= ADC_CTRL_480_TWO_LANE_MODE;
 		} else {
 			adc_ctrl &= ~ADC_CTRL_480_TWO_LANE_MODE;
 		}
 		acq400wr32(adev, ADC_CTRL, adc_ctrl);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-static DEVICE_ATTR(acq480_two_lane_mode,
-		S_IRUGO|S_IWUSR, show_acq480_two_lane_mode, store_acq480_two_lane_mode);
+static DEVICE_ATTR(acq480_two_lane_mode, S_IRUGO | S_IWUSR,
+		   show_acq480_two_lane_mode, store_acq480_two_lane_mode);
 
-
-static ssize_t show_acq482_cmap(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_acq482_cmap(struct device *dev,
+				struct device_attribute *attr, char *buf)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 adc_ctrl = acq400rd32(adev, ADC_CTRL);
 
-	return sprintf(buf, "%d\n", (adc_ctrl&ADC_CTRL_482_CMAP) != 0);
+	return sprintf(buf, "%d\n", (adc_ctrl & ADC_CTRL_482_CMAP) != 0);
 }
 
-
-static ssize_t store_acq482_cmap(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
+static ssize_t store_acq482_cmap(struct device *dev,
+				 struct device_attribute *attr, const char *buf,
+				 size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 tc;
 
-	if (sscanf(buf, "%x", &tc) == 1){
+	if (sscanf(buf, "%x", &tc) == 1) {
 		u32 adc_ctrl = acq400rd32(adev, ADC_CTRL);
-		if (tc){
+		if (tc) {
 			adc_ctrl |= ADC_CTRL_482_CMAP;
 		} else {
 			adc_ctrl &= ~ADC_CTRL_482_CMAP;
 		}
 		acq400wr32(adev, ADC_CTRL, adc_ctrl);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 
-static DEVICE_ATTR(acq482_cmap,
-		S_IRUGO|S_IWUSR, show_acq482_cmap, store_acq482_cmap);
+static DEVICE_ATTR(acq482_cmap, S_IRUGO | S_IWUSR, show_acq482_cmap,
+		   store_acq482_cmap);
 
-
-
-static ssize_t show_acq480_train_xx_val(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf,
-	int data_reg, int frame_shl)
+static ssize_t show_acq480_train_xx_val(struct device *dev,
+					struct device_attribute *attr,
+					char *buf, int data_reg, int frame_shl)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 tc = acq400rd32(adev, data_reg);
 	u32 ctrl = acq400rd32(adev, ADC_CTRL);
 
 	return sprintf(buf, "0x%08x %x\n", tc,
-			(ctrl>>frame_shl)&ADC480_CTRL_FRAME_MASK);
+		       (ctrl >> frame_shl) & ADC480_CTRL_FRAME_MASK);
 }
 
-
-static ssize_t show_acq480_train_hi_val(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_acq480_train_hi_val(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
 {
-	return show_acq480_train_xx_val(dev,attr, buf,
-			ACQ480_TRAIN_HI_VAL, ADC480_CTRL_FRAME_HI_SHL);
+	return show_acq480_train_xx_val(dev, attr, buf, ACQ480_TRAIN_HI_VAL,
+					ADC480_CTRL_FRAME_HI_SHL);
 }
-
 
 static DEVICE_ATTR(acq480_train_hi_val, S_IRUGO, show_acq480_train_hi_val, 0);
 
-static ssize_t show_acq480_train_lo_val(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_acq480_train_lo_val(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
 {
-	return show_acq480_train_xx_val(dev,attr, buf,
-			ACQ480_TRAIN_LO_VAL, ADC480_CTRL_FRAME_LO_SHL);
+	return show_acq480_train_xx_val(dev, attr, buf, ACQ480_TRAIN_LO_VAL,
+					ADC480_CTRL_FRAME_LO_SHL);
 }
-
 
 static DEVICE_ATTR(acq480_train_lo_val, S_IRUGO, show_acq480_train_lo_val, 0);
 
-
-
-static ssize_t show_acq480_loti(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_acq480_loti(struct device *dev,
+				struct device_attribute *attr, char *buf)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 
 	return sprintf(buf, "%d\n", acq480_train_fail(adev));
 }
 
-
 static DEVICE_ATTR(acq480_loti, S_IRUGO, show_acq480_loti, 0);
 
-static ssize_t show_acq480_fpga_decim(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_acq480_fpga_decim(struct device *dev,
+				      struct device_attribute *attr, char *buf)
 {
 	u32 version = GET_MOD_IDV(acq400_devices[dev->id]);
 	int decim;
 
-	switch(version){
+	switch (version) {
 	case MOD_ID_TYPE_ACQ480DIV4:
-		decim = 4; break;
+		decim = 4;
+		break;
 	case MOD_ID_TYPE_ACQ480DIV10:
-		decim = 10; break;
+		decim = 10;
+		break;
 	default:
 		decim = 1;
 	}
@@ -447,67 +415,66 @@ static ssize_t show_acq480_fpga_decim(
 	return sprintf(buf, "%d\n", decim);
 }
 
-
 static DEVICE_ATTR(acq480_fpga_decim, S_IRUGO, show_acq480_fpga_decim, 0);
 
-static ssize_t store_ffir_reset(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
+static ssize_t store_ffir_reset(struct device *dev,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	unsigned reset;
 
-	if (sscanf(buf, "%u", &reset) == 1 && reset){
+	if (sscanf(buf, "%u", &reset) == 1 && reset) {
 		u32 csr = acq400rd32(adev, ACQ480_FIRCO_CSR);
 		csr &= ~ACQ480_FIRCO_CSR_RESET;
-		acq400wr32(adev, ACQ480_FIRCO_CSR, csr|ACQ480_FIRCO_CSR_RESET);
+		acq400wr32(adev, ACQ480_FIRCO_CSR,
+			   csr | ACQ480_FIRCO_CSR_RESET);
 		mdelay(2);
 		acq400wr32(adev, ACQ480_FIRCO_CSR, csr);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 static DEVICE_ATTR(ffir_reset, S_IWUSR, 0, store_ffir_reset);
 
-static ssize_t show_ffir_counter(
-	struct device * dev,
-	struct device_attribute *attr,
-	char * buf)
+static ssize_t show_ffir_counter(struct device *dev,
+				 struct device_attribute *attr, char *buf)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 csr = acq400rd32(adev, ACQ480_FIRCO_CSR);
-	u32 ctr = (csr&ACQ480_FIRCO_CSR_CTR)>>ACQ480_FIRCO_CSR_CTR_SHL;
+	u32 ctr = (csr & ACQ480_FIRCO_CSR_CTR) >> ACQ480_FIRCO_CSR_CTR_SHL;
 	return sprintf(buf, "%u\n", ctr);
 }
 
 static DEVICE_ATTR(ffir_counter, S_IRUGO, show_ffir_counter, 0);
 
-static ssize_t store_ffir_coeff(
-	struct device * dev,
-	struct device_attribute *attr,
-	const char * buf,
-	size_t count)
+static ssize_t store_ffir_coeff(struct device *dev,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	int coeff;
 
-	if ((strstr(buf, "0x") != buf && sscanf(buf, "%d", &coeff) == 1) || sscanf(buf, "%x", &coeff) == 1){
+	if ((strstr(buf, "0x") != buf && sscanf(buf, "%d", &coeff) == 1) ||
+	    sscanf(buf, "%x", &coeff) == 1) {
 		acq400wr32(adev, ACQ480_FIRCO_LOAD, coeff);
 		return count;
-	}else{
+	} else {
 		return -1;
 	}
 }
 static DEVICE_ATTR(ffir_coeff, S_IWUSR, 0, store_ffir_coeff);
 
-MAKE_BITS(ffir_bist, ACQ480_FIRCO_CSR, MAKE_BITS_FROM_MASK, ACQ480_FIRCO_CSR_BIST);
-MAKE_BITS(mr_sel1, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_MRSEL1);
-MAKE_BITS(mr_sel0, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_MRSEL0);
-MAKE_BITS(mr_10dec,ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_MR10_DEC);
-MAKE_BITS(mr_en,   ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_EN);
+MAKE_BITS(ffir_bist, ACQ480_FIRCO_CSR, MAKE_BITS_FROM_MASK,
+	  ACQ480_FIRCO_CSR_BIST);
+MAKE_BITS(mr_sel1, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK,
+	  ACQ480_ADC_MR_MRSEL1);
+MAKE_BITS(mr_sel0, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK,
+	  ACQ480_ADC_MR_MRSEL0);
+MAKE_BITS(mr_10dec, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK,
+	  ACQ480_ADC_MR_MR10_DEC);
+MAKE_BITS(mr_en, ACQ480_ADC_MULTIRATE, MAKE_BITS_FROM_MASK, ACQ480_ADC_MR_EN);
 
 const struct attribute *acq480_ffir_attrs[] = {
 	&dev_attr_ffir_reset.attr,
@@ -533,4 +500,4 @@ const struct attribute *acq480_ffir_attrs[] = {
 	NULL
 };
 
-const struct attribute ** acq480_attrs = (acq480_ffir_attrs+3);
+const struct attribute **acq480_attrs = (acq480_ffir_attrs + 3);

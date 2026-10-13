@@ -19,15 +19,14 @@
 /* ------------------------------------------------------------------------- */
 
 #define SOCKET int
-void error( int status, int err, char *fmt, ... );
-void set_address(const char *hname, const char *sname,
-			 struct sockaddr_in *sap, const char *protocol );
-int readline( SOCKET fd, char *bufptr, size_t len );
+void error(int status, int err, char *fmt, ...);
+void set_address(const char *hname, const char *sname, struct sockaddr_in *sap,
+		 const char *protocol);
+int readline(SOCKET fd, char *bufptr, size_t len);
 
-void connect_to(
-        SOCKET sock, const char *remotehost, const char *remoteport);
+void connect_to(SOCKET sock, const char *remotehost, const char *remoteport);
 
+FILE *connect_to_stream(const char *remotehost, const char *remoteport,
+			const char *mode = "r");
 
-FILE* connect_to_stream(const char *remotehost, const char *remoteport, const char* mode = "r");
-
-#define EPEERDISCONNECT  3700
+#define EPEERDISCONNECT 3700

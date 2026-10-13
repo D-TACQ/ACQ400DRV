@@ -26,5 +26,3 @@
 
 #include "acq400.h"
 #include "mgt400.h"
-
-

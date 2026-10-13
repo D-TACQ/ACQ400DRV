@@ -8,8 +8,6 @@
 #ifndef HEX_CHAR_TO_BIN_H_
 #define HEX_CHAR_TO_BIN_H_
 
-
-std::string hexStrToBin( const std::string & hs );
-
+std::string hexStrToBin(const std::string &hs);
 
 #endif /* HEX_CHAR_TO_BIN_H_ */

@@ -17,39 +17,39 @@
 #include <map>
 
 class Env {
-	std::map<std::string,std::string> _env;
-public:
+	std::map<std::string, std::string> _env;
 
-	Env(const char* fname);
-	std::string& operator() (std::string key);
+    public:
+	Env(const char *fname);
+	std::string &operator()(std::string key);
 
-	static int getenv(const char* key, int def) {
-		const char* sv = ::getenv(key);
-		if (sv){
+	static int getenv(const char *key, int def)
+	{
+		const char *sv = ::getenv(key);
+		if (sv) {
 			return strtol(sv, 0, 0);
-		}else{
+		} else {
 			return def;
 		}
 	}
-	static double getenv(const char* key, double def) {
-		const char* sv = ::getenv(key);
-		if (sv){
+	static double getenv(const char *key, double def)
+	{
+		const char *sv = ::getenv(key);
+		if (sv) {
 			return strtod(sv, 0);
-		}else{
+		} else {
 			return def;
 		}
 	}
-	static const char* getenv(const char* key, const char* def) {
-		const char* sv = ::getenv(key);
-		if (sv){
+	static const char *getenv(const char *key, const char *def)
+	{
+		const char *sv = ::getenv(key);
+		if (sv) {
 			return sv;
-		}else{
+		} else {
 			return def;
 		}
 	}
 };
-
-
-
 
 #endif /* ENV_H_ */

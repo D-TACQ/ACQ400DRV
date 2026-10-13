@@ -39,7 +39,7 @@ struct acq400_base_dev {
 	u32 dev_addrsize;
 };
 
- extern int acq400dsp_devicetree_init(struct platform_device *pdev,
-		 struct device_node *of_node);
+extern int acq400dsp_devicetree_init(struct platform_device *pdev,
+				     struct device_node *of_node);
 
 #endif /* ACQ400_DSP_H_ */

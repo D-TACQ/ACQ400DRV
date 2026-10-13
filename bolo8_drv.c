@@ -36,24 +36,25 @@
 int bolo_gpio_base = 0;
 module_param(bolo_gpio_base, int, 0644);
 
-int bolo8sites[6] = { 0,  };
+int bolo8sites[6] = {
+	0,
+};
 int bolo8sites_count = 0;
 module_param_array(bolo8sites, int, &bolo8sites_count, 0644);
 
-struct i2c_adapter *i2c_adap[7];   /* index by site 1..6 from zero */
+struct i2c_adapter *i2c_adap[7]; /* index by site 1..6 from zero */
 
 static int nbolo;
 
-#define PGA_TYPE	"tca6424"
-#define PGA_ADDR	0x22
+#define PGA_TYPE "tca6424"
+#define PGA_ADDR 0x22
 #define N_PGA_GPIO 24
-#define LED_TYPE	"pca9534"
-#define LED_ADDR	0x20
+#define LED_TYPE "pca9534"
+#define LED_ADDR 0x20
 #define N_LED_GPIO 8
 
-static struct i2c_client* new_device(
-		struct i2c_adapter *adap,
-		const char* name, unsigned short addr, int gpio_base)
+static struct i2c_client *new_device(struct i2c_adapter *adap, const char *name,
+				     unsigned short addr, int gpio_base)
 {
 	struct pca953x_platform_data pca_data = {};
 	struct i2c_board_info info = {};
@@ -67,45 +68,45 @@ static struct i2c_client* new_device(
 }
 static void __init bolo8_init_site(int site)
 {
-	int ch = site+1;
-	int gpio_base = bolo_gpio_base + nbolo * (N_PGA_GPIO+N_LED_GPIO);
+	int ch = site + 1;
+	int gpio_base = bolo_gpio_base + nbolo * (N_PGA_GPIO + N_LED_GPIO);
 
 	i2c_adap[site] = i2c_get_adapter(ch);
 
-	if (new_device(i2c_adap[site], PGA_TYPE, PGA_ADDR, gpio_base) == 0){
+	if (new_device(i2c_adap[site], PGA_TYPE, PGA_ADDR, gpio_base) == 0) {
 		printk("bolo8_init_site(%d) PGA NOT found\n", site);
 	}
 
-	if (new_device(i2c_adap[site], LED_TYPE, LED_ADDR, gpio_base+N_PGA_GPIO) == 0){
+	if (new_device(i2c_adap[site], LED_TYPE, LED_ADDR,
+		       gpio_base + N_PGA_GPIO) == 0) {
 		printk("bolo8_init_site(%d) LED NOT found\n", site);
 	}
 }
 
 static void __init bolo8_remove_site(int site)
 {
-	int ch = site+1;
+	int ch = site + 1;
 	printk("bolo8_init_site %d channel %d\n", site, ch);
 	i2c_put_adapter(i2c_adap[site]);
 }
 
 static void __exit bolo8_exit(void)
 {
-	for (; nbolo--;){
+	for (; nbolo--;) {
 		bolo8_remove_site(bolo8sites[nbolo]);
 	}
 }
 
-
 static int __init bolo8_init(void)
 {
-        int status = 0;
+	int status = 0;
 
 	printk("D-TACQ BOLO8BLF Driver %s\n", REVID);
 
-	for (nbolo = 0; nbolo < bolo8sites_count; ++nbolo){
+	for (nbolo = 0; nbolo < bolo8sites_count; ++nbolo) {
 		bolo8_init_site(bolo8sites[nbolo]);
 	}
-        return status;
+	return status;
 }
 
 module_init(bolo8_init);

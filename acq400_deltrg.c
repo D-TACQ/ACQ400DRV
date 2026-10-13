@@ -27,10 +27,10 @@
 
 #include "acq400.h"
 
-#define ATD_OFFSET(ch) ((ch)*sizeof(int)+AXI_ATD_RAM)
+#define ATD_OFFSET(ch) ((ch) * sizeof(int) + AXI_ATD_RAM)
 
-#define POSMAX	32767
-#define NEGMAX	-32768
+#define POSMAX 32767
+#define NEGMAX -32768
 
 int acq400_setDelTrg(struct acq400_dev *adev, int ch, int threshold)
 {
@@ -38,15 +38,17 @@ int acq400_setDelTrg(struct acq400_dev *adev, int ch, int threshold)
 	short B = NEGMAX;
 	unsigned wval;
 
-	if (threshold > 0){
+	if (threshold > 0) {
 		A = min(threshold, POSMAX);
-	}else if (threshold < 0){
+	} else if (threshold < 0) {
 		B = max(threshold, NEGMAX);
 	}
-	wval = A; wval <<= 16; wval |= ((unsigned)B) &0x0000ffff;
+	wval = A;
+	wval <<= 16;
+	wval |= ((unsigned)B) & 0x0000ffff;
 
-	dev_dbg(DEVP(adev), "acq400_setDelTrg %d %08x = %08x",
-						ch, ATD_OFFSET(ch), wval);
+	dev_dbg(DEVP(adev), "acq400_setDelTrg %d %08x = %08x", ch,
+		ATD_OFFSET(ch), wval);
 	acq400wr32(adev, ATD_OFFSET(ch), wval);
 	return 0;
 }
@@ -57,16 +59,17 @@ int acq400_getDelTrg(struct acq400_dev *adev, int ch, int *threshold)
 	short B = rval & 0x0ffff;
 	int th;
 
-	if (A == POSMAX){
-		if (B == NEGMAX){
+	if (A == POSMAX) {
+		if (B == NEGMAX) {
 			th = 0;
-		}else{
+		} else {
 			th = B;
 		}
-	}else{
+	} else {
 		th = A;
 	}
-	if (threshold) *threshold = th;
+	if (threshold)
+		*threshold = th;
 	return 0;
 }
 int acq400_clearDelTrg(struct acq400_dev *adev)
@@ -74,7 +77,7 @@ int acq400_clearDelTrg(struct acq400_dev *adev)
 	int ch;
 	dev_dbg(DEVP(adev), "acq400_clearDelTrg(%d) ", adev->nchan_enabled);
 
-	for (ch = 0; ch < adev->nchan_enabled; ++ch){
+	for (ch = 0; ch < adev->nchan_enabled; ++ch) {
 		acq400_setDelTrg(adev, ch, 0);
 	}
 	acq400wr32(adev, DTD_CTRL, 1);

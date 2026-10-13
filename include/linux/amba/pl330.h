@@ -9,8 +9,8 @@
  * (at your option) any later version.
  */
 
-#ifndef	__AMBA_PL330_H_
-#define	__AMBA_PL330_H_
+#ifndef __AMBA_PL330_H_
+#define __AMBA_PL330_H_
 
 struct dma_pl330_platdata {
 	/*
@@ -30,4 +30,4 @@ struct dma_pl330_platdata {
 };
 
 extern bool pl330_filter(struct dma_chan *chan, void *param);
-#endif	/* __AMBA_PL330_H_ */
+#endif /* __AMBA_PL330_H_ */

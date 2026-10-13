@@ -8,8 +8,7 @@
 #include "acq400.h"
 #include "dmaengine.h"
 
-
-#define DMA_NS_MAX     40
+#define DMA_NS_MAX 40
 int dma_ns_lines[DMA_NS_MAX];
 int dma_ns[DMA_NS_MAX];
 int dma_ns_num = DMA_NS_MAX;
@@ -19,21 +18,24 @@ module_param_array(dma_ns_lines, int, &dma_ns_num, 0444);
 /* @@todo: too global, should be per adev */
 int toggle_soft_trigger_on_dmadone;
 module_param(toggle_soft_trigger_on_dmadone, int, 0644);
-MODULE_PARM_DESC(toggle_soft_trigger_on_dmadone, "optional trigger source from DMA DONE 0:off 1:full rate 2:half rate, 4:quarter rate");
+MODULE_PARM_DESC(
+	toggle_soft_trigger_on_dmadone,
+	"optional trigger source from DMA DONE 0:off 1:full rate 2:half rate, 4:quarter rate");
 
 #if 0
-#define DMA_NS_INIT \
-	do { 					\
-		ins=0; t0 = otick(); 		\
-	} while(0)
+#define DMA_NS_INIT           \
+	do {                  \
+		ins = 0;      \
+		t0 = otick(); \
+	} while (0)
 
-#define DMA_NS \
-	do { 						\
-		dma_ns_lines[ins] = __LINE__; 		\
-		dma_ns[ins] = delta_nsec(t0, otick()); 	\
-		ins++; 					\
-		BUG_ON(ins >= DMA_NS_MAX);		\
-	} while(0)
+#define DMA_NS                                         \
+	do {                                           \
+		dma_ns_lines[ins] = __LINE__;          \
+		dma_ns[ins] = delta_nsec(t0, otick()); \
+		ins++;                                 \
+		BUG_ON(ins >= DMA_NS_MAX);             \
+	} while (0)
 
 
 void timer_test(void)
@@ -44,58 +46,53 @@ void timer_test(void)
 		DMA_NS;
 	}
 }
-#define DMA_NS_TEST	timer_test()
+#define DMA_NS_TEST timer_test()
 #else
 #define DMA_NS_INIT
 #define DMA_NS
 #define DMA_NS_TEST
 #endif
 
-
 void acq400_dma_callback(void *param)
 {
-	struct acq400_dev* adev = (struct acq400_dev*)param;
+	struct acq400_dev *adev = (struct acq400_dev *)param;
 	adev->dma_callback_done++;
 	wake_up_interruptible(&adev->DMA_READY);
-	switch(toggle_soft_trigger_on_dmadone){
+	switch (toggle_soft_trigger_on_dmadone) {
 	case 0:
 		break;
 	case 1:
 		acq400_soft_trigger(1);
 		acq400_soft_trigger(0);
 		break;
-	default:
-		{	/* @@todo .. this won't work because dma_callback_done gets knocked back by the client */
-			int bit = 1 << (toggle_soft_trigger_on_dmadone-2);  // 2: 1<<0, 4: 1<<1
-			acq400_soft_trigger(adev->dma_callback_done&bit);
-		}
-		break;
+	default: { /* @@todo .. this won't work because dma_callback_done gets knocked back by the client */
+		int bit = 1 << (toggle_soft_trigger_on_dmadone -
+				2); // 2: 1<<0, 4: 1<<1
+		acq400_soft_trigger(adev->dma_callback_done & bit);
+	} break;
 	}
 }
 
-
-dma_cookie_t
-dma_async_memcpy_callback(
-	struct dma_chan *chan,
-	dma_addr_t dma_dst, dma_addr_t dma_src,
-	size_t len, unsigned long flags,
-	dma_async_tx_callback callback,
-	void *callback_param)
+dma_cookie_t dma_async_memcpy_callback(struct dma_chan *chan,
+				       dma_addr_t dma_dst, dma_addr_t dma_src,
+				       size_t len, unsigned long flags,
+				       dma_async_tx_callback callback,
+				       void *callback_param)
 {
 	struct dma_device *dev = chan->device;
 	struct dma_async_tx_descriptor *tx;
-	flags |=  DMA_CTRL_ACK;
+	flags |= DMA_CTRL_ACK;
 
 	DMA_NS;
 	dev_dbg(dev->dev, "dev->prep_dma_memcpy %d 0x%08x 0x%08x %d %08lx",
-			chan->chan_id, dma_dst, dma_src, len, flags);
+		chan->chan_id, dma_dst, dma_src, len, flags);
 	tx = dev->device_prep_dma_memcpy(chan, dma_dst, dma_src, len, flags);
 
 	DMA_NS;
 	if (!tx) {
 		dev_err(dev->dev, "prep failed");
 		return -ENOMEM;
-	} else{
+	} else {
 		dma_cookie_t cookie;
 		tx->callback = callback;
 		tx->callback_param = callback_param;
@@ -111,9 +108,8 @@ dma_async_memcpy_callback(
 	}
 }
 
-dma_cookie_t
-dma_async_memcpy(
-	struct dma_chan *chan, dma_addr_t src, 	dma_addr_t dest, size_t len, unsigned long flags)
+dma_cookie_t dma_async_memcpy(struct dma_chan *chan, dma_addr_t src,
+			      dma_addr_t dest, size_t len, unsigned long flags)
 {
 	struct dma_device *dev = chan->device;
 	struct dma_async_tx_descriptor *tx;
@@ -124,7 +120,7 @@ dma_async_memcpy(
 	DMA_NS;
 	if (!tx) {
 		return -ENOMEM;
-	} else{
+	} else {
 		dma_cookie_t cookie;
 		tx->callback = NULL;
 		cookie = tx->tx_submit(tx);
@@ -139,24 +135,25 @@ dma_async_memcpy(
 	}
 }
 
-int dma_memcpy(
-	struct acq400_dev* adev, dma_addr_t dest, dma_addr_t src, size_t len, unsigned long flags)
+int dma_memcpy(struct acq400_dev *adev, dma_addr_t dest, dma_addr_t src,
+	       size_t len, unsigned long flags)
 {
 	dma_cookie_t cookie;
 	DMA_NS_INIT;
 	DMA_NS;
-	struct dma_chan* dmac = adev->dma_chan[DMACHAN_MEMCPY];
-	if (dmac == 0){
+	struct dma_chan *dmac = adev->dma_chan[DMACHAN_MEMCPY];
+	if (dmac == 0) {
 		dmac = adev->dma_chan[0];
 	}
 
-	if (dmac == 0){
-		dev_err(DEVP(adev), "%p id:%d dma_find_channel set zero",
-				adev, adev->pdev->dev.id);
+	if (dmac == 0) {
+		dev_err(DEVP(adev), "%p id:%d dma_find_channel set zero", adev,
+			adev->pdev->dev.id);
 		return -1;
 	}
-	dev_dbg(DEVP(adev), "dma_memcpy() chan:%d src:%08x dest:%08x len:%d flags:%08lx\n",
-			dmac->chan_id, src, dest, len, flags);
+	dev_dbg(DEVP(adev),
+		"dma_memcpy() chan:%d src:%08x dest:%08x len:%d flags:%08lx\n",
+		dmac->chan_id, src, dest, len, flags);
 	cookie = dma_async_memcpy(dmac, src, dest, len, flags);
 	dev_dbg(DEVP(adev), "dma_memcpy() wait cookie:%d\n", cookie);
 	dma_sync_wait(dmac, cookie);
@@ -164,4 +161,3 @@ int dma_memcpy(
 	DMA_NS;
 	return len;
 }
-

@@ -39,17 +39,14 @@
 #include <linux/spi/spi.h>
 #include <linux/uaccess.h>
 
-
-#define REVID 		"0.1.0"
-#define MODULE_NAME	"acq426"
+#define REVID "0.1.0"
+#define MODULE_NAME "acq426"
 
 extern void acq480_hook_spi_cb(void);
-
 
 static int __init acq426_init(void)
 {
 	int status = 0;
-
 
 	printk("D-TACQ ACQ426 Driver %s\n", REVID);
 
@@ -58,14 +55,12 @@ static int __init acq426_init(void)
 	return status;
 }
 
-static void __exit acq426_exit(void){
-
+static void __exit acq426_exit(void)
+{
 }
 
 module_init(acq426_init);
 module_exit(acq426_exit);
-
-
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("D-TACQ ACQ465ELF SPI Driver");

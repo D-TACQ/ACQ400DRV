@@ -38,7 +38,7 @@
  * 0x28 : ad7417
  * 0x29 : ad7417
  */
-#define REVID	"1.1.0"
+#define REVID "1.1.0"
 
 #include <linux/spi/spi.h>
 
@@ -69,62 +69,69 @@ struct radcelf_dev {
 	struct spi_device *spi;
 };
 
-#define M1	1000000
+#define M1 1000000
 
 static int radcelf_init_spi(void)
 {
 	static struct AD9854_PlatformData pd[3];
 
-	static struct spi_board_info spi_devs [5] = {
-	{
-		.modalias = "ad9854",
-		.max_speed_hz = 10*M1,
-		.bus_num = 1,
-		.chip_select = 0,
-		.platform_data = pd, /* spi_driver specific config, set later */
-		.irq = 0,
-	},
-	{
-		.modalias = "ad9854",
-		.max_speed_hz = 10*M1,
-		.bus_num = 1,
-		.chip_select = 1,
-		.platform_data = pd+1, /* spi_driver specific config, set later */
-		.irq = 0,
-	},
-	{
-		.modalias = "ad9854",
-		.max_speed_hz = 10*M1,
-		.bus_num = 1,
-		.chip_select = 2,
-		.platform_data = pd+2, /* spi_driver specific config, set later */
-		.irq = 0,
-	},
-	{
-		.modalias = "ad9512",
-		.max_speed_hz = 10*M1,
-		.bus_num = 1,
-		.chip_select = 3,
-		.platform_data = NULL, /* No spi_driver specific config */
-		.irq = 0,
-	},
-	{
-		.modalias = "ad9512",
-		.max_speed_hz = 10*M1,
-		.bus_num = 1,
-		.chip_select = 4,
-		.platform_data = NULL, /* No spi_driver specific config */
-		.irq = 0,
-	}
+	static struct spi_board_info spi_devs[5] = {
+		{
+			.modalias = "ad9854",
+			.max_speed_hz = 10 * M1,
+			.bus_num = 1,
+			.chip_select = 0,
+			.platform_data =
+				pd, /* spi_driver specific config, set later */
+			.irq = 0,
+		},
+		{
+			.modalias = "ad9854",
+			.max_speed_hz = 10 * M1,
+			.bus_num = 1,
+			.chip_select = 1,
+			.platform_data =
+				pd +
+				1, /* spi_driver specific config, set later */
+			.irq = 0,
+		},
+		{
+			.modalias = "ad9854",
+			.max_speed_hz = 10 * M1,
+			.bus_num = 1,
+			.chip_select = 2,
+			.platform_data =
+				pd +
+				2, /* spi_driver specific config, set later */
+			.irq = 0,
+		},
+		{
+			.modalias = "ad9512",
+			.max_speed_hz = 10 * M1,
+			.bus_num = 1,
+			.chip_select = 3,
+			.platform_data =
+				NULL, /* No spi_driver specific config */
+			.irq = 0,
+		},
+		{
+			.modalias = "ad9512",
+			.max_speed_hz = 10 * M1,
+			.bus_num = 1,
+			.chip_select = 4,
+			.platform_data =
+				NULL, /* No spi_driver specific config */
+			.irq = 0,
+		}
 	};
 
 	int ii;
-	for (ii = 0; ii < 3; ++ii){
+	for (ii = 0; ii < 3; ++ii) {
 		pd[ii].dev_private = acq400_sites[2];
 		pd[ii].strobe = acq400_spi_strobe;
 		pd[ii].strobe_mode = SPI_STROBE_NONE;
 	}
-	for (ii = 0; ii < 5; ++ii){
+	for (ii = 0; ii < 5; ++ii) {
 		spi_devs[ii].bus_num = spi_bus_num;
 	}
 
@@ -136,28 +143,26 @@ extern int zynq_spi_goslow_usec_kludge;
 
 static int __init radcelf_init(void)
 {
-        int status = 0;
+	int status = 0;
 
 	printk("D-TACQ RADCELF Driver %s\n", REVID);
 
-	if (goslow_usec_kludge){
+	if (goslow_usec_kludge) {
 		zynq_spi_goslow_usec_kludge = goslow_usec_kludge;
-		printk("zynq_spi_goslow_usec_kludge %d", zynq_spi_goslow_usec_kludge);
+		printk("zynq_spi_goslow_usec_kludge %d",
+		       zynq_spi_goslow_usec_kludge);
 	}
 	acq480_hook_spi();
 
 	status = radcelf_init_spi();
-        return status;
+	return status;
 }
 
 static void __exit radcelf_exit(void)
 {
-
 }
 module_init(radcelf_init);
 module_exit(radcelf_exit);
-
-
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("D-TACQ RADCELF Driver");

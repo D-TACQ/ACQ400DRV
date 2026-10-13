@@ -27,43 +27,43 @@
 #define ACQ400_LISTS_H_
 
 /* AI ops */
-struct HBM * getEmpty(struct acq400_dev* adev);
-int multipleEmptiesWaiting(struct acq400_dev* adev);
-void putFull(struct acq400_dev* adev);
-struct HBM * getEmptyFromRefills(struct acq400_dev* adev);
-int getFull(struct acq400_dev* adev, struct HBM **first, int wait);
-#define GF_WAIT 	1
-#define GF_NOWAIT	0
-void putEmpty(struct acq400_dev* adev);
+struct HBM *getEmpty(struct acq400_dev *adev);
+int multipleEmptiesWaiting(struct acq400_dev *adev);
+void putFull(struct acq400_dev *adev);
+struct HBM *getEmptyFromRefills(struct acq400_dev *adev);
+int getFull(struct acq400_dev *adev, struct HBM **first, int wait);
+#define GF_WAIT 1
+#define GF_NOWAIT 0
+void putEmpty(struct acq400_dev *adev);
 
 /* AO ops */
 
-struct HBM *ao_getEmpty(struct acq400_dev* adev);
-void ao_putFull(struct acq400_dev* adev, struct HBM* hbm_full);
-struct HBM *ao_getFull(struct acq400_dev* adev);
-void ao_putEmpty(struct acq400_dev* adev, struct HBM* hbm_empty);
+struct HBM *ao_getEmpty(struct acq400_dev *adev);
+void ao_putFull(struct acq400_dev *adev, struct HBM *hbm_full);
+struct HBM *ao_getFull(struct acq400_dev *adev);
+void ao_putEmpty(struct acq400_dev *adev, struct HBM *hbm_empty);
 
-void move_list_to_empty(struct acq400_dev *adev, struct list_head* elist);
-int move_list_to_stash(struct acq400_dev *adev, struct list_head* elist);
+void move_list_to_empty(struct acq400_dev *adev, struct list_head *elist);
+int move_list_to_stash(struct acq400_dev *adev, struct list_head *elist);
 
-int reserve(struct acq400_path_descriptor* pd, int ibuf);
-int replace(struct acq400_path_descriptor* pd, int ibuf);
-void replace_all(struct acq400_path_descriptor* pd);
-int remove(struct acq400_path_descriptor* pd, int ibuf, struct list_head* rlist);
+int reserve(struct acq400_path_descriptor *pd, int ibuf);
+int replace(struct acq400_path_descriptor *pd, int ibuf);
+void replace_all(struct acq400_path_descriptor *pd);
+int remove(struct acq400_path_descriptor *pd, int ibuf,
+	   struct list_head *rlist);
 
 void empty_lists(struct acq400_dev *adev);
 
 static inline int list_depth(struct list_head *head)
 {
-	struct list_head* pos;
-	struct list_head* n;
+	struct list_head *pos;
+	struct list_head *n;
 	int entries = 0;
 
-	list_for_each_safe(pos, n, head){
+	list_for_each_safe(pos, n, head) {
 		entries++;
 	}
 	return entries;
 }
-
 
 #endif /* ACQ400_LISTS_H_ */

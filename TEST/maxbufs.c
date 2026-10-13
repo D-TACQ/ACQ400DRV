@@ -21,10 +21,8 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                */
 /* ------------------------------------------------------------------------- */
 
-
 #include <linux/kernel.h>
 #include <linux/module.h>
-
 
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
@@ -33,8 +31,7 @@
 #include <linux/dma-direction.h>
 #include "hbm.h"
 
-#define REVID	"0.10"
-
+#define REVID "0.10"
 
 int buffer_len = 0x100000;
 module_param(buffer_len, int, 0644);
@@ -55,27 +52,26 @@ static void __exit maxbufs_exit(void)
 	printk("Good bye\n");
 }
 
-
 static int __init maxbufs_init(void)
 {
 	INIT_LIST_HEAD(&gpb_buffers);
 	INIT_LIST_HEAD(&cma_buffers);
 
 	printk("attempt allocate _get_free_pages %d x %d bytes\n",
-			number_get_pages_buffers, buffer_len);
+	       number_get_pages_buffers, buffer_len);
 
-	if (number_get_pages_buffers > 0){
+	if (number_get_pages_buffers > 0) {
 		if (hbm_allocate(0, number_get_pages_buffers, buffer_len,
-			&gpb_buffers, DMA_FROM_DEVICE)){
+				 &gpb_buffers, DMA_FROM_DEVICE)) {
 			printk("ERROR: failed to allocate\n");
 			return -1;
 		}
 	}
 	printk("attempt allocate dma_alloc_from_contiguous %d x %d bytes\n",
-			number_cma_buffers, buffer_len);
-	if (number_cma_buffers > 0){
+	       number_cma_buffers, buffer_len);
+	if (number_cma_buffers > 0) {
 		if (hbm_allocate_cma(0, number_cma_buffers, buffer_len,
-			&cma_buffers, DMA_FROM_DEVICE)){
+				     &cma_buffers, DMA_FROM_DEVICE)) {
 			printk("ERROR: failed to allocate\n");
 			return -1;
 		}
@@ -91,4 +87,3 @@ MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("find the limits of kernel memory");
 MODULE_AUTHOR("D-TACQ Solutions.");
 MODULE_VERSION(REVID);
-

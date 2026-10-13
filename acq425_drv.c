@@ -29,7 +29,9 @@
 
 #define REVID "0.006"
 
-int acq425_sites[6] = { 0,  };
+int acq425_sites[6] = {
+	0,
+};
 int acq425_sites_count = 0;
 module_param_array(acq425_sites, int, &acq425_sites_count, 0644);
 
@@ -45,15 +47,14 @@ module_param(i2c_chan_offset, int, 0644);
 /* adapters indexed by site .. use I2C_ADAPTER() to access */
 struct i2c_adapter *__i2c_adap[6];
 
-#define I2C_CHAN(site) 	((site)+i2c_chan_offset)
-#define I2C_ADAPTER(site)	(__i2c_adap[(site)-1])
+#define I2C_CHAN(site) ((site) + i2c_chan_offset)
+#define I2C_ADAPTER(site) (__i2c_adap[(site) - 1])
 
-#define PGA_TYPE	"tca6424cr"
-#define NGPIO_CHIP	24
+#define PGA_TYPE "tca6424cr"
+#define NGPIO_CHIP 24
 
-static struct i2c_client* new_device(
-		struct i2c_adapter *adap,
-		const char* name, unsigned short addr, int gpio_base)
+static struct i2c_client *new_device(struct i2c_adapter *adap, const char *name,
+				     unsigned short addr, int gpio_base)
 {
 	struct pca953x_platform_data pca_data = {};
 	struct i2c_board_info info = {};
@@ -69,13 +70,13 @@ static void __init acq425_init_site(int site)
 {
 	I2C_ADAPTER(site) = i2c_get_adapter(I2C_CHAN(site));
 
-	if (new_device(I2C_ADAPTER(site), PGA_TYPE, 0x22, -1) == 0){
+	if (new_device(I2C_ADAPTER(site), PGA_TYPE, 0x22, -1) == 0) {
 		printk("acq425_init_site(%d) PGA1 NOT found\n", site);
 	}
-	if (single_pga_script){
+	if (single_pga_script) {
 		return;
 	}
-	if (new_device(I2C_ADAPTER(site), PGA_TYPE, 0x23, -1) == 0){
+	if (new_device(I2C_ADAPTER(site), PGA_TYPE, 0x23, -1) == 0) {
 		printk("acq425_init_site(%d) PGA2 NOT found\n", site);
 	}
 }
@@ -88,23 +89,21 @@ static void __init acq425_remove_site(int site)
 
 static void __exit acq425_exit(void)
 {
-	for (; n_acq425--;){
+	for (; n_acq425--;) {
 		acq425_remove_site(acq425_sites[n_acq425]);
 	}
 }
 
-
 static int __init acq425_init(void)
 {
-        int status = 0;
-
+	int status = 0;
 
 	printk("D-TACQ ACQ425 i2c Driver %s\n", REVID);
 
-	for (n_acq425 = 0; n_acq425 < acq425_sites_count; ++n_acq425){
+	for (n_acq425 = 0; n_acq425 < acq425_sites_count; ++n_acq425) {
 		acq425_init_site(acq425_sites[n_acq425]);
 	}
-        return status;
+	return status;
 }
 
 module_init(acq425_init);

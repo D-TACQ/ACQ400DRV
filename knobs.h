@@ -26,12 +26,13 @@
 #ifndef KNOBS_H_
 #define KNOBS_H_
 
+int getKnob(int idev, const char *knob, unsigned *value,
+	    const char *fmt = "%u");
+int getKnob(int idev, const char *knob, char *value);
+int setKnob(int idev, const char *knob, const char *value);
+int setKnob(int idev, const char *knob, int value);
 
-int getKnob(int idev, const char* knob, unsigned* value, const char* fmt = "%u");
-int getKnob(int idev, const char* knob, char* value);
-int setKnob(int idev, const char* knob, const char* value);
-int setKnob(int idev, const char* knob, int value);
-
-int getEtcKnob(int idev, const char* knob, unsigned* value, const char* fmt = "%u");
+int getEtcKnob(int idev, const char *knob, unsigned *value,
+	       const char *fmt = "%u");
 
 #endif /* KNOBS_H_ */
