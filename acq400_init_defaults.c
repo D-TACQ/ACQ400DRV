@@ -33,9 +33,9 @@
 int acq424_adc_conv_time = 0x2d;
 module_param(acq424_adc_conv_time, int, 0444);
 
-int adc_18b = 0;
-module_param(adc_18b, int, 0444);
-MODULE_PARM_DESC(adc_18b, "set TRUE on load if 18 bit devices fitted [1]");
+int adc_resolution = 0;
+module_param(adc_resolution, int, 0444);
+MODULE_PARM_DESC(adc_resolution, "set TRUE on load if 18 bit devices fitted [1]");
 
 int data_32b = 0;
 module_param(data_32b, int, 0444);
@@ -100,7 +100,7 @@ int ao424_physChan(int lchan /* 1..32 */ )
 u32 acq420_set_fmt(struct acq400_dev *adev, u32 adc_ctrl)
 /* DOES NOT ACTUALLY WRITE HARDWARE! */
 {
-	if (adev->booleans.adc_18b){
+	if (adev->booleans.adc_resolution){
 		adc_ctrl |= ADC_CTRL_420_18B;
 	}else{
 		adc_ctrl &= ~ADC_CTRL_420_18B;
@@ -376,7 +376,7 @@ static void acq420_init_defaults(struct acq400_dev *adev)
 	dev_info(DEVP(adev), "ACQ420 device init");
 	acq400wr32(adev, ADC_CONV_TIME, IS_ACQ424(adev)? acq424_adc_conv_time: adc_conv_time);
 	adev->booleans.data32 = data_32b;
-	adev->booleans.adc_18b = adc_18b;
+	adev->booleans.adc_resolution = adc_resolution;
 	adc_ctrl |= acq420_set_fmt(adev, adc_ctrl);
 	acq400wr32(adev, ADC_CTRL, adc_ctrl|ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
 	adev->nchan_enabled = IS_ACQ424(adev)? 32:
@@ -402,7 +402,7 @@ static void acq480_init_defaults(struct acq400_dev *adev)
 	dev_info(DEVP(adev), "ACQ480 device init: skeleton");
 
 	adev->booleans.data32 = 0;
-	adev->booleans.adc_18b = 0;
+	adev->booleans.adc_resolution = 0;
 
 	acq400wr32(adev, ADC_CTRL, ADC_CTRL_ES_EN|ADC_CTRL_MODULE_EN);
 	adev->nchan_enabled = '\x8';
@@ -576,7 +576,7 @@ static void pmodadc1_init_defaults(struct acq400_dev *adev)
 	}
 	acq400wr32(adev, ADC_CONV_TIME, adc_conv_time);
 	adev->booleans.data32 = 0;
-	adev->booleans.adc_18b = 0;
+	adev->booleans.adc_resolution = 0;
 	adc_ctrl |= PMODADC1_CTRL_DIV|PMODADC1_CTRL_EXT_CLK_FROM_SYNC;
 	acq400wr32(adev, ADC_CTRL, ADC_CTRL_MODULE_EN|adc_ctrl);
 	/** nchan_enabled @@todo fudge for use in D32 (acq435 systems) */

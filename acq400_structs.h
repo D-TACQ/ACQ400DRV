@@ -189,7 +189,7 @@ struct acq400_dev {
 		u8 busy;
 		u8 ramp_en;
 		u8 data32;
-		u8 adc_18b;			/* @@todo set on probe() */
+		u8 adc_resolution;			/* @@todo set on probe() */
 		u8 sod_mode;			/* Sample On Demand: no trigger */
 		u8 pack24;
 		u8 RW32_debug;
