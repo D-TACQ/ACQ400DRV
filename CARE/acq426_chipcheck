@@ -28,6 +28,6 @@ case $(echo $IDS | tr \  ,) in
 	exit 1
 esac
 
-echo $RES > /dev/acq400.$SITE.knobs/acq426_adc_resolution
-echo "selected acq426_adc_resolution $(cat /dev/acq400.$SITE.knobs/acq426_adc_resolution)"
+echo $RES > /dev/acq400.$SITE.knobs/adc_resolution
+echo "selected adc_resolution $(cat /dev/acq400.$SITE.knobs/adc_resolution)"
 
