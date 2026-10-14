@@ -2328,6 +2328,7 @@ static const struct attribute *acq426_attrs[] = {
 	&dev_attr_busy.attr,
 	&dev_attr_los.attr,
 
+	&dev_attr_adc_conv_time.attr,
 	&dev_attr_adc_resolution.attr,
 	&dev_attr_adc_reset.attr,
 	&dev_attr_adc_status.attr,
