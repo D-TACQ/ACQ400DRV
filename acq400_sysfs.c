@@ -1214,14 +1214,15 @@ static ssize_t store_adc_resolution(
 {
 	struct acq400_dev *adev = acq400_devices[dev->id];
 	u32 adc_resolution;
-	if (!IS_ACQ43X(adev) && sscanf(buf, "%u", &adc_resolution) == 1){
-		adev->booleans.adc_resolution = adc_resolution != 0;
-		adev->word_size = adc_resolution? 4: 2;
-		return count;
-	}
-	else if (IS_ACQ426(adev) && sscanf(buf, "%u", &adc_resolution) == 1){
+	if (IS_ACQ426(adev) && sscanf(buf, "%u", &adc_resolution) == 1){
 		adev->booleans.adc_resolution = adc_resolution != 0;
 		adev->word_size = adc_resolution? 2: 4;
+		acq420_commit_format(adev);
+		return count;
+	}else if (!IS_ACQ43X(adev) && sscanf(buf, "%u", &adc_resolution) == 1){
+		adev->booleans.adc_resolution = adc_resolution != 0;
+		adev->word_size = adc_resolution? 4: 2;
+		acq420_commit_format(adev);
 		return count;
 	}else{
 		return -1;
