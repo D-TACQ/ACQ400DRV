@@ -285,6 +285,11 @@ customize_acq420()
                 elif [ $BITS -eq 24 ]; then
                     echo WARNING: 24 bit mode NOT supported
                 fi;;
+	    20)
+                set.sys $knobd/data32 1
+                set.sys $knobd/adc_resolution 0
+                echo "set data32 $(get.sys $knobd/data32)"
+                echo "set adc_resolution $(get.sys $knobd/adc_resolution)";;
             *)
                 set.sys $knobd/data32 0
                 set.sys $knobd/adc_resolution 0;;
