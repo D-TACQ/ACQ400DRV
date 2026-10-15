@@ -20,9 +20,9 @@ done
 #echo $IDS
 case $(echo $IDS | tr \  ,) in
 0x61,0x61,0x61,0x61) 
-	RES=16;;
+	RES=1;;
 0x60,0x60,0x60,0x60) 
-	RES=20;;
+	RES=0;;
 *)
 	echo "ERROR SITE:$SITE ID:$IDS not supported. Contact D-TACQ"
 	exit 1
