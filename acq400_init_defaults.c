@@ -35,7 +35,7 @@ module_param(acq424_adc_conv_time, int, 0444);
 
 int adc_resolution = 0;
 module_param(adc_resolution, int, 0444);
-MODULE_PARM_DESC(adc_resolution, "set TRUE on load if 18 bit devices fitted [1]");
+MODULE_PARM_DESC(adc_resolution, "set TRUE on load if 18 bit devices fitted (except ACQ426 0=20-bit and 1=16-bit) [1]");
 
 int data_32b = 0;
 module_param(data_32b, int, 0444);
@@ -100,10 +100,19 @@ int ao424_physChan(int lchan /* 1..32 */ )
 u32 acq420_set_fmt(struct acq400_dev *adev, u32 adc_ctrl)
 /* DOES NOT ACTUALLY WRITE HARDWARE! */
 {
-	if (adev->booleans.adc_resolution){
-		adc_ctrl |= ADC_CTRL_420_18B;
-	}else{
-		adc_ctrl &= ~ADC_CTRL_420_18B;
+        if (IS_ACQ426(adev)) {
+	    if (adev->booleans.adc_resolution){
+		    adc_ctrl &= ~ADC_CTRL_420_18B;
+	    }else{
+		    adc_ctrl |= ADC_CTRL_420_18B;
+	    }
+	}
+	else {
+	    if (adev->booleans.adc_resolution){
+		    adc_ctrl |= ADC_CTRL_420_18B;
+	    }else{
+		    adc_ctrl &= ~ADC_CTRL_420_18B;
+	    }
 	}
 	if (adev->booleans.data32){
 		adc_ctrl |= ADC_CTRL32B_data;
