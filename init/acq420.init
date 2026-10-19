@@ -231,6 +231,7 @@ customize_acq420()
             case $field in
             ACQ420FMC)  echo ACQ420FMC detected;;
             ACQ425?LF)  echo $field detected;;
+            ACQ426ELF)  IS_ACQ426=1; echo ACQ426ELF detected;;
             ACQ427ELF)  IS_ACQ427=1; echo ACQ427ELF detected;;
             ACQ428ELF) IS_ACQ428=1; echo ACQ428ELF detected;;
             *)
@@ -271,9 +272,9 @@ customize_acq420()
             case $field in
             24|18)
                 set.sys $knobd/data32 1
-                set.sys $knobd/adc_18b 1
+                set.sys $knobd/adc_resolution 1
                 echo "set data32 $(get.sys $knobd/data32)"
-                echo "set adc_18b $(get.sys $knobd/adc_18b)"
+                echo "set adc_resolution $(get.sys $knobd/adc_resolution)"
                 if [ -e $knobd/adc_nobt ]; then
                     case $field in
                     24)
@@ -284,9 +285,14 @@ customize_acq420()
                 elif [ $BITS -eq 24 ]; then
                     echo WARNING: 24 bit mode NOT supported
                 fi;;
+	    20)
+                set.sys $knobd/data32 1
+                set.sys $knobd/adc_resolution 0
+                echo "set data32 $(get.sys $knobd/data32)"
+                echo "set adc_resolution $(get.sys $knobd/adc_resolution)";;
             *)
                 set.sys $knobd/data32 0
-                set.sys $knobd/adc_18b 0;;
+                set.sys $knobd/adc_resolution 0;;
             esac;;              
         esac
         let ix="$ix+1"
@@ -642,7 +648,6 @@ build_knobs_device() {
         FLASHELF_SITES="${FLASHELF_SITES} $site";;
     ${MOD_ID_ACQ426ELF})
         set_max_min_khz ${site} 1000 1
-        ACQ426_SITES="${ACQ426_SITES} $site"
         build_knobs_acq426_device $site $mtype $dk $ek;;
     ${MOD_ID_ACQ428ELF})
         set_max_min_khz ${site} 1000 1

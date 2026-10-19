@@ -219,7 +219,6 @@
 #define ADC_CTRL_465_PACK24	(1 << 8)	/* ACQ465ELF aka "compress" */
 #define ADC_CTRL32B_data	(1 << 7)	/* ACQ420FMC */
 
-#define ADC_CTRL_426_16_N20	(1 << 6)	/* ACQ426 */
 #define ADC_CTRL_420_18B	(1 << 6)	/* ACQ420FMC */
 #define ADC_CTRL_435_EMBED_STR	(1 << 6)	/* ACQ435 bitslice data */
 #define ADC_CTRL_RAMP_EN 	(1 << 5)	/* Deprecated, sadly. Use SPAD */
