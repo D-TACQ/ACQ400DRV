@@ -451,6 +451,7 @@ acq427_4_action() {
 
 build_knobs_ao420() {
         site=$1; mtype=$2 dk=$3 ek=$4
+	source /dev/sites/${site}/details
 
         case $mtype in
         ${MOD_ID_DAC_CELF})
