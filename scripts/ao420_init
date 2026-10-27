@@ -98,12 +98,11 @@ else    # 24-bit writes
 	*)
 		vset_sys ${KNOBS}/dacspi 0x400002   # @@todo .. probably redundant
 		if [ $SET_UNIPOLAR -eq 1 ]; then
+		      vset_sys ${KNOBS}/ao420_cs3 1           # register with driver that unipolar
 		      vset_sys ${KNOBS}/dacspi 0x200016       # OPGND and offset binary
 		      vset_sys ${KNOBS}/dacspi 0x300000       # Clear Code
 		      vset_sys ${KNOBS}/dacspi 0x400002       # software clear
 		      vset_sys ${KNOBS}/dacspi 0x200012       # release OPGND clamp
-
-		      set.sys ${KNOBS}/ao420_cs3 1  # register with driver that unipolar
 		else
 		      vset_sys ${KNOBS}/dacspi 0x200000
 		fi;;
