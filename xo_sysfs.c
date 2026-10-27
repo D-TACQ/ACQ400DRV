@@ -783,7 +783,7 @@ static ssize_t show_dac_immediate(
 		if (ao420_cs3) {
 		    // zero extend unipolar CS3 values so they don't overflow EPICS
 		    unsigned short u_chx = (unsigned short)chx;
-		    return sprintf(bug "0x%04x %u\n", u_chx, u_chx);
+		    return sprintf(buf, "0x%04x %u\n", u_chx, u_chx);
 		}
 		return sprintf(buf, "0x%04x %d\n", chx, chx);
 	}
@@ -811,7 +811,7 @@ static ssize_t show_dac_no_immediate(
 		if (ao420_cs3) {
 		    // zero extend unipolar CS3 values so they don't overflow EPICS
 		    unsigned short u_chx = (unsigned short)chx;
-		    return sprintf(bug "0x%04x %u\n", u_chx, u_chx);
+		    return sprintf(buf, "0x%04x %u\n", u_chx, u_chx);
 		}
 		return sprintf(buf, "0x%04x %d\n", chx, chx);
 	}
