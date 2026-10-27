@@ -726,6 +726,22 @@ MAKE_AO_GO(2);
 MAKE_AO_GO(3);
 MAKE_AO_GO(4);
 
+int ao420_cs3 = 0;
+static ssize_t ao420_cs3_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%d\n", ao420_cs3);
+}
+
+static ssize_t ao420_cs3_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+        int val;
+        if (kstrtoint(buf, 10, &val) == 0) {
+                ao420_cs3 = val;
+        }
+        return count;
+}
+
+static DEVICE_ATTR(ao420_cs3, 0644, ao420_cs3_show, ao420_cs3_store);
 
 
 static void ao420_flushImmediate(struct acq400_dev *adev)
@@ -764,6 +780,11 @@ static ssize_t show_dac_immediate(
 		if (IS_AO424(adev)){
 			chx = ao424_fixEncoding(adev, pchan, chx);
 		}
+		if (ao420_cs3) {
+		    // zero extend unipolar CS3 values so they don't overflow EPICS
+		    unsigned short u_chx = (unsigned short)chx;
+		    return sprintf(bug "0x%04x %u\n", u_chx, u_chx);
+		}
 		return sprintf(buf, "0x%04x %d\n", chx, chx);
 	}
 }
@@ -786,6 +807,11 @@ static ssize_t show_dac_no_immediate(
 		chx = xo_dev->AO_immediate._u.ch[pchan];
 		if (IS_AO424(adev)){
 			chx = ao424_fixEncoding(adev, pchan, chx);
+		}
+		if (ao420_cs3) {
+		    // zero extend unipolar CS3 values so they don't overflow EPICS
+		    unsigned short u_chx = (unsigned short)chx;
+		    return sprintf(bug "0x%04x %u\n", u_chx, u_chx);
 		}
 		return sprintf(buf, "0x%04x %d\n", chx, chx);
 	}
@@ -1509,6 +1535,7 @@ const struct attribute *ao420_attrs[] = {
 	&dev_attr_GR2.attr, &dev_attr_DR2.attr,
 	&dev_attr_GR3.attr, &dev_attr_DR3.attr,
 	&dev_attr_GR4.attr, &dev_attr_DR4.attr,
+	&dev_attr_ao420_cs3.attr,
 	NULL
 };
 
