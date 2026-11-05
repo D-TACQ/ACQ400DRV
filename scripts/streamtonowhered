@@ -32,7 +32,7 @@ stop() {
         set.site 0 state 0
     fi
         
-    if [ -r ${PDIF}]; then
+    if [ -r ${PDIF} ]; then
         sleep 1
         [ -r ${PDIF} ] && kill -${SIGTERM} $(cat ${PIDF}) 2>/dev/null
     fi
